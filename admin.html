@@ -19,6 +19,15 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #3A3A38; border-radius: 99px; }
     input, textarea, select { font-family: 'DM Sans', system-ui, sans-serif; }
+    @media (max-width: 768px) {
+      .rs-admin-wrap { flex-direction: column !important; }
+      .rs-admin-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto !important; border-right: none !important; border-bottom: 1px solid #3A3A38 !important; }
+      .rs-admin-sidebar > div:first-child { display: none !important; }
+      .rs-admin-sidebar > div:last-child { display: none !important; }
+      .rs-admin-sidebar > div:nth-child(2) { display: flex !important; flex-direction: row !important; padding: 4px !important; }
+      .rs-admin-sidebar > div:nth-child(2) button { width: auto !important; border-left: none !important; padding: 8px 12px !important; font-size: 11px !important; white-space: nowrap !important; }
+      .rs-admin-main { padding: 16px !important; max-height: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -799,9 +808,9 @@
       );
 
       return (
-        <div style={{ minHeight: "100vh", display: "flex" }}>
+        <div className="rs-admin-wrap" style={{ minHeight: "100vh", display: "flex" }}>
           {/* Sidebar */}
-          <div style={{ width: 200, flexShrink: 0, background: "#22221E", borderRight: `1px solid #3A3A38`, display: "flex", flexDirection: "column" }}>
+          <div className="rs-admin-sidebar" style={{ width: 200, flexShrink: 0, background: "#22221E", borderRight: `1px solid #3A3A38`, display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "20px 16px", borderBottom: `1px solid #3A3A38` }}>
               <div style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 700, color: COLORS.verdeMint, display: "flex", alignItems: "center", gap: 8 }}>
                 🛡️ Admin
@@ -846,7 +855,7 @@
           </div>
 
           {/* Main content */}
-          <div style={{ flex: 1, padding: "24px 28px", overflowY: "auto", maxHeight: "100vh" }}>
+          <div className="rs-admin-main" style={{ flex: 1, padding: "24px 28px", overflowY: "auto", maxHeight: "100vh" }}>
             {renderSection()}
           </div>
 

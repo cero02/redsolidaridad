@@ -14,9 +14,31 @@
   <script src="firebase-config.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      background: #F7F0E6;
+    body { margin: 0; background: #F7F0E6; }
+    * { box-sizing: border-box; }
+    @media (max-width: 900px) {
+      .rs-muro-left, .rs-muro-right { display: none !important; }
+      .rs-muro-wrap { flex-direction: column !important; align-items: stretch !important; }
+    }
+    @media (max-width: 640px) {
+      header { padding: 0 12px !important; }
+      nav button { padding: 10px 10px !important; font-size: 11px !important; }
+      main > div { padding: 16px 12px !important; }
+      [style*="min-width: 120px"][style*="flex: 1 1"] { min-width: calc(50% - 8px) !important; }
+      .rs-event-pill { flex-wrap: wrap !important; }
+      .rs-event-pill-right { width: 100% !important; flex-direction: row !important; align-items: center !important; }
+      .rs-chat { width: calc(100vw - 32px) !important; right: 16px !important; bottom: 84px !important; }
+      .rs-toast { width: calc(100% - 32px) !important; font-size: 12px !important; padding: 10px 16px !important; }
+      .rs-filters button { font-size: 11px !important; padding: 6px 12px !important; }
+    }
+    @media (max-width: 480px) {
+      header { height: 52px !important; }
+      header > div:first-child { font-size: 17px !important; }
+      header > div:first-child > span:first-child { font-size: 20px !important; }
+      header > div:last-child > div:first-child { padding: 3px 8px !important; }
+      nav button span:last-child { font-size: 10px !important; }
+      [style*="min-width: 120px"][style*="flex: 1 1"] { min-width: 100% !important; }
+      [style*="position: fixed"][style*="z-index: 1000"] > div { padding: 24px 16px !important; margin: 0 8px !important; }
     }
   </style>
 </head>
@@ -308,7 +330,7 @@ function CampaignCard({ campaign, onJoin, isExample }) {
 function EventPill({ event, onToggleAttend, isJoined, isExample }) {
   const color = categoryColors[event.category] || COLORS.gris;
   return (
-    <div style={{
+    <div className="rs-event-pill" style={{
       background: COLORS.cream,
       border: isJoined ? `2px solid ${color}` : `1px solid ${COLORS.creamDark}`,
       borderRadius: 16,
@@ -338,7 +360,7 @@ function EventPill({ event, onToggleAttend, isJoined, isExample }) {
         </div>
         <div style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.gris }}>📅 {event.date} · 📍 {event.location}</div>
       </div>
-      <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+      <div className="rs-event-pill-right" style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
         <div>
           <span style={{ fontFamily: FONTS.body, fontSize: 13, color: color, fontWeight: 700 }}>{event.people}</span>
           <span style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris, marginLeft: 2 }}>van</span>
@@ -593,9 +615,9 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
   const getScore = (p) => (p.upvotes || 0) - (p.downvotes || 0);
 
   return (
-    <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 0 }}>
+    <div className="rs-muro-wrap" style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 0 }}>
       {/* Sidebar izquierdo: categorías */}
-      <div style={{ width: 180, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 84 }}>
+      <div className="rs-muro-left" style={{ width: 180, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 84 }}>
         <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 12 }}>
           Comunidades
         </div>
@@ -881,7 +903,7 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
       </div>
 
       {/* Sidebar derecho: tendencias */}
-      <div style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 84 }}>
+      <div className="rs-muro-right" style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 84 }}>
         <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
           <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
             🔥 Tendencias
@@ -1245,7 +1267,7 @@ function RedSolidaria() {
     return matchesCategory && matchesSearch;
   });
 
-  const styles = {
+    const styles = {
     app: {
       fontFamily: FONTS.body,
       background: "#F7F0E6",
@@ -1513,7 +1535,7 @@ function RedSolidaria() {
             <div style={{ marginBottom: 24 }}>
               <h2 style={{ ...styles.sectionTitle, fontSize: 18, marginBottom: 4 }}>Impacto colectivo 🇵🇪</h2>
               <p style={styles.sectionSub}>Lo que construimos juntos en Perú</p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div className="rs-stats" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <StatCard value={statsData?.voluntarios || mockData.stats.voluntarios} label="Voluntarios activos" emoji="👥" color={COLORS.verde} />
                 <StatCard value={statsData?.horas || mockData.stats.horas} label="Horas de ayuda" emoji="⏳" color={COLORS.tierra} />
                 <StatCard value={statsData?.familias || mockData.stats.familias} label="Familias apoyadas" emoji="🏠" color={COLORS.cielo} />
@@ -1587,7 +1609,7 @@ function RedSolidaria() {
             </div>
 
             {/* Filtros por Categoría */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+            <div className="rs-filters" style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
               {["Todos", "cultura", "aventura", "social", "tech", "bienestar"].map(cat => {
                 const labelMap = {
                   Todos: "🌍 Todos", cultura: "🎨 Cultura", aventura: "⛰️ Aventura",
@@ -1772,7 +1794,7 @@ function RedSolidaria() {
       </main>
 
       {/* CHAT CHIP INTELIGENTE */}
-      <button
+      <button className="rs-bot-btn"
         onClick={() => setShowAI(!showAI)}
         style={{
           position: "fixed", bottom: 24, right: 24, width: 56, height: 56, borderRadius: "50%",
@@ -1786,7 +1808,7 @@ function RedSolidaria() {
       </button>
 
       {showAI && (
-        <div style={{
+        <div className="rs-chat" style={{
           position: "fixed", bottom: 92, right: 24, width: 320, background: COLORS.cream,
           borderRadius: 20, border: `1px solid ${COLORS.creamDark}`, zIndex: 500, overflow: "hidden",
           boxShadow: "0 16px 48px rgba(0,0,0,0.15)", display: 'flex', flexDirection: 'column'
@@ -1825,7 +1847,7 @@ function RedSolidaria() {
 
       {/* TOAST DE AVISOS */}
       {toast && (
-        <div style={{
+        <div className="rs-toast" style={{
           position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
           background: COLORS.carbon, color: "#fff", padding: "12px 24px", borderRadius: 14,
           fontFamily: FONTS.body, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, zIndex: 600,
