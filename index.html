@@ -19,6 +19,7 @@
     @media (max-width: 900px) {
       .rs-muro-left, .rs-muro-right { display: none !important; }
       .rs-muro-wrap { flex-direction: column !important; align-items: stretch !important; }
+      .rs-mobile-bar { display: flex !important; }
     }
     @media (max-width: 640px) {
       header { padding: 0 12px !important; }
@@ -451,6 +452,8 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
   const [showShareModal, setShowShareModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [notifications, setNotifications] = useState([]);
+  const [showMobileComunidades, setShowMobileComunidades] = useState(false);
+  const [showMobileTendencias, setShowMobileTendencias] = useState(false);
 
   // Cargar posts desde Firebase en tiempo real
   useEffect(() => {
@@ -614,51 +617,104 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
 
   const getScore = (p) => (p.upvotes || 0) - (p.downvotes || 0);
 
+  const renderLeftContent = () => (
+    <>
+      <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 12 }}>
+        Comunidades
+      </div>
+      <button onClick={() => { setSelectedSub("Todos"); setShowMobileComunidades(false); }} style={{
+        display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 10, border: "none",
+        cursor: "pointer", textAlign: "left",
+        background: selectedSub === "Todos" ? `${COLORS.verde}18` : "transparent",
+        color: selectedSub === "Todos" ? COLORS.verde : COLORS.gris,
+        fontWeight: selectedSub === "Todos" ? 700 : 500, fontSize: 12, fontFamily: FONTS.body,
+      }}>
+        <span>🔥</span><span>r/Todos</span>
+      </button>
+      {Object.keys(SUBCATEGORIAS).map(renderSubButton)}
+
+      <div style={{ marginTop: 12, borderTop: `1px solid ${COLORS.creamDark}`, paddingTop: 12 }}>
+        <button onClick={() => { setShowCreatePost(true); setShowMobileComunidades(false); }} style={{
+          width: "100%", background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
+          color: "#fff", border: "none", borderRadius: 12, padding: "10px 0",
+          fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONTS.body,
+        }}>
+          + Nueva Publicación
+        </button>
+      </div>
+
+      <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.gold}10`, borderRadius: 12, border: `1px solid ${COLORS.gold}22` }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu Karma</div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: 20, fontWeight: 800, color: COLORS.gold }}>{userKarma}</div>
+        <div style={{ fontSize: 10, color: COLORS.gris }}>puntos de reputación</div>
+      </div>
+
+      {notifications.length > 0 && (
+        <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.cielo}10`, borderRadius: 12, border: `1px solid ${COLORS.cielo}22` }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Notificaciones</div>
+          {notifications.slice(0, 3).map(n => (
+            <div key={n.id} style={{ fontSize: 11, color: COLORS.carbon, marginBottom: 4, display: "flex", gap: 4 }}>
+              <span style={{ color: COLORS.cielo }}>●</span>
+              <span>{n.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  const renderRightContent = () => (
+    <>
+      <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
+        <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+          🔥 Tendencias
+        </div>
+        {[
+          { tag: "#AyudaMutua", posts: 0 },
+          { tag: "#Adopción", posts: 0 },
+          { tag: "#Carpooling", posts: 0 },
+          { tag: "#Voluntariado", posts: 0 },
+          { tag: "#LimaNorte", posts: 0 },
+        ].map(t => (
+          <div key={t.tag} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${COLORS.creamDark}44` }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.carbon, cursor: "pointer", fontFamily: FONTS.body }}
+              onMouseEnter={e => e.currentTarget.style.color = COLORS.verde}
+              onMouseLeave={e => e.currentTarget.style.color = COLORS.carbon}
+            >{t.tag}</span>
+            <span style={{ fontSize: 10, color: COLORS.gris }}>{t.posts} posts</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
+        <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+          📊 Red Solidaria Stats
+        </div>
+        <div style={{ fontSize: 11, fontFamily: FONTS.body, color: COLORS.carbon, lineHeight: 1.8 }}>
+          👥 {statsData?.voluntarios || "0"} voluntarios<br />
+          ⏳ {statsData?.horas || "0"} horas de ayuda<br />
+          🏠 {statsData?.familias || "0"} familias<br />
+          🤝 {statsData?.empresas || "0"} empresas aliadas
+        </div>
+      </div>
+
+      <div style={{ background: `linear-gradient(135deg, ${COLORS.verde}10, ${COLORS.tierra}10)`, border: `1px solid ${COLORS.verde}33`, borderRadius: 16, padding: 16, textAlign: "center" }}>
+        <div style={{ fontSize: 24, marginBottom: 6 }}>⭐</div>
+        <div style={{ fontFamily: FONTS.body, fontSize: 11, fontWeight: 600, color: COLORS.verde }}>
+          {userKarma > 50 ? "¡Eres un miembro destacado!" : "¡Sigue participando!"}
+        </div>
+        <div style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris, marginTop: 4 }}>
+          {userKarma} karma · {posts.filter(p => p.userVote === 'up').length} votos emitidos
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="rs-muro-wrap" style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 0 }}>
       {/* Sidebar izquierdo: categorías */}
       <div className="rs-muro-left" style={{ width: 180, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 84 }}>
-        <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 12 }}>
-          Comunidades
-        </div>
-        <button onClick={() => setSelectedSub("Todos")} style={{
-          display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 10, border: "none",
-          cursor: "pointer", textAlign: "left",
-          background: selectedSub === "Todos" ? `${COLORS.verde}18` : "transparent",
-          color: selectedSub === "Todos" ? COLORS.verde : COLORS.gris,
-          fontWeight: selectedSub === "Todos" ? 700 : 500, fontSize: 12, fontFamily: FONTS.body,
-        }}>
-          <span>🔥</span><span>r/Todos</span>
-        </button>
-        {Object.keys(SUBCATEGORIAS).map(renderSubButton)}
-
-        <div style={{ marginTop: 12, borderTop: `1px solid ${COLORS.creamDark}`, paddingTop: 12 }}>
-          <button onClick={() => setShowCreatePost(true)} style={{
-            width: "100%", background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
-            color: "#fff", border: "none", borderRadius: 12, padding: "10px 0",
-            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONTS.body,
-          }}>
-            + Nueva Publicación
-          </button>
-        </div>
-
-        <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.gold}10`, borderRadius: 12, border: `1px solid ${COLORS.gold}22` }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu Karma</div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 20, fontWeight: 800, color: COLORS.gold }}>{userKarma}</div>
-          <div style={{ fontSize: 10, color: COLORS.gris }}>puntos de reputación</div>
-        </div>
-
-        {notifications.length > 0 && (
-          <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.cielo}10`, borderRadius: 12, border: `1px solid ${COLORS.cielo}22` }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Notificaciones</div>
-            {notifications.slice(0, 3).map(n => (
-              <div key={n.id} style={{ fontSize: 11, color: COLORS.carbon, marginBottom: 4, display: "flex", gap: 4 }}>
-                <span style={{ color: COLORS.cielo }}>●</span>
-                <span>{n.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {renderLeftContent()}
       </div>
 
       {/* Feed principal */}
@@ -670,6 +726,20 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
               fontFamily: FONTS.body, fontSize: 13, outline: "none", background: COLORS.cream,
               boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}
           />
+        </div>
+
+        {/* Botones móviles: Comunidades + Tendencias */}
+        <div className="rs-mobile-bar" style={{ display: "none", gap: 8, marginBottom: 12 }}>
+          <button onClick={() => setShowMobileComunidades(true)} style={{
+            flex: 1, padding: "8px 12px", borderRadius: 10, border: `1px solid ${COLORS.creamDark}`,
+            background: COLORS.cream, color: COLORS.carbon, fontSize: 12, fontWeight: 600,
+            cursor: "pointer", fontFamily: FONTS.body, textAlign: "center",
+          }}>☰ Comunidades</button>
+          <button onClick={() => setShowMobileTendencias(true)} style={{
+            flex: 1, padding: "8px 12px", borderRadius: 10, border: `1px solid ${COLORS.creamDark}`,
+            background: COLORS.cream, color: COLORS.carbon, fontSize: 12, fontWeight: 600,
+            cursor: "pointer", fontFamily: FONTS.body, textAlign: "center",
+          }}>🔥 Tendencias</button>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
@@ -904,49 +974,52 @@ function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showTo
 
       {/* Sidebar derecho: tendencias */}
       <div className="rs-muro-right" style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 84 }}>
-        <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
-          <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            🔥 Tendencias
-          </div>
-          {[
-            { tag: "#AyudaMutua", posts: 0 },
-            { tag: "#Adopción", posts: 0 },
-            { tag: "#Carpooling", posts: 0 },
-            { tag: "#Voluntariado", posts: 0 },
-            { tag: "#LimaNorte", posts: 0 },
-          ].map(t => (
-            <div key={t.tag} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${COLORS.creamDark}44` }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.carbon, cursor: "pointer", fontFamily: FONTS.body }}
-                onMouseEnter={e => e.currentTarget.style.color = COLORS.verde}
-                onMouseLeave={e => e.currentTarget.style.color = COLORS.carbon}
-              >{t.tag}</span>
-              <span style={{ fontSize: 10, color: COLORS.gris }}>{t.posts} posts</span>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
-          <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            📊 Red Solidaria Stats
-          </div>
-          <div style={{ fontSize: 11, fontFamily: FONTS.body, color: COLORS.carbon, lineHeight: 1.8 }}>
-            👥 {statsData?.voluntarios || "0"} voluntarios<br />
-            ⏳ {statsData?.horas || "0"} horas de ayuda<br />
-            🏠 {statsData?.familias || "0"} familias<br />
-            🤝 {statsData?.empresas || "0"} empresas aliadas
-          </div>
-        </div>
-
-        <div style={{ background: `linear-gradient(135deg, ${COLORS.verde}10, ${COLORS.tierra}10)`, border: `1px solid ${COLORS.verde}33`, borderRadius: 16, padding: 16, textAlign: "center" }}>
-          <div style={{ fontSize: 24, marginBottom: 6 }}>⭐</div>
-          <div style={{ fontFamily: FONTS.body, fontSize: 11, fontWeight: 600, color: COLORS.verde }}>
-            {userKarma > 50 ? "¡Eres un miembro destacado!" : "¡Sigue participando!"}
-          </div>
-          <div style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris, marginTop: 4 }}>
-            {userKarma} karma · {posts.filter(p => p.userVote === 'up').length} votos emitidos
-          </div>
-        </div>
+        {renderRightContent()}
       </div>
+
+      {/* Modal móvil: Comunidades */}
+      {showMobileComunidades && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(26,26,24,0.65)",
+          backdropFilter: "blur(8px)", zIndex: 1000,
+          display: "flex", alignItems: "flex-start", justifyContent: "flex-start",
+        }} onClick={() => setShowMobileComunidades(false)}>
+          <div style={{
+            width: 280, height: "100%", background: COLORS.cream,
+            borderRight: `1px solid ${COLORS.creamDark}`,
+            padding: "20px 16px", overflowY: "auto",
+            display: "flex", flexDirection: "column", gap: 4,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 700, color: COLORS.carbon }}>☰ Comunidades</span>
+              <button onClick={() => setShowMobileComunidades(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: COLORS.gris }}>✕</button>
+            </div>
+            {renderLeftContent()}
+          </div>
+        </div>
+      )}
+
+      {/* Modal móvil: Tendencias */}
+      {showMobileTendencias && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(26,26,24,0.65)",
+          backdropFilter: "blur(8px)", zIndex: 1000,
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+        }} onClick={() => setShowMobileTendencias(false)}>
+          <div style={{
+            width: "100%", maxWidth: 460, background: COLORS.cream,
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: "24px 20px", maxHeight: "70vh", overflowY: "auto",
+            display: "flex", flexDirection: "column", gap: 12,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 700, color: COLORS.carbon }}>🔥 Tendencias</span>
+              <button onClick={() => setShowMobileTendencias(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: COLORS.gris }}>✕</button>
+            </div>
+            {renderRightContent()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1783,7 +1856,7 @@ function RedSolidaria() {
               <p style={{ fontFamily: FONTS.body, fontSize: 13, color: COLORS.gris }}>{firebaseUser?.email || "Anónimo"} · Miembro desde Enero 2024</p>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+            <div className="rs-stats" style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
               <StatCard value={userPoints.toLocaleString()} label="Puntos totales" emoji="⭐" color={COLORS.tierra} />
               <StatCard value={`#${firebaseUser ? "—" : mockData.user.rank}`} label="Ranking nacional" emoji="🏆" color={COLORS.gold} />
               <StatCard value={userActivities} label="Actividades" emoji="✅" color={COLORS.verde} />

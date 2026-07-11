@@ -21,12 +21,15 @@
     input, textarea, select { font-family: 'DM Sans', system-ui, sans-serif; }
     @media (max-width: 768px) {
       .rs-admin-wrap { flex-direction: column !important; }
-      .rs-admin-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto !important; border-right: none !important; border-bottom: 1px solid #3A3A38 !important; }
+      .rs-admin-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto !important; border-right: none !important; border-bottom: 1px solid #3A3A38 !important; align-items: center !important; }
       .rs-admin-sidebar > div:first-child { display: none !important; }
-      .rs-admin-sidebar > div:last-child { display: none !important; }
-      .rs-admin-sidebar > div:nth-child(2) { display: flex !important; flex-direction: row !important; padding: 4px !important; }
+      .rs-admin-sidebar > div:nth-child(2) { display: flex !important; flex-direction: row !important; padding: 4px !important; flex: 1 !important; }
       .rs-admin-sidebar > div:nth-child(2) button { width: auto !important; border-left: none !important; padding: 8px 12px !important; font-size: 11px !important; white-space: nowrap !important; }
-      .rs-admin-main { padding: 16px !important; max-height: none !important; }
+      .rs-admin-sidebar > div:last-child { padding: 4px 8px !important; display: flex !important; }
+      .rs-admin-sidebar > div:last-child button { font-size: 10px !important; padding: 4px 8px !important; }
+      .rs-admin-main { padding: 12px !important; max-height: none !important; }
+      .rs-admin-main table { font-size: 11px !important; }
+      .rs-admin-main table th, .rs-admin-main table td { padding: 6px 8px !important; }
     }
   </style>
 </head>
