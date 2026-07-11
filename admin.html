@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - RedSolidaria</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;700&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #1A1A18; color: #fff; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #3A3A38; border-radius: 99px; }
+    input, textarea, select { font-family: 'DM Sans', system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const COLORS = {
+      tierra: "#C4612A", tierraLight: "#E8845A",
+      verde: "#2D6A4F", verdeLight: "#52B788", verdeMint: "#95D5B2",
+      cream: "#FAF3E8", creamDark: "#F0E4CC",
+      carbon: "#1A1A18", gris: "#6B6B63", grisLight: "#E8E4DC",
+      gold: "#D4A017", rojo: "#C0392B", cielo: "#4A90A4",
+    };
+
+    const FONTS = {
+      display: "'Playfair Display', Georgia, serif",
+      body: "'DM Sans', system-ui, sans-serif",
+      mono: "'DM Mono', monospace",
+    };
+
+    const TABS = [
+      { id: "dashboard", label: "Dashboard", emoji: "📊" },
+      { id: "campanas", label: "Campañas", emoji: "🌟" },
+      { id: "eventos", label: "Eventos", emoji: "🎉" },
+      { id: "muro", label: "Muro", emoji: "📢" },
+      { id: "cajitas", label: "Cajitas", emoji: "📦" },
+      { id: "ranking", label: "Ranking", emoji: "🏆" },
+      { id: "stats", label: "Estadísticas", emoji: "📊" },
+      { id: "bloqueo", label: "Bloqueo", emoji: "🔒" },
+    ];
+
+    function AdminApp() {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [loginEmail, setLoginEmail] = useState("");
+      const [loginPass, setLoginPass] = useState("");
+      const [loginError, setLoginError] = useState("");
+      const [isRegister, setIsRegister] = useState(false);
+      const [showLinkAccount, setShowLinkAccount] = useState(false);
+      const [linkEmail, setLinkEmail] = useState("");
+      const [linkPass, setLinkPass] = useState("");
+      const [linkError, setLinkError] = useState("");
+      const [activeTab, setActiveTab] = useState("dashboard");
+      const [toast, setToast] = useState(null);
+
+      // Data states
+      const [campaigns, setCampaigns] = useState([]);
+      const [events, setEvents] = useState([]);
+      const [muroPosts, setMuroPosts] = useState([]);
+      const [cajitas, setCajitas] = useState([]);
+      const [leaderboard, setLeaderboard] = useState([]);
+      const [stats, setStats] = useState(null);
+      const [blockedPages, setBlockedPages] = useState([]);
+
+      // Form states
+      const [editingItem, setEditingItem] = useState(null);
+      const [showForm, setShowForm] = useState(false);
+      const [formData, setFormData] = useState({});
+
+      const showToast = (msg, emoji = "✅") => {
+        setToast({ msg, emoji });
+        setTimeout(() => setToast(null), 3000);
+      };
+
+      // Auth state listener
+      useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(u => {
+          setUser(u);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      // Load data when user is logged in
+      useEffect(() => {
+        if (!user) return;
+
+        const unsubscribers = [];
+
+        unsubscribers.push(db.collection("campaigns").onSnapshot(s => {
+          setCampaigns(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        }));
+        unsubscribers.push(db.collection("events").onSnapshot(s => {
+          setEvents(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        }));
+        unsubscribers.push(db.collection("muroPosts").orderBy("createdAt", "desc").onSnapshot(s => {
+          setMuroPosts(s.docs.map(d => ({ id: d.id, ...d.data(), comments: d.data().comments || [] })));
+        }));
+        unsubscribers.push(db.collection("cajitas").onSnapshot(s => {
+          setCajitas(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        }));
+        unsubscribers.push(db.collection("leaderboard").onSnapshot(s => {
+          setLeaderboard(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        }));
+        unsubscribers.push(db.collection("stats").onSnapshot(s => {
+          const docs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (docs.length > 0) setStats(docs[0]);
+        }));
+        unsubscribers.push(db.collection("pageBlocks").onSnapshot(s => {
+          setBlockedPages(s.docs.map(d => d.id));
+        }));
+
+        return () => unsubscribers.forEach(u => u());
+      }, [user]);
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoginError("");
+        try {
+          if (isRegister) {
+            await auth.createUserWithEmailAndPassword(loginEmail, loginPass);
+          } else {
+            await auth.signInWithEmailAndPassword(loginEmail, loginPass);
+          }
+        } catch (err) {
+          setLoginError(err.message.replace("Firebase: ", ""));
+        }
+      };
+
+      const handleAnonymousLogin = async () => {
+        setLoginError("");
+        try {
+          await auth.signInAnonymously();
+        } catch (err) {
+          setLoginError(err.message.replace("Firebase: ", ""));
+        }
+      };
+
+      const handleLinkAccount = async (e) => {
+        e.preventDefault();
+        setLinkError("");
+        try {
+          const credential = firebase.auth.EmailAuthProvider.credential(linkEmail, linkPass);
+          await user.linkWithCredential(credential);
+          setShowLinkAccount(false);
+          setLinkEmail("");
+          setLinkPass("");
+        } catch (err) {
+          setLinkError(err.message.replace("Firebase: ", ""));
+        }
+      };
+
+      const handleLogout = async () => {
+        await auth.signOut();
+      };
+
+      const openForm = (item = null) => {
+        if (item) {
+          setEditingItem(item);
+          setFormData({ ...item });
+        } else {
+          setEditingItem(null);
+          setFormData({});
+        }
+        setShowForm(true);
+      };
+
+      const closeForm = () => {
+        setShowForm(false);
+        setEditingItem(null);
+        setFormData({});
+      };
+
+      const handleFormChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+      };
+
+      const handleSave = async (collection) => {
+        try {
+          if (editingItem) {
+            const { id, ...data } = formData;
+            await db.collection(collection).doc(id).update(data);
+            showToast(`${collection} actualizado`, "✏️");
+          } else {
+            await db.collection(collection).add({
+              ...formData,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+            showToast(`${collection} creado`, "✅");
+          }
+          closeForm();
+        } catch (err) {
+          showToast("Error: " + err.message, "❌");
+        }
+      };
+
+      const handleDelete = async (collection, id) => {
+        if (!confirm("¿Estás seguro de eliminar este elemento?")) return;
+        try {
+          await db.collection(collection).doc(id).delete();
+          showToast("Eliminado correctamente", "🗑️");
+        } catch (err) {
+          showToast("Error: " + err.message, "❌");
+        }
+      };
+
+      const toggleBlock = async (pageId) => {
+        try {
+          if (blockedPages.includes(pageId)) {
+            await db.collection("pageBlocks").doc(pageId).delete();
+            showToast("Página desbloqueada", "🔓");
+          } else {
+            await db.collection("pageBlocks").doc(pageId).set({ blocked: true });
+            showToast("Página bloqueada", "🔒");
+          }
+        } catch (err) {
+          showToast("Error: " + err.message, "❌");
+        }
+      };
+
+      const seedData = async () => {
+        if (!confirm("¿Poblar datos de ejemplo? Esto agregará campañas, eventos y cajitas de muestra.")) return;
+
+        const seedCampaigns = [
+          { title: "Limpieza Playa Miraflores", category: "voluntariado", emoji: "🌊", sponsor: "Backus", goal: 200, current: 0, date: "Sáb 17 Mayo", location: "Playa La Pampilla", reward: "Sorteo PS5 + Netflix 1 año", rewardEmoji: "🎮", participants: 0, tag: "NUEVA", tagColor: COLORS.verde, image: "ocean" },
+          { title: "Reforestación Lomas de Lúcumo", category: "voluntariado", emoji: "🌳", sponsor: "BCP", goal: 150, current: 0, date: "Dom 18 Mayo", location: "Pachacamac", reward: "Cajita Comunitaria + Gift Card S/200", rewardEmoji: "📦", participants: 0, tag: "NUEVA", tagColor: COLORS.tierra, image: "forest" },
+          { title: "Tutorías para niños en VES", category: "comunidad", emoji: "📚", sponsor: "Interbank", goal: 50, current: 0, date: "Vie-Dom", location: "Villa El Salvador", reward: "Puntos x3 + Libro colección", rewardEmoji: "⭐", participants: 0, tag: "NUEVA", tagColor: "#C0392B", image: "education" },
+        ];
+        for (const c of seedCampaigns) {
+          await db.collection("campaigns").add({ ...c, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+
+        const seedEvents = [
+          { title: "Noche de Salsa Colectiva", emoji: "💃", date: "Vie 16 Mayo", location: "Barranco", people: 0, category: "cultura" },
+          { title: "Hiking: Marcahuasi al Amanecer", emoji: "⛰️", date: "Sáb 17 Mayo", location: "San Pedro", people: 0, category: "aventura" },
+          { title: "Feria de Emprendedoras", emoji: "🌸", date: "Dom 18 Mayo", location: "Miraflores", people: 0, category: "social" },
+        ];
+        for (const e of seedEvents) {
+          await db.collection("events").add({ ...e, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+
+        const seedCajitas = [
+          { name: "Cajita Lectora", emoji: "📚", items: "3 libros + marcapáginas artesanal", points: 800, available: 12 },
+          { name: "Cajita Bienestar", emoji: "🌿", items: "Té orgánico + velas + jabón andino", points: 600, available: 8 },
+          { name: "Cajita Sorpresa VIP", emoji: "✨", items: "Gift cards + experiencias premium", points: 1500, available: 3 },
+        ];
+        for (const c of seedCajitas) {
+          await db.collection("cajitas").add(c);
+        }
+
+        if (!stats) {
+          await db.collection("stats").add({ voluntarios: "0", horas: "0", familias: "0", empresas: "0" });
+        }
+
+        showToast("Datos de ejemplo creados", "🌱");
+      };
+
+      // Login screen
+      if (loading) {
+        return (
+          <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.carbon }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+              <div style={{ fontFamily: FONTS.body, color: COLORS.gris }}>Cargando...</div>
+            </div>
+          </div>
+        );
+      }
+
+      if (!user) {
+        return (
+          <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.carbon, padding: 20 }}>
+            <div style={{ maxWidth: 380, width: "100%", background: "#2A2A22", borderRadius: 24, padding: "36px 28px", border: `1px solid #3A3A38` }}>
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🛡️</div>
+                <h1 style={{ fontFamily: FONTS.display, fontSize: 22, color: "#fff", marginBottom: 6 }}>Admin Panel</h1>
+                <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris }}>Red Solidaria</p>
+              </div>
+              <form onSubmit={handleLogin}>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Email</label>
+                  <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
+                    placeholder="admin@redsolidaria.com"
+                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                    required
+                  />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Contraseña</label>
+                  <input type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)}
+                    placeholder="••••••••"
+                    style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                    required
+                  />
+                </div>
+                {loginError && (
+                  <div style={{ color: COLORS.rojo, fontSize: 12, fontFamily: FONTS.body, marginBottom: 14, textAlign: "center" }}>
+                    ❌ {loginError}
+                  </div>
+                )}
+                <button type="submit" style={{
+                  width: "100%", background: COLORS.verde, color: "#fff", border: "none", borderRadius: 12,
+                  padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer",
+                }}>
+                  {isRegister ? "Registrarse" : "Ingresar"}
+                </button>
+              </form>
+              <div style={{ marginTop: 12, textAlign: "center" }}>
+                <button type="button" onClick={() => { setIsRegister(!isRegister); setLoginError(""); }}
+                  style={{ background: "none", border: "none", color: COLORS.verdeMint, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                  {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
+                </button>
+              </div>
+              <div style={{ marginTop: 12, borderTop: `1px solid #3A3A38`, paddingTop: 14 }}>
+                <button type="button" onClick={handleAnonymousLogin} style={{
+                  width: "100%", background: "none", border: `1px solid #3A3A38`, borderRadius: 12,
+                  padding: "10px 0", fontWeight: 600, fontSize: 13, cursor: "pointer", color: COLORS.gris,
+                }}>
+                  👤 Entrar como anónimo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Render item count
+      const count = (arr) => arr?.length || 0;
+
+      // Render section
+      const renderSection = () => {
+        switch (activeTab) {
+          case "dashboard": return renderDashboard();
+          case "campanas": return renderCRUD("Campaigns", "campaigns", campaigns, renderCampaignRow, campaignForm);
+          case "eventos": return renderCRUD("Events", "events", events, renderEventRow, eventForm);
+          case "muro": return renderMuro();
+          case "cajitas": return renderCRUD("Cajitas", "cajitas", cajitas, renderCajitaRow, cajitaForm);
+          case "ranking": return renderRanking();
+          case "stats": return renderStatsEdit();
+          case "bloqueo": return renderBloqueo();
+          default: return null;
+        }
+      };
+
+      // Dashboard
+      const renderDashboard = () => (
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
+            {[
+              { emoji: "🌟", label: "Campañas", value: count(campaigns), color: COLORS.verde },
+              { emoji: "🎉", label: "Eventos", value: count(events), color: COLORS.cielo },
+              { emoji: "📢", label: "Posts Muro", value: count(muroPosts), color: COLORS.tierra },
+              { emoji: "📦", label: "Cajitas", value: count(cajitas), color: COLORS.gold },
+              { emoji: "🏆", label: "Ranking", value: count(leaderboard), color: COLORS.verdeMint },
+              { emoji: "🔒", label: "Bloqueadas", value: count(blockedPages), color: "#C0392B" },
+            ].map(card => (
+              <div key={card.label} style={{ background: "#2A2A22", borderRadius: 16, padding: "20px 16px", textAlign: "center", border: `1px solid #3A3A38` }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{card.emoji}</div>
+                <div style={{ fontFamily: FONTS.mono, fontSize: 28, fontWeight: 800, color: card.color }}>{card.value}</div>
+                <div style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.gris, marginTop: 4 }}>{card.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Últimos posts del muro */}
+          <div style={{ background: "#2A2A22", borderRadius: 16, padding: 20, border: `1px solid #3A3A38`, marginBottom: 16 }}>
+            <h3 style={{ fontFamily: FONTS.body, fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#fff" }}>📢 Últimas publicaciones del Muro</h3>
+            {muroPosts.slice(0, 5).map(p => (
+              <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid #3A3A38`, gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+                  <div style={{ fontSize: 10, color: COLORS.gris }}>{p.user} · {p.sub}</div>
+                </div>
+                <span style={{ fontSize: 10, color: COLORS.gris, flexShrink: 0 }}>{(p.upvotes || 0) - (p.downvotes || 0)} pts</span>
+              </div>
+            ))}
+            {muroPosts.length === 0 && <div style={{ color: COLORS.gris, fontSize: 12, textAlign: "center", padding: 12 }}>No hay publicaciones aún</div>}
+          </div>
+
+          <button onClick={seedData} style={{
+            background: COLORS.gold, color: "#1A1A18", border: "none", borderRadius: 12,
+            padding: "12px 24px", fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>
+            🌱 Poblar datos de ejemplo
+          </button>
+        </div>
+      );
+
+      // Generic CRUD table
+      const renderCRUD = (label, collection, data, renderRow, formComponent) => (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <h2 style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff" }}>{label}</h2>
+              <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris }}>{data.length} registros</p>
+            </div>
+            <button onClick={() => openForm(null)} style={{
+              background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10,
+              padding: "10px 20px", fontWeight: 700, fontSize: 12, cursor: "pointer",
+            }}>
+              + Nuevo
+            </button>
+          </div>
+
+          {data.length === 0 ? (
+            <div style={{ background: "#2A2A22", borderRadius: 16, padding: "40px 20px", textAlign: "center", border: `1px solid #3A3A38` }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+              <div style={{ fontSize: 13, color: COLORS.gris }}>No hay {label.toLowerCase()} todavía</div>
+              <button onClick={() => openForm(null)} style={{
+                marginTop: 12, background: COLORS.verde, color: "#fff", border: "none", borderRadius: 8,
+                padding: "8px 16px", fontWeight: 600, fontSize: 12, cursor: "pointer",
+              }}>Crear primero</button>
+            </div>
+          ) : (
+            <div style={{ background: "#2A2A22", borderRadius: 16, overflow: "hidden", border: `1px solid #3A3A38` }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid #3A3A38` }}>
+                      {renderRow(true)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.map(item => (
+                      <tr key={item.id} style={{ borderBottom: `1px solid #3A3A38` }}>
+                        {renderRow(false, item, () => {
+                          openForm(item);
+                        }, () => handleDelete(collection, item.id))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {showForm && (
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+              zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            }} onClick={closeForm}>
+              <div style={{ background: "#2A2A22", borderRadius: 20, padding: "28px 24px", maxWidth: 480, width: "100%" }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                  <h3 style={{ fontFamily: FONTS.body, fontSize: 16, fontWeight: 700, color: "#fff" }}>
+                    {editingItem ? `Editar ${label}` : `Nuevo ${label}`}
+                  </h3>
+                  <button onClick={closeForm} style={{ background: "none", border: "none", fontSize: 20, color: COLORS.gris, cursor: "pointer" }}>✕</button>
+                </div>
+                {formComponent()}
+                <button onClick={() => handleSave(collection)} style={{
+                  width: "100%", marginTop: 16, background: COLORS.verde, color: "#fff", border: "none",
+                  borderRadius: 10, padding: "11px 0", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                }}>
+                  {editingItem ? "Guardar cambios" : "Crear"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+
+      // Campaign row
+      const renderCampaignRow = (isHeader, item, onEdit, onDelete) => {
+        if (isHeader) return (
+          <>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Título</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Patrocinador</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Meta</th>
+            <th style={{ padding: "10px 14px", textAlign: "center", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
+          </>
+        );
+        return (
+          <>
+            <td style={{ padding: "10px 14px", color: "#fff", fontWeight: 500 }}>{item.emoji} {item.title}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.sponsor}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.current || 0}/{item.goal}</td>
+            <td style={{ padding: "10px 14px", textAlign: "center" }}>
+              <button onClick={onEdit} style={{ background: "none", border: "none", color: COLORS.cielo, cursor: "pointer", fontSize: 16, marginRight: 8 }}>✏️</button>
+              <button onClick={onDelete} style={{ background: "none", border: "none", color: COLORS.rojo, cursor: "pointer", fontSize: 16 }}>🗑️</button>
+            </td>
+          </>
+        );
+      };
+
+      const campaignForm = () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <FormField label="Título" value={formData.title || ""} onChange={v => handleFormChange("title", v)} />
+          <FormField label="Categoría" value={formData.category || "voluntariado"} onChange={v => handleFormChange("category", v)} />
+          <FormField label="Emoji" value={formData.emoji || "🌊"} onChange={v => handleFormChange("emoji", v)} />
+          <FormField label="Patrocinador" value={formData.sponsor || ""} onChange={v => handleFormChange("sponsor", v)} />
+          <FormField label="Meta (número)" type="number" value={formData.goal || ""} onChange={v => handleFormChange("goal", Number(v))} />
+          <FormField label="Fecha" value={formData.date || ""} onChange={v => handleFormChange("date", v)} />
+          <FormField label="Ubicación" value={formData.location || ""} onChange={v => handleFormChange("location", v)} />
+          <FormField label="Recompensa" value={formData.reward || ""} onChange={v => handleFormChange("reward", v)} />
+        </div>
+      );
+
+      // Event row
+      const renderEventRow = (isHeader, item, onEdit, onDelete) => {
+        if (isHeader) return (
+          <>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Título</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Fecha</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Ubicación</th>
+            <th style={{ padding: "10px 14px", textAlign: "center", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
+          </>
+        );
+        return (
+          <>
+            <td style={{ padding: "10px 14px", color: "#fff" }}>{item.emoji} {item.title}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.date}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.location}</td>
+            <td style={{ padding: "10px 14px", textAlign: "center" }}>
+              <button onClick={onEdit} style={{ background: "none", border: "none", color: COLORS.cielo, cursor: "pointer", fontSize: 16, marginRight: 8 }}>✏️</button>
+              <button onClick={onDelete} style={{ background: "none", border: "none", color: COLORS.rojo, cursor: "pointer", fontSize: 16 }}>🗑️</button>
+            </td>
+          </>
+        );
+      };
+
+      const eventForm = () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <FormField label="Título" value={formData.title || ""} onChange={v => handleFormChange("title", v)} />
+          <FormField label="Categoría" value={formData.category || "cultura"} onChange={v => handleFormChange("category", v)} />
+          <FormField label="Emoji" value={formData.emoji || "🎉"} onChange={v => handleFormChange("emoji", v)} />
+          <FormField label="Fecha" value={formData.date || ""} onChange={v => handleFormChange("date", v)} />
+          <FormField label="Ubicación" value={formData.location || ""} onChange={v => handleFormChange("location", v)} />
+        </div>
+      );
+
+      // Cajita row
+      const renderCajitaRow = (isHeader, item, onEdit, onDelete) => {
+        if (isHeader) return (
+          <>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Nombre</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Puntos</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Disponibles</th>
+            <th style={{ padding: "10px 14px", textAlign: "center", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
+          </>
+        );
+        return (
+          <>
+            <td style={{ padding: "10px 14px", color: "#fff" }}>{item.emoji} {item.name}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.points}</td>
+            <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.available}</td>
+            <td style={{ padding: "10px 14px", textAlign: "center" }}>
+              <button onClick={onEdit} style={{ background: "none", border: "none", color: COLORS.cielo, cursor: "pointer", fontSize: 16, marginRight: 8 }}>✏️</button>
+              <button onClick={onDelete} style={{ background: "none", border: "none", color: COLORS.rojo, cursor: "pointer", fontSize: 16 }}>🗑️</button>
+            </td>
+          </>
+        );
+      };
+
+      const cajitaForm = () => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <FormField label="Nombre" value={formData.name || ""} onChange={v => handleFormChange("name", v)} />
+          <FormField label="Emoji" value={formData.emoji || "📦"} onChange={v => handleFormChange("emoji", v)} />
+          <FormField label="Items" value={formData.items || ""} onChange={v => handleFormChange("items", v)} />
+          <FormField label="Puntos" type="number" value={formData.points || ""} onChange={v => handleFormChange("points", Number(v))} />
+          <FormField label="Disponibles" type="number" value={formData.available || ""} onChange={v => handleFormChange("available", Number(v))} />
+        </div>
+      );
+
+      // Muro moderation
+      const renderMuro = () => (
+        <div>
+          <h2 style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff", marginBottom: 4 }}>Muro Comunitario 📢</h2>
+          <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris, marginBottom: 16 }}>{muroPosts.length} publicaciones · Modera el contenido</p>
+
+          {muroPosts.length === 0 ? (
+            <div style={{ background: "#2A2A22", borderRadius: 16, padding: "40px 20px", textAlign: "center", border: `1px solid #3A3A38` }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+              <div style={{ fontSize: 13, color: COLORS.gris }}>No hay publicaciones en el muro</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {muroPosts.map(p => (
+                <div key={p.id} style={{ background: "#2A2A22", borderRadius: 12, padding: "14px 16px", border: `1px solid #3A3A38` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 2 }}>{p.title}</div>
+                      <div style={{ fontSize: 11, color: COLORS.gris }}>{p.user} · {p.sub} · {(p.upvotes || 0) - (p.downvotes || 0)} pts</div>
+                    </div>
+                    <button onClick={() => handleDelete("muroPosts", p.id)} style={{
+                      background: `${COLORS.rojo}22`, color: COLORS.rojo, border: `1px solid ${COLORS.rojo}44`,
+                      borderRadius: 8, padding: "4px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                    }}>
+                      Eliminar 🗑️
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 12, color: COLORS.gris, lineHeight: 1.4, marginBottom: 8, whiteSpace: "pre-wrap" }}>{p.text}</div>
+                  <div style={{ fontSize: 10, color: COLORS.gris }}>
+                    💬 {(p.comments || []).length} comentarios
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+
+      // Ranking
+      const renderRanking = () => (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <h2 style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff" }}>Ranking 🏆</h2>
+              <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris }}>{leaderboard.length} usuarios</p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => openForm(null)} style={{
+                background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10,
+                padding: "10px 20px", fontWeight: 700, fontSize: 12, cursor: "pointer",
+              }}>+ Agregar</button>
+            </div>
+          </div>
+
+          {leaderboard.length === 0 ? (
+            <div style={{ background: "#2A2A22", borderRadius: 16, padding: "40px 20px", textAlign: "center", border: `1px solid #3A3A38` }}>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
+              <div style={{ fontSize: 13, color: COLORS.gris }}>No hay usuarios en el ranking</div>
+            </div>
+          ) : (
+            <div style={{ background: "#2A2A22", borderRadius: 16, overflow: "hidden", border: `1px solid #3A3A38` }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid #3A3A38` }}>
+                    <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Nombre</th>
+                    <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Puntos</th>
+                    <th style={{ padding: "10px 14px", textAlign: "left", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Nivel</th>
+                    <th style={{ padding: "10px 14px", textAlign: "center", color: COLORS.gris, fontWeight: 600, fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map(item => (
+                    <tr key={item.id} style={{ borderBottom: `1px solid #3A3A38` }}>
+                      <td style={{ padding: "10px 14px", color: "#fff", fontWeight: 500 }}>{item.badge} {item.name}</td>
+                      <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.points}</td>
+                      <td style={{ padding: "10px 14px", color: COLORS.gris }}>{item.level}</td>
+                      <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                        <button onClick={() => { openForm(item); }} style={{ background: "none", border: "none", color: COLORS.cielo, cursor: "pointer", fontSize: 16, marginRight: 8 }}>✏️</button>
+                        <button onClick={() => handleDelete("leaderboard", item.id)} style={{ background: "none", border: "none", color: COLORS.rojo, cursor: "pointer", fontSize: 16 }}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Leaderboard form modal */}
+          {showForm && (
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+              zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            }} onClick={closeForm}>
+              <div style={{ background: "#2A2A22", borderRadius: 20, padding: "28px 24px", maxWidth: 440, width: "100%" }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                  <h3 style={{ fontFamily: FONTS.body, fontSize: 16, fontWeight: 700, color: "#fff" }}>
+                    {editingItem ? "Editar usuario" : "Agregar usuario"}
+                  </h3>
+                  <button onClick={closeForm} style={{ background: "none", border: "none", fontSize: 20, color: COLORS.gris, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <FormField label="Nombre" value={formData.name || ""} onChange={v => handleFormChange("name", v)} />
+                  <FormField label="Puntos" type="number" value={formData.points || ""} onChange={v => handleFormChange("points", Number(v))} />
+                  <FormField label="Badge (emoji)" value={formData.badge || "⭐"} onChange={v => handleFormChange("badge", v)} />
+                  <FormField label="Nivel" value={formData.level || ""} onChange={v => handleFormChange("level", v)} />
+                </div>
+                <button onClick={() => handleSave("leaderboard")} style={{
+                  width: "100%", marginTop: 16, background: COLORS.verde, color: "#fff", border: "none",
+                  borderRadius: 10, padding: "11px 0", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                }}>
+                  {editingItem ? "Guardar cambios" : "Agregar"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+
+      // Stats editor
+      const renderStatsEdit = () => (
+        <div>
+          <h2 style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff", marginBottom: 4 }}>Estadísticas 📊</h2>
+          <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris, marginBottom: 16 }}>Edita las estadísticas que se muestran en la app pública</p>
+
+          <div style={{ background: "#2A2A22", borderRadius: 16, padding: 24, border: `1px solid #3A3A38`, maxWidth: 500 }}>
+            {!stats ? (
+              <div>
+                <p style={{ fontSize: 13, color: COLORS.gris, marginBottom: 16 }}>No hay estadísticas aún. Créalas ahora:</p>
+                <button onClick={() => { db.collection("stats").add({ voluntarios: "0", horas: "0", familias: "0", empresas: "0" }); showToast("Estadísticas creadas", "✅"); }} style={{
+                  background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10,
+                  padding: "10px 20px", fontWeight: 700, fontSize: 12, cursor: "pointer",
+                }}>Crear estadísticas</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {[
+                  { key: "voluntarios", label: "Voluntarios activos", emoji: "👥" },
+                  { key: "horas", label: "Horas de ayuda", emoji: "⏳" },
+                  { key: "familias", label: "Familias apoyadas", emoji: "🏠" },
+                  { key: "empresas", label: "Empresas aliadas", emoji: "🤝" },
+                ].map(field => (
+                  <div key={field.key}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>{field.emoji} {field.label}</label>
+                    <input type="text" value={stats?.[field.key] || ""}
+                      onChange={async (e) => {
+                        await db.collection("stats").doc(stats.id).update({ [field.key]: e.target.value });
+                        showToast(`${field.label} actualizado`, "✅");
+                      }}
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+      // Page blocking
+      const renderBloqueo = () => (
+        <div>
+          <h2 style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff", marginBottom: 4 }}>Bloqueo de Páginas 🔒</h2>
+          <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris, marginBottom: 16 }}>Controla qué secciones están visibles en la app pública</p>
+
+          <div style={{ background: "#2A2A22", borderRadius: 16, overflow: "hidden", border: `1px solid #3A3A38`, maxWidth: 500 }}>
+            {[
+              { id: "inicio", label: "Inicio", emoji: "🏡" },
+              { id: "muro", label: "Red Mural", emoji: "📢" },
+              { id: "campanas", label: "Campañas", emoji: "🌟" },
+              { id: "eventos", label: "Eventos", emoji: "🎉" },
+              { id: "ranking", label: "Ranking", emoji: "🏆" },
+              { id: "cajitas", label: "Cajitas", emoji: "📦" },
+              { id: "perfil", label: "Mi Perfil", emoji: "👤" },
+            ].map(tab => {
+              const isBlocked = blockedPages.includes(tab.id);
+              return (
+                <div key={tab.id} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "14px 18px", borderBottom: `1px solid #3A3A38`,
+                  background: isBlocked ? `${COLORS.rojo}08` : "transparent",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>{tab.emoji}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{tab.label}</div>
+                      <div style={{ fontSize: 10, color: COLORS.gris }}>{isBlocked ? "🔴 Bloqueada" : "🟢 Visible"}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => toggleBlock(tab.id)} style={{
+                    background: isBlocked ? COLORS.rojo : COLORS.verde,
+                    color: "#fff", border: "none", borderRadius: 8,
+                    padding: "6px 14px", fontWeight: 700, fontSize: 11, cursor: "pointer",
+                  }}>
+                    {isBlocked ? "Desbloquear" : "Bloquear"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 16, background: "#2A2A22", borderRadius: 12, padding: "14px 18px", border: `1px solid #3A3A38`, fontSize: 12, color: COLORS.gris, maxWidth: 500 }}>
+            💡 Las páginas bloqueadas no aparecerán en la navegación de la app pública.
+          </div>
+        </div>
+      );
+
+      // FormField helper
+      const FormField = ({ label, value, onChange, type = "text" }) => (
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 4 }}>
+            {label}
+          </label>
+          {type === "textarea" ? (
+            <textarea value={value} onChange={e => onChange(e.target.value)} rows="3"
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none", resize: "none" }}
+            />
+          ) : (
+            <input type={type} value={value} onChange={e => onChange(e.target.value)}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+            />
+          )}
+        </div>
+      );
+
+      return (
+        <div style={{ minHeight: "100vh", display: "flex" }}>
+          {/* Sidebar */}
+          <div style={{ width: 200, flexShrink: 0, background: "#22221E", borderRight: `1px solid #3A3A38`, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 16px", borderBottom: `1px solid #3A3A38` }}>
+              <div style={{ fontFamily: FONTS.display, fontSize: 16, fontWeight: 700, color: COLORS.verdeMint, display: "flex", alignItems: "center", gap: 8 }}>
+                🛡️ Admin
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.gris, marginTop: 4 }}>{user.isAnonymous ? "👤 Anónimo" : user.email}</div>
+              {user.isAnonymous && (
+                <button onClick={() => { setShowLinkAccount(true); setLinkError(""); }} style={{
+                  marginTop: 8, width: "100%", background: COLORS.gold, color: "#1A1A18", border: "none",
+                  borderRadius: 8, padding: "6px 0", fontWeight: 700, fontSize: 10, cursor: "pointer",
+                }}>
+                  Vincular email
+                </button>
+              )}
+            </div>
+            <div style={{ flex: 1, padding: "8px 0" }}>
+              {TABS.map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                    display: "flex", alignItems: "center", gap: 8, width: "100%",
+                    padding: "10px 16px", border: "none", cursor: "pointer",
+                    background: isActive ? `${COLORS.verde}22` : "transparent",
+                    color: isActive ? COLORS.verdeMint : COLORS.gris,
+                    fontWeight: isActive ? 700 : 500, fontSize: 12, textAlign: "left",
+                    fontFamily: FONTS.body, borderLeft: isActive ? `3px solid ${COLORS.verde}` : "3px solid transparent",
+                    transition: "all 0.1s",
+                  }}>
+                    <span>{tab.emoji}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ padding: "12px 16px", borderTop: `1px solid #3A3A38` }}>
+              <button onClick={handleLogout} style={{
+                width: "100%", background: "none", border: `1px solid #3A3A38`, borderRadius: 8,
+                padding: "8px 0", fontSize: 11, color: COLORS.gris, cursor: "pointer", fontFamily: FONTS.body,
+              }}>
+                🔒 Cerrar sesión
+              </button>
+            </div>
+          </div>
+
+          {/* Main content */}
+          <div style={{ flex: 1, padding: "24px 28px", overflowY: "auto", maxHeight: "100vh" }}>
+            {renderSection()}
+          </div>
+
+          {/* Link account modal */}
+          {showLinkAccount && (
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)",
+              zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            }} onClick={() => setShowLinkAccount(false)}>
+              <div style={{ maxWidth: 380, width: "100%", background: "#2A2A22", borderRadius: 24, padding: "28px 24px", border: `1px solid #3A3A38` }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ textAlign: "center", marginBottom: 20 }}>
+                  <div style={{ fontSize: 40, marginBottom: 8 }}>🔗</div>
+                  <h2 style={{ fontFamily: FONTS.display, fontSize: 18, color: "#fff", marginBottom: 4 }}>Vincular cuenta</h2>
+                  <p style={{ fontSize: 11, color: COLORS.gris }}>No perderás tus datos al cerrar sesión</p>
+                </div>
+                <form onSubmit={handleLinkAccount}>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Email</label>
+                    <input type="email" value={linkEmail} onChange={e => setLinkEmail(e.target.value)}
+                      placeholder="tucorreo@ejemplo.com"
+                      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                      required
+                    />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Contraseña</label>
+                    <input type="password" value={linkPass} onChange={e => setLinkPass(e.target.value)}
+                      placeholder="••••••••"
+                      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                      required
+                    />
+                  </div>
+                  {linkError && (
+                    <div style={{ color: COLORS.rojo, fontSize: 12, fontFamily: FONTS.body, marginBottom: 14, textAlign: "center" }}>
+                      ❌ {linkError}
+                    </div>
+                  )}
+                  <button type="submit" style={{
+                    width: "100%", background: COLORS.gold, color: "#1A1A18", border: "none", borderRadius: 12,
+                    padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer",
+                  }}>
+                    Vincular
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Toast */}
+          {toast && (
+            <div style={{
+              position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+              background: COLORS.carbon, color: "#fff", padding: "12px 24px", borderRadius: 14,
+              fontFamily: FONTS.body, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, zIndex: 600,
+              border: `1px solid #3A3A38`,
+            }}>
+              <span style={{ fontSize: 18 }}>{toast.emoji}</span> {toast.msg}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<AdminApp />);
+  </script>
+</body>
+</html>

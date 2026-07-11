@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedSolidaria</title>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #F7F0E6;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+const COLORS = {
+  tierra: "#C4612A",
+  tierraLight: "#E8845A",
+  verde: "#2D6A4F",
+  verdeLight: "#52B788",
+  verdeMint: "#95D5B2",
+  cream: "#FAF3E8",
+  creamDark: "#F0E4CC",
+  carbon: "#1A1A18",
+  gris: "#6B6B63",
+  grisLight: "#E8E4DC",
+  gold: "#D4A017",
+  rojo: "#C0392B",
+  cielo: "#4A90A4",
+};
+
+const FONTS = {
+  display: "'Playfair Display', Georgia, serif",
+  body: "'DM Sans', system-ui, sans-serif",
+  mono: "'DM Mono', monospace",
+};
+
+const mockData = {
+  user: {
+    name: "Valentina Torres",
+    avatar: "VT",
+    points: 2840,
+    level: "Guardiana Solidaria",
+    badge: "🌿",
+    rank: 12,
+    verified: true,
+    actividades: 18,
+    impacto: "340 personas",
+  },
+  campaigns: [
+    {
+      id: 1,
+      title: "Limpieza Playa Miraflores",
+      category: "voluntariado",
+      emoji: "🌊",
+      sponsor: "Backus",
+      sponsorLogo: "B",
+      goal: 200,
+      current: 143,
+      date: "Sáb 17 Mayo",
+      location: "Playa La Pampilla",
+      reward: "Sorteo PS5 + Netflix 1 año",
+      rewardEmoji: "🎮",
+      participants: 143,
+      tag: "TRENDING",
+      tagColor: COLORS.tierra,
+      image: "ocean",
+    },
+    {
+      id: 2,
+      title: "Reforestación Lomas de Lúcumo",
+      category: "voluntariado",
+      emoji: "🌳",
+      sponsor: "BCP",
+      sponsorLogo: "BCP",
+      goal: 150,
+      current: 89,
+      date: "Dom 18 Mayo",
+      location: "Pachacamac",
+      reward: "Cajita Comunitaria + Gift Card S/200",
+      rewardEmoji: "📦",
+      participants: 89,
+      tag: "NUEVO",
+      tagColor: COLORS.verde,
+      image: "forest",
+    },
+    {
+      id: 3,
+      title: "Tutorías para niños en Villa El Salvador",
+      category: "comunidad",
+      emoji: "📚",
+      sponsor: "Interbank",
+      sponsorLogo: "IB",
+      goal: 50,
+      current: 38,
+      date: "Vie-Dom",
+      location: "Villa El Salvador",
+      reward: "Puntos x3 + Libro colección",
+      rewardEmoji: "⭐",
+      participants: 38,
+      tag: "URGENTE",
+      tagColor: "#C0392B",
+      image: "education",
+    },
+  ],
+  events: [
+    { id: 1, title: "Noche de Salsa Colectiva", emoji: "💃", date: "Vie 16 Mayo", location: "Barranco", people: 67, category: "cultura", isExample: true },
+    { id: 2, title: "Hiking: Marcahuasi al Amanecer", emoji: "⛰️", date: "Sáb 17 Mayo", location: "San Pedro", people: 24, category: "aventura", isExample: true },
+    { id: 3, title: "Feria de Emprendedoras", emoji: "🌸", date: "Dom 18 Mayo", location: "Miraflores", people: 110, category: "social", isExample: true },
+    { id: 4, title: "Visita Museo Larco + Arte", emoji: "🏛️", date: "Sáb 24 Mayo", location: "Pueblo Libre", people: 31, category: "cultura", isExample: true },
+    { id: 5, title: "Tech + Impacto: Meetup", emoji: "💻", date: "Jue 22 Mayo", location: "Miraflores", people: 88, category: "tech", isExample: true },
+    { id: 6, title: "Yoga en la Playa", emoji: "🧘", date: "Dom 25 Mayo", location: "La Costa Verde", people: 45, category: "bienestar", isExample: true },
+  ],
+  feed: [
+    { id: 1, user: "Marco R.", avatar: "MR", action: "completó", activity: "Limpieza Costa Verde", time: "hace 2h", points: "+120", emoji: "🌊", color: COLORS.cielo },
+    { id: 2, user: "Sofía L.", avatar: "SL", action: "ayudó en", activity: "Olla Común San Juan", time: "hace 4h", points: "+80", emoji: "🍲", color: COLORS.tierra },
+    { id: 3, user: "Diego M.", avatar: "DM", action: "ganó insignia en", activity: "Tutor del Mes", time: "ayer", points: "🏆", emoji: "📚", color: COLORS.gold },
+    { id: 4, user: "Camila V.", avatar: "CV", action: "participó en", activity: "Feria Emprendedoras", time: "ayer", points: "+60", emoji: "🌸", color: COLORS.verde },
+  ],
+  leaderboard: [
+    { rank: 1, name: "Andrés Q.", points: 5200, badge: "🦁", level: "Héroe Comunitario" },
+    { rank: 2, name: "Luciana F.", points: 4800, badge: "🌺", level: "Protectora Social" },
+    { rank: 3, name: "Ricardo P.", points: 4100, badge: "⚡", level: "Agente de Cambio" },
+    { rank: 4, name: "Mia S.", points: 3700, badge: "🦋", level: "Embajadora Verde" },
+    { rank: 12, name: "Valentina T.", points: 2840, badge: "🌿", level: "Guardiana Solidaria", isUser: true },
+  ],
+  cajitas: [
+    { id: 1, name: "Cajita Lectora", emoji: "📚", items: "3 libros + marcapáginas artesanal", points: 800, available: 12 },
+    { id: 2, name: "Cajita Bienestar", emoji: "🌿", items: "Té orgánico + velas + jabón andino", points: 600, available: 8 },
+    { id: 3, name: "Cajita Sorpresa VIP", emoji: "✨", items: "Gift cards + experiencias premium", points: 1500, available: 3 },
+  ],
+  stats: {
+    voluntarios: "12,340",
+    horas: "48,200",
+    familias: "3,180",
+    empresas: "47",
+  },
+};
+
+const categoryColors = {
+  cultura: COLORS.tierra,
+  aventura: COLORS.verde,
+  social: COLORS.gold,
+  tech: COLORS.cielo,
+  bienestar: COLORS.verdeLight,
+};
+
+function ProgressBar({ current, goal, color = COLORS.verde }) {
+  const pct = Math.min(100, Math.round((current / goal) * 100));
+  return (
+    <div style={{ width: "100%", background: COLORS.grisLight, borderRadius: 99, height: 7, overflow: "hidden" }}>
+      <div
+        style={{
+          width: `${pct}%`,
+          height: "100%",
+          background: `linear-gradient(90deg, ${color}, ${color}cc)`,
+          borderRadius: 99,
+          transition: "width 1s cubic-bezier(.4,0,.2,1)",
+          boxShadow: `0 0 8px ${color}66`,
+        }}
+      />
+    </div>
+  );
+}
+
+function Avatar({ initials, size = 36, color = COLORS.verde, emoji }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      background: `linear-gradient(135deg, ${color}22, ${color}44)`,
+      border: `2px solid ${color}55`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.33, fontWeight: 700, color: color,
+      fontFamily: FONTS.body, flexShrink: 0,
+    }}>
+      {emoji || initials}
+    </div>
+  );
+}
+
+function Badge({ text, color, emoji }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      background: `${color}18`, color: color,
+      border: `1px solid ${color}33`,
+      borderRadius: 99, padding: "2px 10px",
+      fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+      fontFamily: FONTS.body, textTransform: "uppercase",
+    }}>
+      {emoji && <span>{emoji}</span>}{text}
+    </span>
+  );
+}
+
+function CampaignCard({ campaign, onJoin, isExample }) {
+  const pct = Math.round((campaign.current / campaign.goal) * 100);
+  const bgMap = {
+    ocean: `radial-gradient(ellipse at 70% 30%, ${COLORS.cielo}33 0%, transparent 70%)`,
+    forest: `radial-gradient(ellipse at 30% 70%, ${COLORS.verde}33 0%, transparent 70%)`,
+    education: `radial-gradient(ellipse at 50% 50%, ${COLORS.gold}22 0%, transparent 70%)`,
+  };
+  return (
+    <div style={{
+      background: COLORS.cream,
+      border: `1px solid ${COLORS.creamDark}`,
+      borderRadius: 20,
+      overflow: "hidden",
+      transition: "transform 0.2s, box-shadow 0.2s",
+      cursor: "pointer",
+      position: "relative",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
+    >
+      <div style={{
+        height: 100, background: bgMap[campaign.image] || bgMap.ocean,
+        backgroundColor: `${COLORS.grisLight}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 48, position: "relative",
+      }}>
+        {campaign.emoji}
+        <div style={{ position: "absolute", top: 10, left: 12, display: "flex", gap: 4 }}>
+          <Badge text={campaign.tag} color={campaign.tagColor} />
+          {isExample && <Badge text="EJEMPLO" color={COLORS.gris} emoji="🔍" />}
+        </div>
+        <div style={{
+          position: "absolute", top: 10, right: 12,
+          background: COLORS.cream, borderRadius: 8, padding: "3px 8px",
+          fontSize: 11, fontWeight: 700, color: COLORS.gris, fontFamily: FONTS.body,
+          border: `1px solid ${COLORS.creamDark}`,
+        }}>
+          Patrocinado por <strong style={{ color: COLORS.carbon }}>{campaign.sponsor}</strong>
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 18px 18px" }}>
+        <h3 style={{ margin: "0 0 6px", fontFamily: FONTS.display, fontSize: 16, color: COLORS.carbon, lineHeight: 1.3 }}>
+          {campaign.title}
+        </h3>
+        <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: COLORS.gris, fontFamily: FONTS.body }}>📅 {campaign.date}</span>
+          <span style={{ fontSize: 12, color: COLORS.gris, fontFamily: FONTS.body }}>📍 {campaign.location}</span>
+          <span style={{ fontSize: 12, color: COLORS.gris, fontFamily: FONTS.body }}>👥 {campaign.participants} unidos</span>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <span style={{ fontSize: 12, fontFamily: FONTS.body, color: COLORS.gris }}>Meta colectiva</span>
+            <span style={{ fontSize: 12, fontFamily: FONTS.mono, fontWeight: 700, color: COLORS.verde }}>{pct}%</span>
+          </div>
+          <ProgressBar current={campaign.current} goal={campaign.goal} color={COLORS.verde} />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+            <span style={{ fontSize: 11, color: COLORS.gris, fontFamily: FONTS.body }}>{campaign.current} participantes</span>
+            <span style={{ fontSize: 11, color: COLORS.gris, fontFamily: FONTS.body }}>Meta: {campaign.goal}</span>
+          </div>
+        </div>
+
+        <div style={{
+          background: `${COLORS.gold}12`,
+          border: `1px solid ${COLORS.gold}33`,
+          borderRadius: 10, padding: "8px 12px",
+          display: "flex", alignItems: "center", gap: 8, marginBottom: 14,
+        }}>
+          <span style={{ fontSize: 18 }}>{campaign.rewardEmoji}</span>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gold, letterSpacing: "0.06em", fontFamily: FONTS.body, textTransform: "uppercase" }}>Al completar la meta</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.carbon, fontFamily: FONTS.body }}>{campaign.reward}</div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onJoin(campaign)}
+          style={{
+            width: "100%",
+            background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
+            color: "#fff",
+            border: "none",
+            borderRadius: 12,
+            padding: "11px 0",
+            fontSize: 14,
+            fontWeight: 700,
+            fontFamily: FONTS.body,
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Unirme ahora →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EventPill({ event, onToggleAttend, isJoined, isExample }) {
+  const color = categoryColors[event.category] || COLORS.gris;
+  return (
+    <div style={{
+      background: COLORS.cream,
+      border: isJoined ? `2px solid ${color}` : `1px solid ${COLORS.creamDark}`,
+      borderRadius: 16,
+      padding: "14px 16px",
+      display: "flex",
+      alignItems: "center",
+      gap: 14,
+      cursor: "pointer",
+      transition: "all 0.2s",
+      boxShadow: isJoined ? `0 4px 12px ${color}15` : "none"
+    }}
+      onMouseEnter={e => { if(!isJoined) { e.currentTarget.style.borderColor = color; e.currentTarget.style.background = `${color}08`; } }}
+      onMouseLeave={e => { if(!isJoined) { e.currentTarget.style.borderColor = COLORS.creamDark; e.currentTarget.style.background = COLORS.cream; } }}
+    >
+      <div style={{
+        width: 46, height: 46, borderRadius: 12,
+        background: `${color}18`, display: "flex", alignItems: "center",
+        justifyContent: "center", fontSize: 22, flexShrink: 0,
+        border: `1px solid ${color}33`, position: "relative",
+      }}>
+        {event.emoji}
+        {isExample && <span style={{ position: "absolute", bottom: -4, right: -4, fontSize: 10, background: COLORS.gris, color: "#fff", borderRadius: 4, padding: "0 4px", lineHeight: "14px" }}>🔍</span>}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: FONTS.body, fontWeight: 700, fontSize: 13, color: COLORS.carbon, marginBottom: 2 }}>
+          {event.title} {isJoined && <span style={{fontSize: 11, color: color, fontWeight: 700}}>✓ Inscrito</span>}
+        </div>
+        <div style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.gris }}>📅 {event.date} · 📍 {event.location}</div>
+      </div>
+      <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+        <div>
+          <span style={{ fontFamily: FONTS.body, fontSize: 13, color: color, fontWeight: 700 }}>{event.people}</span>
+          <span style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris, marginLeft: 2 }}>van</span>
+        </div>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onToggleAttend(event.id); }}
+          style={{
+            background: isJoined ? `${color}22` : color,
+            color: isJoined ? color : "#fff",
+            border: isJoined ? `1px solid ${color}` : "none",
+            borderRadius: 8,
+            padding: "4px 10px",
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: FONTS.body,
+            transition: "all 0.1s"
+          }}
+        >
+          {isJoined ? "Salir" : "Asistir"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FeedItem({ item }) {
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 0", borderBottom: `1px solid ${COLORS.grisLight}` }}>
+      <Avatar initials={item.avatar} size={38} color={item.color} />
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontFamily: FONTS.body, fontSize: 13, color: COLORS.carbon, lineHeight: 1.5 }}>
+          <strong>{item.user}</strong> {item.action} <span style={{ color: item.color, fontWeight: 600 }}>{item.activity}</span> {item.emoji}
+        </p>
+        <span style={{ fontSize: 11, color: COLORS.gris, fontFamily: FONTS.body }}>{item.time}</span>
+      </div>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 700, color: COLORS.verde, flexShrink: 0, marginTop: 2 }}>{item.points}</span>
+    </div>
+  );
+}
+
+function StatCard({ value, label, emoji, color }) {
+  return (
+    <div style={{
+      background: COLORS.cream,
+      border: `1px solid ${COLORS.creamDark}`,
+      borderRadius: 16,
+      padding: "20px 16px",
+      textAlign: "center",
+      flex: "1 1 0",
+      minWidth: 120,
+    }}>
+      <div style={{ fontSize: 28, marginBottom: 6 }}>{emoji}</div>
+      <div style={{ fontFamily: FONTS.display, fontSize: 24, fontWeight: 700, color: color, marginBottom: 4 }}>{value}</div>
+      <div style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris }}>{label}</div>
+    </div>
+  );
+}
+
+/* === SISTEMA DE SUBREDDITS / CATEGORÍAS === */
+const SUBCATEGORIAS = {
+  "r/Adopción": { emoji: "🐾", color: COLORS.tierra, desc: "Mascotas que buscan hogar" },
+  "r/Carpooling": { emoji: "🚗", color: COLORS.cielo, desc: "Comparte viajes y ahorra" },
+  "r/Anuncios": { emoji: "📢", color: COLORS.gold, desc: "Avisos importantes para la comunidad" },
+  "r/AyudaMutua": { emoji: "🤝", color: COLORS.rojo, desc: "Pide o brinda ayuda vecinal" },
+  "r/Libre": { emoji: "💬", color: COLORS.verde, desc: "Conversación libre" },
+  "r/Eventos": { emoji: "🎉", color: COLORS.verdeLight, desc: "Eventos y quedadas" },
+};
+
+/* === MURO SOCIAL CON FIREBASE === */
+function MuroSocial({ onAddPoints, userKarma, setUserKarma, firebaseUser, showToast, statsData }) {
+  const getName = () => firebaseUser?.email?.split('@')[0] || "Anónimo";
+  const getAvatar = () => getName().substring(0, 2).toUpperCase();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("hot");
+  const [selectedSub, setSelectedSub] = useState("Todos");
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newText, setNewText] = useState("");
+  const [newSub, setNewSub] = useState("r/Libre");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [expandedPostId, setExpandedPostId] = useState(null);
+  const [commentInputs, setCommentInputs] = useState({});
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editText, setEditText] = useState("");
+  const [showShareModal, setShowShareModal] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [notifications, setNotifications] = useState([]);
+
+  // Cargar posts desde Firebase en tiempo real
+  useEffect(() => {
+    const unsubscribe = db.collection("muroPosts")
+      .orderBy("createdAt", "desc")
+      .onSnapshot(snapshot => {
+        const postsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          comments: doc.data().comments || []
+        }));
+        setPosts(postsData);
+        setLoading(false);
+      }, error => {
+        console.error("Error al cargar posts:", error);
+        setLoading(false);
+      });
+    return () => unsubscribe();
+  }, []);
+
+  const sortedPosts = [...posts].sort((a, b) => {
+    const aScore = (a.upvotes || 0) - (a.downvotes || 0) + (a.karma || 0);
+    const bScore = (b.upvotes || 0) - (b.downvotes || 0) + (b.karma || 0);
+    if (sortBy === "hot") return bScore - aScore;
+    if (sortBy === "new") return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+    if (sortBy === "top") return ((b.upvotes || 0) - (b.downvotes || 0)) - ((a.upvotes || 0) - (a.downvotes || 0));
+    return 0;
+  });
+
+  const filteredPosts = sortedPosts.filter(p => {
+    const matchesSub = selectedSub === "Todos" || p.sub === selectedSub;
+    const matchesSearch = (p.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (p.text || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSub && matchesSearch;
+  });
+
+  const handleVote = async (postId, type) => {
+    try {
+      const postRef = db.collection("muroPosts").doc(postId);
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      const isUndo = post.userVote === type;
+      const delta = type === 'up' ? 1 : -1;
+
+      await db.runTransaction(async transaction => {
+        const doc = await transaction.get(postRef);
+        if (!doc.exists) return;
+        const data = doc.data();
+        let upvotes = data.upvotes || 0;
+        let downvotes = data.downvotes || 0;
+
+        if (isUndo) {
+          if (type === 'up') upvotes = Math.max(0, upvotes - 1);
+          else downvotes = Math.max(0, downvotes - 1);
+        } else {
+          if (data.userVote === 'up' && type === 'down') { upvotes = Math.max(0, upvotes - 1); downvotes += 1; }
+          else if (data.userVote === 'down' && type === 'up') { downvotes = Math.max(0, downvotes - 1); upvotes += 1; }
+          else if (type === 'up') upvotes += 1;
+          else downvotes += 1;
+        }
+
+        transaction.update(postRef, { upvotes, downvotes, userVote: isUndo ? null : type });
+      });
+
+      setUserKarma(prev => prev + (isUndo ? -delta : delta));
+      if (delta > 0) onAddPoints(2, "Voto positivo ↑");
+    } catch (err) {
+      showToast("Error al votar: " + err.message, "❌");
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!newTitle.trim()) return;
+    try {
+      const postData = {
+        user: getName(), avatar: getAvatar(), color: COLORS.verde, karma: 0,
+        sub: newSub, title: newTitle, text: newText || "...",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        time: "Ahora mismo",
+        upvotes: 1, downvotes: 0, comments: [], userVote: 'up',
+        image: newImageUrl || SUBCATEGORIAS[newSub]?.emoji || "💬",
+        imageUrl: newImageUrl || "",
+        imageBg: `${SUBCATEGORIAS[newSub]?.color || COLORS.verde}22`,
+      };
+      await db.collection("muroPosts").add(postData);
+      setNewTitle(""); setNewText(""); setNewImageUrl(""); setShowCreatePost(false);
+      onAddPoints(30, "¡Publicación creada! 🚀");
+      setNotifications(prev => [{ id: Date.now(), text: "Tu publicación está en línea", time: "Ahora" }, ...prev]);
+    } catch (err) {
+      showToast("Error al publicar: " + err.message, "❌");
+    }
+  };
+
+  const handleEditPost = async () => {
+    if (!editingPostId) return;
+    try {
+      await db.collection("muroPosts").doc(editingPostId).update({ title: editTitle, text: editText });
+      setEditingPostId(null);
+      onAddPoints(5, "Publicación editada ✏️");
+    } catch (err) {
+      showToast("Error al editar: " + err.message, "❌");
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      await db.collection("muroPosts").doc(postId).delete();
+      setExpandedPostId(null);
+      onAddPoints(-5, "Publicación eliminada 🗑️");
+    } catch (err) {
+      showToast("Error al eliminar: " + err.message, "❌");
+    }
+  };
+
+  const handleAddComment = async (postId) => {
+    const text = commentInputs[postId]?.trim();
+    if (!text) return;
+    try {
+      const postRef = db.collection("muroPosts").doc(postId);
+      const newComment = { id: Date.now(), user: getName(), text, time: "Ahora mismo", upvotes: 0 };
+      await postRef.update({
+        comments: firebase.firestore.FieldValue.arrayUnion(newComment)
+      });
+      setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+      onAddPoints(3, "Comentario agregado 💬");
+    } catch (err) {
+      showToast("Error al comentar: " + err.message, "❌");
+    }
+  };
+
+  const renderSortButton = (id, label) => (
+    <button onClick={() => setSortBy(id)} style={{
+      padding: "6px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700,
+      border: sortBy === id ? `2px solid ${COLORS.verde}` : `1px solid ${COLORS.creamDark}`,
+      background: sortBy === id ? COLORS.verde : "transparent",
+      color: sortBy === id ? "#fff" : COLORS.gris, cursor: "pointer", fontFamily: FONTS.body,
+      transition: "all 0.15s",
+    }}>{label}</button>
+  );
+
+  const renderSubButton = (sub) => {
+    const info = SUBCATEGORIAS[sub];
+    const isSelected = selectedSub === sub;
+    return (
+      <button key={sub} onClick={() => setSelectedSub(sub)} style={{
+        display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 12px",
+        borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left",
+        background: isSelected ? `${info.color}18` : "transparent",
+        color: isSelected ? info.color : COLORS.gris, fontWeight: isSelected ? 700 : 500,
+        fontSize: 12, fontFamily: FONTS.body, transition: "all 0.1s",
+      }}
+        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = `${COLORS.grisLight}66`; }}
+        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+      >
+        <span>{info.emoji}</span>
+        <span>{sub}</span>
+      </button>
+    );
+  };
+
+  const getScore = (p) => (p.upvotes || 0) - (p.downvotes || 0);
+
+  return (
+    <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 0 }}>
+      {/* Sidebar izquierdo: categorías */}
+      <div style={{ width: 180, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 84 }}>
+        <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 12 }}>
+          Comunidades
+        </div>
+        <button onClick={() => setSelectedSub("Todos")} style={{
+          display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 10, border: "none",
+          cursor: "pointer", textAlign: "left",
+          background: selectedSub === "Todos" ? `${COLORS.verde}18` : "transparent",
+          color: selectedSub === "Todos" ? COLORS.verde : COLORS.gris,
+          fontWeight: selectedSub === "Todos" ? 700 : 500, fontSize: 12, fontFamily: FONTS.body,
+        }}>
+          <span>🔥</span><span>r/Todos</span>
+        </button>
+        {Object.keys(SUBCATEGORIAS).map(renderSubButton)}
+
+        <div style={{ marginTop: 12, borderTop: `1px solid ${COLORS.creamDark}`, paddingTop: 12 }}>
+          <button onClick={() => setShowCreatePost(true)} style={{
+            width: "100%", background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
+            color: "#fff", border: "none", borderRadius: 12, padding: "10px 0",
+            fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONTS.body,
+          }}>
+            + Nueva Publicación
+          </button>
+        </div>
+
+        <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.gold}10`, borderRadius: 12, border: `1px solid ${COLORS.gold}22` }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tu Karma</div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: 20, fontWeight: 800, color: COLORS.gold }}>{userKarma}</div>
+          <div style={{ fontSize: 10, color: COLORS.gris }}>puntos de reputación</div>
+        </div>
+
+        {notifications.length > 0 && (
+          <div style={{ marginTop: 12, padding: "12px 14px", background: `${COLORS.cielo}10`, borderRadius: 12, border: `1px solid ${COLORS.cielo}22` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Notificaciones</div>
+            {notifications.slice(0, 3).map(n => (
+              <div key={n.id} style={{ fontSize: 11, color: COLORS.carbon, marginBottom: 4, display: "flex", gap: 4 }}>
+                <span style={{ color: COLORS.cielo }}>●</span>
+                <span>{n.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Feed principal */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ marginBottom: 16 }}>
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="🔍 Buscar en la Red Mural..."
+            style={{ width: "100%", padding: "10px 16px", borderRadius: 12, border: `1px solid ${COLORS.creamDark}`,
+              fontFamily: FONTS.body, fontSize: 13, outline: "none", background: COLORS.cream,
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          {renderSortButton("hot", "🔥 Hot")}
+          {renderSortButton("new", "✨ Nuevo")}
+          {renderSortButton("top", "🏆 Top")}
+          <span style={{ flex: 1 }} />
+          {selectedSub !== "Todos" && (
+            <span style={{ fontSize: 11, color: COLORS.gris, alignSelf: "center", fontFamily: FONTS.body }}>
+              {SUBCATEGORIAS[selectedSub]?.emoji} {SUBCATEGORIAS[selectedSub]?.desc}
+            </span>
+          )}
+        </div>
+
+        {showCreatePost && (
+          <div style={{ background: "#fff", border: `2px solid ${COLORS.verde}55`, borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: `0 8px 24px ${COLORS.verde}15` }}>
+            <h3 style={{ fontFamily: FONTS.display, fontSize: 16, marginBottom: 14, color: COLORS.carbon }}>
+              Crear publicación 📝
+            </h3>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              {Object.keys(SUBCATEGORIAS).map(sub => {
+                const info = SUBCATEGORIAS[sub];
+                return (
+                  <button key={sub} onClick={() => setNewSub(sub)} style={{
+                    padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                    border: newSub === sub ? `2px solid ${info.color}` : `1px solid ${COLORS.creamDark}`,
+                    background: newSub === sub ? `${info.color}18` : COLORS.cream,
+                    color: newSub === sub ? info.color : COLORS.gris, fontFamily: FONTS.body,
+                  }}>{info.emoji} {sub}</button>
+                );
+              })}
+            </div>
+            <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
+              placeholder="Título de tu publicación..."
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${COLORS.creamDark}`,
+                fontSize: 14, fontFamily: FONTS.body, fontWeight: 700, outline: "none", marginBottom: 10 }}
+            />
+            <textarea value={newText} onChange={e => setNewText(e.target.value)}
+              placeholder="Cuéntale a la comunidad (opcional)..."
+              rows="3"
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${COLORS.creamDark}`,
+                fontSize: 13, fontFamily: FONTS.body, outline: "none", resize: "none", marginBottom: 10 }}
+            />
+            <input type="text" value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)}
+              placeholder="URL de imagen (opcional)"
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: `1px solid ${COLORS.creamDark}`,
+                fontSize: 13, fontFamily: FONTS.body, outline: "none", marginBottom: 12 }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={handleCreatePost} style={{
+                background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10,
+                padding: "10px 24px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
+              }}>Publicar →</button>
+              <button onClick={() => setShowCreatePost(false)} style={{
+                background: COLORS.grisLight, color: COLORS.gris, border: "none", borderRadius: 10,
+                padding: "10px 20px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
+              }}>Cancelar</button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: COLORS.gris, fontFamily: FONTS.body }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Cargando publicaciones...</div>
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 20px", color: COLORS.gris, fontFamily: FONTS.body }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📢</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>No hay publicaciones todavía</div>
+              <div style={{ fontSize: 12 }}>¡Sé el primero en compartir algo con la comunidad!</div>
+              <button onClick={() => setShowCreatePost(true)} style={{
+                marginTop: 16, background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10,
+                padding: "10px 24px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: FONTS.body,
+              }}>Crear primera publicación</button>
+            </div>
+          ) : filteredPosts.map(post => {
+            const score = getScore(post);
+            const isExpanded = expandedPostId === post.id;
+            const isEditing = editingPostId === post.id;
+            const isOwner = post.avatar === getAvatar();
+
+            return (
+              <div key={post.id} style={{
+                background: "#fff", border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, overflow: "hidden",
+                transition: "transform 0.15s, box-shadow 0.15s",
+                boxShadow: isExpanded ? `0 8px 20px rgba(0,0,0,0.06)` : "none",
+              }}>
+                <div style={{ display: "flex" }}>
+                  <div style={{
+                    width: 40, background: `${COLORS.grisLight}44`, display: "flex", flexDirection: "column",
+                    alignItems: "center", padding: "10px 4px", gap: 2, flexShrink: 0,
+                  }}>
+                    <button onClick={() => handleVote(post.id, 'up')} style={{
+                      background: post.userVote === 'up' ? `${COLORS.verde}22` : "none",
+                      border: "none", cursor: "pointer", fontSize: 16, padding: 2, lineHeight: 1,
+                      color: post.userVote === 'up' ? COLORS.verde : COLORS.gris,
+                    }}>▲</button>
+                    <span style={{
+                      fontFamily: FONTS.mono, fontSize: 12, fontWeight: 800,
+                      color: score > 0 ? COLORS.verde : score < 0 ? COLORS.rojo : COLORS.gris,
+                    }}>{score}</span>
+                    <button onClick={() => handleVote(post.id, 'down')} style={{
+                      background: post.userVote === 'down' ? `${COLORS.rojo}22` : "none",
+                      border: "none", cursor: "pointer", fontSize: 16, padding: 2, lineHeight: 1,
+                      color: post.userVote === 'down' ? COLORS.rojo : COLORS.gris,
+                    }}>▼</button>
+                  </div>
+
+                  <div style={{ flex: 1, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <Avatar initials={post.avatar} size={26} color={post.color} />
+                        <span style={{ fontFamily: FONTS.body, fontWeight: 600, fontSize: 12, color: COLORS.carbon }}>{post.user}</span>
+                        <span style={{ fontSize: 10, color: COLORS.gris }}>·</span>
+                        <Badge text={post.sub} color={SUBCATEGORIAS[post.sub]?.color || COLORS.gris} emoji={SUBCATEGORIAS[post.sub]?.emoji} />
+                        <span style={{ fontSize: 10, color: COLORS.gris, fontFamily: FONTS.body }}>{post.time}</span>
+                      </div>
+                      {isOwner && (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => { setEditingPostId(post.id); setEditTitle(post.title); setEditText(post.text); }} style={{ background: "none", border: "none", fontSize: 11, color: COLORS.gris, cursor: "pointer", padding: "2px 4px" }}>✏️</button>
+                          <button onClick={() => handleDeletePost(post.id)} style={{ background: "none", border: "none", fontSize: 11, color: COLORS.gris, cursor: "pointer", padding: "2px 4px" }}>🗑️</button>
+                        </div>
+                      )}
+                    </div>
+
+                    {post.imageUrl ? (
+                      <img src={post.imageUrl} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 12, marginBottom: 10, border: `1px solid ${COLORS.creamDark}` }}
+                        onError={e => { e.target.style.display = "none" }}
+                      />
+                    ) : post.image && (
+                      <div style={{
+                        width: "100%", height: 80, borderRadius: 12, marginBottom: 10,
+                        background: post.imageBg, display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 36, border: `1px solid ${COLORS.creamDark}`,
+                      }}>
+                        {post.image}
+                      </div>
+                    )}
+
+                    {isEditing ? (
+                      <div style={{ marginBottom: 10 }}>
+                        <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1px solid ${COLORS.creamDark}`, fontSize: 14, fontWeight: 700, fontFamily: FONTS.body, marginBottom: 6, outline: "none" }}
+                        />
+                        <textarea value={editText} onChange={e => setEditText(e.target.value)}
+                          rows="2"
+                          style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1px solid ${COLORS.creamDark}`, fontSize: 13, fontFamily: FONTS.body, outline: "none", resize: "none" }}
+                        />
+                        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                          <button onClick={handleEditPost} style={{ background: COLORS.verde, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Guardar</button>
+                          <button onClick={() => setEditingPostId(null)} style={{ background: COLORS.grisLight, color: COLORS.gris, border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, cursor: "pointer" }}>Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 style={{ fontFamily: FONTS.body, fontSize: 15, fontWeight: 700, color: COLORS.carbon, margin: "0 0 6px 0", lineHeight: 1.3 }}>{post.title}</h3>
+                        <p style={{ fontFamily: FONTS.body, fontSize: 13, color: COLORS.gris, lineHeight: 1.5, margin: "0 0 12px 0", whiteSpace: "pre-wrap" }}>{post.text}</p>
+                      </>
+                    )}
+
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", borderTop: `1px solid ${COLORS.grisLight}44`, paddingTop: 10 }}>
+                      <button onClick={() => setExpandedPostId(isExpanded ? null : post.id)} style={{
+                        background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+                        fontSize: 12, color: COLORS.gris, fontFamily: FONTS.body, fontWeight: 600,
+                      }}>
+                        💬 {(post.comments || []).length} comentarios
+                      </button>
+                      <button onClick={() => setShowShareModal(post.id)} style={{
+                        background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+                        fontSize: 12, color: COLORS.gris, fontFamily: FONTS.body, fontWeight: 600,
+                      }}>
+                        🔗 Compartir
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${COLORS.creamDark}` }}>
+                        {(post.comments || []).length === 0 && (
+                          <div style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris, marginBottom: 10 }}>
+                            No hay comentarios aún. ¡Sé el primero en responder!
+                          </div>
+                        )}
+                        {(post.comments || []).map(c => (
+                          <div key={c.id} style={{
+                            background: `${COLORS.grisLight}44`, padding: "10px 14px", borderRadius: 12,
+                            marginBottom: 8, border: `1px solid ${COLORS.creamDark}44`,
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.carbon }}>{c.user}</span>
+                              <span style={{ fontSize: 10, color: COLORS.gris }}>{c.time}</span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: 12, fontFamily: FONTS.body, color: COLORS.carbon }}>{c.text}</p>
+                          </div>
+                        ))}
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <input type="text" placeholder="Escribe un comentario..."
+                            value={commentInputs[post.id] || ""}
+                            onChange={e => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && handleAddComment(post.id)}
+                            style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `1px solid ${COLORS.creamDark}`, fontSize: 12, fontFamily: FONTS.body, outline: "none" }}
+                          />
+                          <button onClick={() => handleAddComment(post.id)} style={{
+                            background: COLORS.verde, color: "#fff", border: "none", borderRadius: 8,
+                            padding: "0 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                          }}>Enviar</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {showShareModal === post.id && (
+                      <div style={{ marginTop: 10, padding: "10px 14px", background: `${COLORS.cielo}08`, borderRadius: 10, border: `1px solid ${COLORS.cielo}22` }}>
+                        <div style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.gris, marginBottom: 6 }}>Compartir esta publicación:</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          {["📱 WhatsApp", "🐦 Twitter", "📋 Copiar enlace", "🔗 Comunidad"].map(opt => (
+                            <button key={opt} onClick={() => { setShowShareModal(null); onAddPoints(1, "Enlace compartido 🔗"); }} style={{
+                              background: `${COLORS.creamDark}66`, border: "none", borderRadius: 8,
+                              padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: FONTS.body,
+                            }}>{opt}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sidebar derecho: tendencias */}
+      <div style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 84 }}>
+        <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
+          <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            🔥 Tendencias
+          </div>
+          {[
+            { tag: "#AyudaMutua", posts: 0 },
+            { tag: "#Adopción", posts: 0 },
+            { tag: "#Carpooling", posts: 0 },
+            { tag: "#Voluntariado", posts: 0 },
+            { tag: "#LimaNorte", posts: 0 },
+          ].map(t => (
+            <div key={t.tag} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${COLORS.creamDark}44` }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.carbon, cursor: "pointer", fontFamily: FONTS.body }}
+                onMouseEnter={e => e.currentTarget.style.color = COLORS.verde}
+                onMouseLeave={e => e.currentTarget.style.color = COLORS.carbon}
+              >{t.tag}</span>
+              <span style={{ fontSize: 10, color: COLORS.gris }}>{t.posts} posts</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: COLORS.cream, border: `1px solid ${COLORS.creamDark}`, borderRadius: 16, padding: 16 }}>
+          <div style={{ fontFamily: FONTS.body, fontSize: 10, fontWeight: 700, color: COLORS.gris, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            📊 Red Solidaria Stats
+          </div>
+          <div style={{ fontSize: 11, fontFamily: FONTS.body, color: COLORS.carbon, lineHeight: 1.8 }}>
+            👥 {statsData?.voluntarios || "0"} voluntarios<br />
+            ⏳ {statsData?.horas || "0"} horas de ayuda<br />
+            🏠 {statsData?.familias || "0"} familias<br />
+            🤝 {statsData?.empresas || "0"} empresas aliadas
+          </div>
+        </div>
+
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.verde}10, ${COLORS.tierra}10)`, border: `1px solid ${COLORS.verde}33`, borderRadius: 16, padding: 16, textAlign: "center" }}>
+          <div style={{ fontSize: 24, marginBottom: 6 }}>⭐</div>
+          <div style={{ fontFamily: FONTS.body, fontSize: 11, fontWeight: 600, color: COLORS.verde }}>
+            {userKarma > 50 ? "¡Eres un miembro destacado!" : "¡Sigue participando!"}
+          </div>
+          <div style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris, marginTop: 4 }}>
+            {userKarma} karma · {posts.filter(p => p.userVote === 'up').length} votos emitidos
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(26,26,24,0.65)",
+      backdropFilter: "blur(8px)", zIndex: 1000,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+    }} onClick={onClose}>
+      <div style={{
+        background: COLORS.cream, borderRadius: 24,
+        padding: "32px 28px", maxWidth: 420, width: "100%",
+        boxShadow: "0 24px 80px rgba(0,0,0,0.2)",
+        border: `1px solid ${COLORS.creamDark}`,
+        maxHeight: "90vh", overflowY: "auto"
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontFamily: FONTS.display, fontSize: 20, color: COLORS.carbon }}>{title}</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: COLORS.gris }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function RedSolidaria() {
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPass, setAuthPass] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isRegister, setIsRegister] = useState(false);
+
+  const getDisplayName = () => firebaseUser?.email?.split('@')[0] || "Anónimo";
+  const getInitials = () => getDisplayName().substring(0, 2).toUpperCase();
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => {
+      setFirebaseUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const [activeTab, setActiveTab] = useState("inicio");
+  const [modal, setModal] = useState(null);
+  const [joinedCampaigns, setJoinedCampaigns] = useState(new Set());
+  const [toast, setToast] = useState(null);
+  const [botInput, setBotInput] = useState("");
+  const [showAI, setShowAI] = useState(false);
+  const [botMessages, setBotMessages] = useState([
+    { role: "bot", text: `¡Hola ${getDisplayName()}! 👋 Soy Sol, tu asistente comunitaria. ¿En qué puedo ayudarte hoy? Puedo recomendarte actividades, campañas o contarte sobre tus puntos.` }
+  ]);
+
+  // ESTADOS DE CONTROL DE PUNTOS Y ACTIVIDADES
+  const [userPoints, setUserPoints] = useState(mockData.user.points);
+  const [userActivities, setUserActivities] = useState(mockData.user.actividades);
+  const [eventsList, setEventsList] = useState(mockData.events);
+  const [selectedEventCategory, setSelectedEventCategory] = useState("Todos");
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [joinedEvents, setJoinedEvents] = useState(new Set());
+
+  // Karma para la Red Mural
+  const [userKarma, setUserKarma] = useState(120);
+  const [blockedPages, setBlockedPages] = useState([]);
+
+  // Datos desde Firestore
+  const [campaigns, setCampaigns] = useState(mockData.campaigns);
+  const [cajitasData, setCajitasData] = useState(mockData.cajitas);
+  const [leaderboardData, setLeaderboardData] = useState(mockData.leaderboard);
+  const [statsData, setStatsData] = useState(mockData.stats);
+  const [feedPosts, setFeedPosts] = useState([]);
+
+  useEffect(() => {
+    const unsub = db.collection("pageBlocks").onSnapshot(s => {
+      setBlockedPages(s.docs.map(d => d.id));
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("campaigns").onSnapshot(s => {
+      const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (data.length) setCampaigns(data);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("events").onSnapshot(s => {
+      const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (data.length) setEventsList(data);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("cajitas").onSnapshot(s => {
+      const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (data.length) setCajitasData(data);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("leaderboard").onSnapshot(s => {
+      const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (data.length) setLeaderboardData(data);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("stats").onSnapshot(s => {
+      const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (data.length) setStatsData(data[0]);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection("muroPosts").orderBy("createdAt", "desc").limit(5).onSnapshot(s => {
+      setFeedPosts(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+
+  // Cargar/guardar puntos del usuario desde Firestore
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = db.collection("users").doc(firebaseUser.uid).onSnapshot(doc => {
+      if (doc.exists) {
+        setUserPoints(doc.data().points || 0);
+        setUserActivities(doc.data().activities || 0);
+      }
+    });
+    return () => unsub();
+  }, [firebaseUser]);
+
+  // Guardar puntos cuando cambien
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const timer = setTimeout(() => {
+      db.collection("users").doc(firebaseUser.uid).set({
+        points: userPoints,
+        activities: userActivities,
+        displayName: getDisplayName(),
+        email: firebaseUser.email || "",
+      }, { merge: true });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [userPoints, userActivities, firebaseUser]);
+
+
+
+  // Formulario para proponer evento
+  const [proposalTitle, setProposalTitle] = useState("");
+  const [proposalCategory, setProposalCategory] = useState("cultura");
+  const [proposalEmoji, setProposalEmoji] = useState("🎨");
+  const [proposalLocation, setProposalLocation] = useState("");
+  const [proposalDate, setProposalDate] = useState("");
+
+  const showToast = (msg, emoji = "✅") => {
+    setToast({ msg, emoji });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAddPointsFromMuro = (pts, msg) => {
+    setUserPoints(prev => prev + pts);
+    showToast(msg, "🌟");
+  };
+
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError("");
+    try {
+      if (isRegister) {
+        await auth.createUserWithEmailAndPassword(authEmail, authPass);
+      } else {
+        await auth.signInWithEmailAndPassword(authEmail, authPass);
+      }
+      setShowAuth(false);
+    } catch (err) {
+      setAuthError(err.message.replace("Firebase: ", ""));
+    }
+  };
+
+  const handleAnonymousLogin = async () => {
+    setAuthError("");
+    try {
+      await auth.signInAnonymously();
+      setShowAuth(false);
+    } catch (err) {
+      setAuthError(err.message.replace("Firebase: ", ""));
+    }
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    setFirebaseUser(null);
+  };
+
+  const handleJoin = async (campaign) => {
+    if (joinedCampaigns.has(campaign.id)) {
+      showToast("Ya te habías unido a esta campaña", "💡");
+      return;
+    }
+    setJoinedCampaigns(prev => new Set([...prev, campaign.id]));
+    setUserPoints(prev => prev + 120);
+    setUserActivities(prev => prev + 1);
+    setModal({
+      type: "join",
+      title: `¡Te uniste! ${campaign.emoji}`,
+      campaign,
+    });
+    showToast(`+120 puntos ganados`, "🌟");
+    try {
+      await db.collection("campaigns").doc(campaign.id).update({
+        current: firebase.firestore.FieldValue.increment(1),
+        participants: firebase.firestore.FieldValue.increment(1),
+      });
+    } catch (err) {
+      console.error("Error al unirse a campaña:", err);
+    }
+  };
+
+  const handleToggleEventAttendance = async (eventId) => {
+    const targetEvent = eventsList.find(e => e.id === eventId);
+    if (!targetEvent) return;
+
+    if (joinedEvents.has(eventId)) {
+      setJoinedEvents(prev => {
+        const n = new Set(prev);
+        n.delete(eventId);
+        return n;
+      });
+      setEventsList(prev => prev.map(e => e.id === eventId ? { ...e, people: Math.max(0, e.people - 1) } : e));
+      setUserPoints(prev => Math.max(0, prev - 50));
+      setUserActivities(prev => Math.max(0, prev - 1));
+      showToast("Cancelaste tu asistencia", "↩️");
+      try { await db.collection("events").doc(eventId).update({ people: firebase.firestore.FieldValue.increment(-1) }); } catch (e) { console.error(e); }
+    } else {
+      setJoinedEvents(prev => new Set([...prev, eventId]));
+      setEventsList(prev => prev.map(e => e.id === eventId ? { ...e, people: e.people + 1 } : e));
+      setUserPoints(prev => prev + 50);
+      setUserActivities(prev => prev + 1);
+      showToast("¡Inscrito! +50 puntos", "🎉");
+      try { await db.collection("events").doc(eventId).update({ people: firebase.firestore.FieldValue.increment(1) }); } catch (e) { console.error(e); }
+    }
+  };
+
+  const handleCreateEvent = async (e) => {
+    e.preventDefault();
+    if (!proposalTitle.trim() || !proposalLocation.trim() || !proposalDate.trim()) {
+      showToast("Por favor completa los campos", "⚠️");
+      return;
+    }
+
+    try {
+      await db.collection("events").add({
+        title: proposalTitle,
+        category: proposalCategory,
+        emoji: proposalEmoji,
+        date: proposalDate,
+        location: proposalLocation,
+        people: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      setProposalTitle("");
+      setProposalLocation("");
+      setProposalDate("");
+      setModal(null);
+      setUserPoints(prev => prev + 100);
+      setUserActivities(prev => prev + 1);
+      showToast("¡Evento creado! +100 puntos 🚀", "🚀");
+    } catch (err) {
+      showToast("Error al crear evento: " + err.message, "❌");
+    }
+  };
+
+  const handleBotSend = () => {
+    if (!botInput.trim()) return;
+    const userMsg = botInput;
+    setBotInput("");
+    setBotMessages(prev => [...prev, { role: "user", text: userMsg }]);
+
+    setTimeout(() => {
+      const responses = [
+        "¡Excelente pregunta! 🌿 Basándome en tu perfil, te recomiendo unirte a la limpieza de playa este sábado. Es perfecta para sumar puntos y conocer gente increíble.",
+        `Tienes ${userPoints.toLocaleString()} puntos. ¡Te falta muy poco para canjear nuevas recompensas! 📚 Considera participar activamente este fin de semana.`,
+        "Las empresas patrocinadoras como BCP e Interbank tienen sorteos activos. Por cada actividad completada entras automáticamente al sorteo. 🎉",
+        "Vi que tienes interés en el hiking. ¡El evento a Marcahuasi tiene pocos cupos disponibles! Te lo recomiendo mucho. ⛰️",
+      ];
+      const resp = responses[Math.floor(Math.random() * responses.length)];
+      setBotMessages(prev => [...prev, { role: "bot", text: resp }]);
+    }, 800);
+  };
+
+  const tabs = [
+    { id: "inicio", label: "Inicio", emoji: "🏡" },
+    { id: "muro", label: "Red Mural", emoji: "📢" },
+    { id: "campanas", label: "Campañas", emoji: "🌟" },
+    { id: "eventos", label: "Eventos", emoji: "🎉" },
+    { id: "ranking", label: "Ranking", emoji: "🏆" },
+    { id: "cajitas", label: "Cajitas", emoji: "📦" },
+    { id: "perfil", label: "Mi Perfil", emoji: "👤" },
+  ];
+
+  const filteredEvents = eventsList.filter(ev => {
+    const matchesCategory = selectedEventCategory === "Todos" || ev.category === selectedEventCategory;
+    const matchesSearch = ev.title.toLowerCase().includes(eventSearchQuery.toLowerCase()) || 
+                          ev.location.toLowerCase().includes(eventSearchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const styles = {
+    app: {
+      fontFamily: FONTS.body,
+      background: "#F7F0E6",
+      minHeight: "100vh",
+      color: COLORS.carbon,
+      maxWidth: 1100,
+      margin: "0 auto",
+    },
+    header: {
+      background: COLORS.carbon,
+      padding: "0 24px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      height: 60,
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+      borderBottom: `2px solid ${COLORS.verde}`,
+    },
+    logo: {
+      fontFamily: FONTS.display,
+      fontSize: 22,
+      fontWeight: 700,
+      color: COLORS.verdeMint,
+      letterSpacing: "-0.02em",
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+    },
+    nav: {
+      display: "flex",
+      gap: 4,
+      overflowX: "auto",
+      padding: "0 16px",
+      background: COLORS.cream,
+      borderBottom: `1px solid ${COLORS.creamDark}`,
+    },
+    tab: (active) => ({
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "14px 16px",
+      background: "none",
+      border: "none",
+      borderBottom: active ? `3px solid ${COLORS.verde}` : "3px solid transparent",
+      color: active ? COLORS.verde : COLORS.gris,
+      fontFamily: FONTS.body,
+      fontWeight: active ? 700 : 500,
+      fontSize: 13,
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+      transition: "all 0.2s",
+    }),
+    section: {
+      padding: "24px 20px",
+    },
+    sectionTitle: {
+      fontFamily: FONTS.display,
+      fontSize: 22,
+      fontWeight: 700,
+      color: COLORS.carbon,
+      marginBottom: 4,
+    },
+    sectionSub: {
+      fontFamily: FONTS.body,
+      fontSize: 13,
+      color: COLORS.gris,
+      marginBottom: 20,
+    },
+    grid2: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+      gap: 16,
+    },
+    card: {
+      background: COLORS.cream,
+      border: `1px solid ${COLORS.creamDark}`,
+      borderRadius: 20,
+      padding: 20,
+    },
+    formGroup: {
+      marginBottom: 14,
+      display: "flex",
+      flexDirection: "column",
+      gap: 6
+    },
+    input: {
+      padding: "10px 12px",
+      borderRadius: 10,
+      border: `1px solid ${COLORS.creamDark}`,
+      fontFamily: FONTS.body,
+      fontSize: 13,
+      background: "#fff",
+      outline: "none"
+    }
+  };
+
+  return (
+    <div style={styles.app}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: ${COLORS.grisLight}; border-radius: 99px; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+      `}</style>
+
+      {authLoading ? (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F0E6" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🌿</div>
+            <div style={{ fontFamily: FONTS.body, color: COLORS.gris }}>Cargando...</div>
+          </div>
+        </div>
+      ) : !firebaseUser ? (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${COLORS.carbon}, #2A2A22)`, padding: 20 }}>
+          <div style={{ maxWidth: 380, width: "100%", background: "#2A2A22", borderRadius: 24, padding: "36px 28px", border: `1px solid #3A3A38` }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🌿</div>
+              <h1 style={{ fontFamily: FONTS.display, fontSize: 24, color: COLORS.verdeMint, marginBottom: 4 }}>RedSolidaria</h1>
+              <p style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.gris }}>{isRegister ? "Crea tu cuenta" : "Inicia sesión para continuar"}</p>
+            </div>
+            <form onSubmit={handleAuthSubmit}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Email</label>
+                <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
+                  placeholder="tu@correo.com"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                  required
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: COLORS.gris, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Contraseña</label>
+                <input type="password" value={authPass} onChange={e => setAuthPass(e.target.value)}
+                  placeholder="••••••••"
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "none", fontSize: 13, background: "#3A3A38", color: "#fff", outline: "none" }}
+                  required
+                />
+              </div>
+              {authError && (
+                <div style={{ color: COLORS.rojo, fontSize: 12, marginBottom: 14, textAlign: "center" }}>
+                  ❌ {authError}
+                </div>
+              )}
+              <button type="submit" style={{
+                width: "100%", background: COLORS.verde, color: "#fff", border: "none", borderRadius: 12,
+                padding: "12px 0", fontWeight: 700, fontSize: 14, cursor: "pointer",
+              }}>
+                {isRegister ? "Registrarse" : "Ingresar"}
+              </button>
+            </form>
+            <div style={{ marginTop: 12, textAlign: "center" }}>
+              <button onClick={() => { setIsRegister(!isRegister); setAuthError(""); }}
+                style={{ background: "none", border: "none", color: COLORS.verdeMint, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
+              </button>
+            </div>
+            <div style={{ marginTop: 12, borderTop: `1px solid #3A3A38`, paddingTop: 14 }}>
+              <button onClick={handleAnonymousLogin} style={{
+                width: "100%", background: "none", border: `1px solid #3A3A38`, borderRadius: 12,
+                padding: "10px 0", fontWeight: 600, fontSize: 13, cursor: "pointer", color: COLORS.gris,
+              }}>
+                👤 Entrar como anónimo
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (<>
+
+      {/* HEADER */}
+      <header style={styles.header}>
+        <div style={styles.logo}>
+          <span style={{ fontSize: 24 }}>🌿</span>
+          RedSolidaria
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {firebaseUser ? (
+            <>
+              <div style={{
+                background: `${COLORS.verde}22`, border: `1px solid ${COLORS.verde}44`,
+                borderRadius: 99, padding: "5px 14px",
+                display: "flex", alignItems: "center", gap: 6,
+              }}>
+                <span style={{ fontSize: 14 }}>⭐</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 13, fontWeight: 700, color: COLORS.verdeMint }}>
+                  {userPoints.toLocaleString()}
+                </span>
+              </div>
+              <div onClick={() => setShowAuth(!showAuth)} title={firebaseUser.isAnonymous ? "Anónimo" : firebaseUser.email} style={{
+                width: 36, height: 36, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.tierra})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 800, color: "#fff",
+                cursor: "pointer",
+                fontFamily: FONTS.body,
+              }}>
+                {firebaseUser.isAnonymous ? "👤" : getInitials()}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </header>
+
+      {/* NAV TABS */}
+      <nav style={styles.nav}>
+        {tabs.filter(t => !blockedPages.includes(t.id)).map(tab => (
+          <button key={tab.id} style={styles.tab(activeTab === tab.id)} onClick={() => setActiveTab(tab.id)}>
+            <span>{tab.emoji}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => window.open("admin.html", "_blank")} style={{
+          background: "none", border: "none", fontSize: 14, cursor: "pointer",
+          padding: "14px 12px", opacity: 0.3, fontFamily: FONTS.body, color: COLORS.gris,
+        }} title="Admin">
+          🛡️
+        </button>
+      </nav>
+
+      {/* CONTENT MAPPER */}
+      <main style={{ animation: "fadeIn 0.3s ease" }}>
+
+        {/* ===== TAB: INICIO ===== */}
+        {activeTab === "inicio" && (
+          <div style={styles.section}>
+            <div style={{
+              background: `linear-gradient(135deg, ${COLORS.carbon} 0%, #2A2A22 100%)`,
+              borderRadius: 24, padding: "28px 28px 24px", marginBottom: 24,
+              position: "relative", overflow: "hidden",
+            }}>
+              <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <span style={{ fontSize: 28 }}>{mockData.user.badge}</span>
+                  <div>
+                    <div style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.verdeMint, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Bienvenida de vuelta</div>
+                    <div style={{ fontFamily: FONTS.display, fontSize: 20, color: "#fff" }}>{getDisplayName()}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                  {[
+                    { label: "Nivel", value: mockData.user.level, color: COLORS.verdeMint },
+                    { label: "Rango", value: `#${mockData.user.rank}`, color: COLORS.gold },
+                    { label: "Actividades", value: userActivities, color: COLORS.tierraLight },
+                    { label: "Impacto", value: mockData.user.impacto, color: COLORS.cielo },
+                  ].map(stat => (
+                    <div key={stat.label}>
+                      <div style={{ fontFamily: FONTS.body, fontSize: 10, color: "#ffffff66", textTransform: "uppercase", letterSpacing: "0.06em" }}>{stat.label}</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 700, color: stat.color }}>{stat.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontFamily: FONTS.body, fontSize: 11, color: "#ffffff99" }}>Progreso al siguiente nivel</span>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: COLORS.verdeMint }}>{userPoints} / 3000 pts</span>
+                  </div>
+                  <ProgressBar current={userPoints} goal={3000} color={COLORS.verdeMint} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ ...styles.sectionTitle, fontSize: 18, marginBottom: 4 }}>Impacto colectivo 🇵🇪</h2>
+              <p style={styles.sectionSub}>Lo que construimos juntos en Perú</p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <StatCard value={statsData?.voluntarios || mockData.stats.voluntarios} label="Voluntarios activos" emoji="👥" color={COLORS.verde} />
+                <StatCard value={statsData?.horas || mockData.stats.horas} label="Horas de ayuda" emoji="⏳" color={COLORS.tierra} />
+                <StatCard value={statsData?.familias || mockData.stats.familias} label="Familias apoyadas" emoji="🏠" color={COLORS.cielo} />
+                <StatCard value={statsData?.empresas || mockData.stats.empresas} label="Empresas aliadas" emoji="🤝" color={COLORS.gold} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ ...styles.sectionTitle, fontSize: 18, marginBottom: 4 }}>Campaña del momento 🔥</h2>
+              <p style={styles.sectionSub}>Únete ahora y desbloquea recompensas colectivas</p>
+              <div style={{ maxWidth: 380 }}>
+                <CampaignCard campaign={campaigns[0] || mockData.campaigns[0]} onJoin={handleJoin} isExample={true} />
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <h2 style={{ ...styles.sectionTitle, fontSize: 18, marginBottom: 4 }}>Feed comunitario ✨</h2>
+              <p style={styles.sectionSub}>Lo que está pasando ahora mismo</p>
+              {feedPosts.slice(0, 5).map(p => (
+                <FeedItem key={p.id} item={{ id: p.id, user: p.user, avatar: p.avatar, action: "publicó en", activity: p.title, time: "Ahora", points: `+${(p.upvotes||0) - (p.downvotes||0)}`, emoji: p.image || "💬", color: p.color || COLORS.verde }} />
+              ))}
+            </div>
+
+          </div>
+        )}
+
+        {/* ===== TAB: RED MURAL ===== */}
+        {activeTab === "muro" && (
+          <div style={styles.section}>
+            <h2 style={{ ...styles.sectionTitle, fontSize: 20 }}>Red Mural Comunitaria 📢</h2>
+            <p style={{ ...styles.sectionSub, marginBottom: 20 }}>
+              Un espacio libre estilo Reddit/X para compartir, votar y conectar con tu comunidad. Publica adopciones, anuncios, ayuda mutua y más.
+            </p>
+            <MuroSocial onAddPoints={handleAddPointsFromMuro} userKarma={userKarma} setUserKarma={setUserKarma} firebaseUser={firebaseUser} showToast={showToast} statsData={statsData} />
+          </div>
+        )}
+
+        {/* ===== TAB: CAMPAÑAS ===== */}
+        {activeTab === "campanas" && (
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Campañas Activas 🌟</h2>
+            <p style={styles.sectionSub}>Participa, suma puntos y desbloquea recompensas colectivas reales</p>
+            <div style={styles.grid2}>
+              {campaigns.map(c => (
+                <CampaignCard key={c.id} campaign={c} onJoin={handleJoin} isExample={true} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===== TAB: EVENTOS ===== */}
+        {activeTab === "eventos" && (
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Eventos y Actividades 🎉</h2>
+            <p style={styles.sectionSub}>Conoce gente, vive experiencias, forma parte de algo real en tu comunidad</p>
+
+            {/* Barra de Búsqueda */}
+            <div style={{ marginBottom: 18 }}>
+              <input 
+                type="text" 
+                placeholder="🔍 Buscar eventos por título o ubicación..." 
+                value={eventSearchQuery}
+                onChange={(e) => setEventSearchQuery(e.target.value)}
+                style={{
+                  width: "100%", padding: "12px 16px", borderRadius: 14,
+                  border: `1px solid ${COLORS.creamDark}`, fontFamily: FONTS.body,
+                  fontSize: 14, background: COLORS.cream, color: COLORS.carbon,
+                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)", outline: "none"
+                }}
+              />
+            </div>
+
+            {/* Filtros por Categoría */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+              {["Todos", "cultura", "aventura", "social", "tech", "bienestar"].map(cat => {
+                const labelMap = {
+                  Todos: "🌍 Todos", cultura: "🎨 Cultura", aventura: "⛰️ Aventura",
+                  social: "🌸 Social", tech: "💻 Tech", bienestar: "🧘 Bienestar"
+                };
+                const isSelected = selectedEventCategory === cat;
+                const catColor = categoryColors[cat] || COLORS.verde;
+
+                return (
+                  <button 
+                    key={cat} 
+                    onClick={() => setSelectedEventCategory(cat)}
+                    style={{
+                      padding: "8px 16px", borderRadius: 99,
+                      border: isSelected ? `2px solid ${catColor}` : `1px solid ${catColor}44`,
+                      background: isSelected ? catColor : `${catColor}12`,
+                      color: isSelected ? "#fff" : catColor,
+                      fontFamily: FONTS.body, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {labelMap[cat]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Listado */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {filteredEvents.length > 0 ? (
+                filteredEvents.map(ev => (
+                  <EventPill 
+                    key={ev.id} 
+                    event={ev} 
+                    onToggleAttend={handleToggleEventAttendance} 
+                    isJoined={joinedEvents.has(ev.id)}
+                    isExample={ev.isExample}
+                  />
+                ))
+              ) : (
+                <div style={{textAlign: 'center', padding: '30px', color: COLORS.gris, fontFamily: FONTS.body}}>
+                  No se encontraron eventos en esta categoría. ¡Sé el primero en proponer uno! 💡
+                </div>
+              )}
+            </div>
+
+            {/* CTA Proponer */}
+            <div style={{
+              marginTop: 24, background: `linear-gradient(135deg, ${COLORS.verde}15, ${COLORS.tierra}10)`,
+              border: `1px solid ${COLORS.verde}33`, borderRadius: 20, padding: "24px", textAlign: "center",
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>➕</div>
+              <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 8 }}>¿Quieres organizar algo?</h3>
+              <p style={{ fontFamily: FONTS.body, fontSize: 13, color: COLORS.gris, marginBottom: 16 }}>
+                Propón tu actividad, reúne a personas con tus mismos intereses y gana +100 puntos de impacto.
+              </p>
+              <button 
+                onClick={() => setModal({ type: "propose_event" })}
+                style={{
+                  background: COLORS.verde, color: "#fff", border: "none", borderRadius: 12,
+                  padding: "12px 28px", fontFamily: FONTS.body, fontWeight: 700, fontSize: 14,
+                  cursor: "pointer", boxShadow: `0 4px 12px ${COLORS.verde}33`
+                }}
+              >
+                Proponer evento
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== TAB: RANKING ===== */}
+        {activeTab === "ranking" && (
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Ranking Comunitario 🏆</h2>
+            <p style={styles.sectionSub}>Las personas que más impacto generan en Perú</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+              {leaderboardData.map((person) => (
+                <div key={person.rank} style={{
+                  ...styles.card, padding: "14px 20px", display: "flex", alignItems: "center", gap: 14,
+                  border: person.isUser ? `2px solid ${COLORS.verde}` : `1px solid ${COLORS.creamDark}`,
+                  background: person.isUser ? `${COLORS.verde}08` : COLORS.cream,
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: FONTS.body, fontWeight: 700, fontSize: 14, color: COLORS.carbon }}>
+                      {person.name} {person.badge} {person.isUser && <Badge text="Tú" color={COLORS.verde} />}
+                    </div>
+                    <div style={{ fontFamily: FONTS.body, fontSize: 11, color: COLORS.gris }}>{person.level}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: FONTS.mono, fontWeight: 800, fontSize: 16, color: COLORS.tierra }}>
+                      {person.isUser ? userPoints.toLocaleString() : person.points.toLocaleString()}
+                    </div>
+                    <div style={{ fontFamily: FONTS.body, fontSize: 10, color: COLORS.gris }}>puntos</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===== TAB: CAJITAS ===== */}
+        {activeTab === "cajitas" && (
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Cajitas Comunitarias 📦</h2>
+            <p style={styles.sectionSub}>Canjea tus puntos por sorpresas reales enviadas a tu puerta</p>
+            <div style={{
+              background: `linear-gradient(135deg, ${COLORS.tierra} 0%, ${COLORS.gold} 100%)`,
+              borderRadius: 20, padding: "20px 24px", marginBottom: 24, color: "#fff",
+              display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12,
+            }}>
+              <div>
+                <div style={{ fontFamily: FONTS.body, fontSize: 11, fontWeight: 600, opacity: 0.8, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Tus puntos disponibles</div>
+                <div style={{ fontFamily: FONTS.display, fontSize: 36, fontWeight: 800 }}>{userPoints} ⭐</div>
+              </div>
+            </div>
+
+            <div style={styles.grid2}>
+              {cajitasData.map(cajita => {
+                const canRedeem = userPoints >= cajita.points;
+                return (
+                  <div key={cajita.id} style={{
+                    ...styles.card, position: "relative",
+                    border: canRedeem ? `2px solid ${COLORS.verde}55` : `1px solid ${COLORS.creamDark}`,
+                  }}>
+                    <div style={{ fontSize: 48, marginBottom: 12, textAlign: "center" }}>{cajita.emoji}</div>
+                    <h3 style={{ fontFamily: FONTS.display, fontSize: 18, marginBottom: 6 }}>{cajita.name}</h3>
+                    <p style={{ fontFamily: FONTS.body, fontSize: 13, color: COLORS.gris, marginBottom: 14 }}>{cajita.items}</p>
+                    <button
+                      disabled={!canRedeem}
+                      onClick={async () => {
+                        if (cajita.available <= 0) { showToast("Ya no quedan cajitas disponibles", "😞"); return; }
+                        setUserPoints(prev => prev - cajita.points);
+                        showToast("¡Cajita solicitada con éxito! 📦", "📦");
+                        try {
+                          await db.collection("cajitas").doc(cajita.id).update({
+                            available: firebase.firestore.FieldValue.increment(-1)
+                          });
+                        } catch (err) {
+                          console.error("Error al canjear cajita:", err);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        background: canRedeem ? `linear-gradient(135deg, ${COLORS.tierra}, ${COLORS.gold})` : COLORS.grisLight,
+                        color: canRedeem ? "#fff" : COLORS.gris,
+                        border: "none", borderRadius: 12, padding: "11px 0",
+                        fontSize: 13, fontWeight: 700, fontFamily: FONTS.body,
+                        cursor: canRedeem ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {canRedeem ? "Canjear cajita" : `Faltan ${(cajita.points - userPoints).toLocaleString()} pts`}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ===== TAB: PERFIL ===== */}
+        {activeTab === "perfil" && (
+          <div style={styles.section}>
+            <div style={{ ...styles.card, marginBottom: 20, textAlign: "center", padding: "32px 24px" }}>
+              <div style={{
+                width: 80, height: 80, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.tierra})`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 28, fontWeight: 800, color: "#fff", margin: "0 auto 16px",
+              }}>{firebaseUser?.isAnonymous ? "👤" : getInitials()}</div>
+              <h2 style={{ fontFamily: FONTS.display, fontSize: 24, marginBottom: 4 }}>{getDisplayName()}</h2>
+              <p style={{ fontFamily: FONTS.body, fontSize: 13, color: COLORS.gris }}>{firebaseUser?.email || "Anónimo"} · Miembro desde Enero 2024</p>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+              <StatCard value={userPoints.toLocaleString()} label="Puntos totales" emoji="⭐" color={COLORS.tierra} />
+              <StatCard value={`#${firebaseUser ? "—" : mockData.user.rank}`} label="Ranking nacional" emoji="🏆" color={COLORS.gold} />
+              <StatCard value={userActivities} label="Actividades" emoji="✅" color={COLORS.verde} />
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* CHAT CHIP INTELIGENTE */}
+      <button
+        onClick={() => setShowAI(!showAI)}
+        style={{
+          position: "fixed", bottom: 24, right: 24, width: 56, height: 56, borderRadius: "50%",
+          background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
+          border: "none", cursor: "pointer", zIndex: 500, fontSize: 24,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 8px 24px ${COLORS.verde}55`,
+        }}
+      >
+        {showAI ? "✕" : "🤖"}
+      </button>
+
+      {showAI && (
+        <div style={{
+          position: "fixed", bottom: 92, right: 24, width: 320, background: COLORS.cream,
+          borderRadius: 20, border: `1px solid ${COLORS.creamDark}`, zIndex: 500, overflow: "hidden",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.15)", display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ background: COLORS.carbon, padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 22 }}>🤖</span>
+            <div>
+              <div style={{ fontFamily: FONTS.body, fontWeight: 700, color: COLORS.verdeMint, fontSize: 14 }}>Sol · Asistente Solidaria</div>
+            </div>
+          </div>
+          <div style={{ height: 200, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+            {botMessages.map((msg, i) => (
+              <div key={i} style={{
+                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                background: msg.role === "user" ? COLORS.verde : `${COLORS.grisLight}`,
+                color: msg.role === "user" ? "#fff" : COLORS.carbon,
+                borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                padding: "8px 12px", fontSize: 12, maxWidth: "85%", lineHeight: 1.5,
+              }}>
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "10px 14px", borderTop: `1px solid ${COLORS.creamDark}`, display: "flex", gap: 8 }}>
+            <input
+              value={botInput}
+              onChange={e => setBotInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleBotSend()}
+              placeholder="Pregúntame algo..."
+              style={{ flex: 1, border: `1px solid ${COLORS.creamDark}`, borderRadius: 10, padding: "8px 12px", fontSize: 12, outline: "none" }}
+            />
+            <button onClick={handleBotSend} style={{ background: COLORS.verde, color: "#fff", border: "none", borderRadius: 10, padding: "0 14px", cursor: "pointer" }}>→</button>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST DE AVISOS */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          background: COLORS.carbon, color: "#fff", padding: "12px 24px", borderRadius: 14,
+          fontFamily: FONTS.body, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, zIndex: 600,
+        }}>
+          <span style={{ fontSize: 18 }}>{toast.emoji}</span> {toast.msg}
+        </div>
+      )}
+
+      {/* MODAL: INSCRIPCIÓN A CAMPAÑA */}
+      {modal?.type === "join" && (
+        <Modal title={modal.title} onClose={() => setModal(null)}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 60, marginBottom: 12 }}>{modal.campaign.emoji}</div>
+            <p style={{ fontFamily: FONTS.body, fontSize: 14, color: COLORS.gris, marginBottom: 20 }}>
+              ¡Genial! Te has unido a <strong>{modal.campaign.title}</strong>.
+            </p>
+            <button onClick={() => setModal(null)} style={{ width: "100%", background: COLORS.verde, color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", cursor: "pointer", fontWeight: 700 }}>¡Perfecto! 🌿</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: FORMULARIO PROPONER EVENTO */}
+      {modal?.type === "propose_event" && (
+        <Modal title="Proponer Nuevo Evento 💡" onClose={() => setModal(null)}>
+          <form onSubmit={handleCreateEvent} style={{fontFamily: FONTS.body}}>
+            <div style={styles.formGroup}>
+              <label style={{fontSize: 12, fontWeight: 700, color: COLORS.carbon}}>Título de la actividad</label>
+              <input 
+                type="text" 
+                placeholder="Ej. Limpieza del Parque Reducto" 
+                value={proposalTitle} 
+                onChange={(e) => setProposalTitle(e.target.value)}
+                style={styles.input}
+                required
+              />
+            </div>
+
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10}}>
+              <div style={styles.formGroup}>
+                <label style={{fontSize: 12, fontWeight: 700, color: COLORS.carbon}}>Categoría</label>
+                <select 
+                  value={proposalCategory} 
+                  onChange={(e) => {
+                    setProposalCategory(e.target.value);
+                    const emojis = { cultura: "🎨", aventura: "⛰️", social: "🌸", tech: "💻", bienestar: "🧘" };
+                    setProposalEmoji(emojis[e.target.value] || "🎉");
+                  }}
+                  style={styles.input}
+                >
+                  <option value="cultura">🎨 Cultura</option>
+                  <option value="aventura">⛰️ Aventura</option>
+                  <option value="social">🌸 Social</option>
+                  <option value="tech">💻 Tech</option>
+                  <option value="bienestar">🧘 Bienestar</option>
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={{fontSize: 12, fontWeight: 700, color: COLORS.carbon}}>Fecha / Hora</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej. Sáb 24, 4:00 PM" 
+                  value={proposalDate} 
+                  onChange={(e) => setProposalDate(e.target.value)}
+                  style={styles.input}
+                  required
+                />
+              </div>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={{fontSize: 12, fontWeight: 700, color: COLORS.carbon}}>Lugar de encuentro</label>
+              <input 
+                type="text" 
+                placeholder="Ej. Parque Reducto #2, Miraflores" 
+                value={proposalLocation} 
+                onChange={(e) => setProposalLocation(e.target.value)}
+                style={styles.input}
+                required
+              />
+            </div>
+
+            <div style={{background: `${COLORS.verde}10`, padding: 12, borderRadius: 10, fontSize: 12, color: COLORS.verde, marginBottom: 16, fontWeight: 500}}>
+              🚀 Al publicar este evento ganarás <strong>+100 puntos</strong> inmediatamente y aparecerá listado para toda la red.
+            </div>
+
+            <button 
+              type="submit"
+              style={{
+                width: "100%", background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.verdeLight})`,
+                color: "#fff", border: "none", borderRadius: 12, padding: "12px 0",
+                fontSize: 14, fontWeight: 700, cursor: "pointer"
+              }}
+            >
+              Lanzar Evento Colectivo 🌟
+            </button>
+          </form>
+        </Modal>
+      )}
+
+      {showAuth && firebaseUser && (
+        <div style={{
+          position: "fixed", top: 64, right: 24, zIndex: 200, background: COLORS.cream,
+          borderRadius: 16, border: `1px solid ${COLORS.creamDark}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          padding: "20px 24px", minWidth: 220,
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%",
+              background: `linear-gradient(135deg, ${COLORS.verde}, ${COLORS.tierra})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18, fontWeight: 800, color: "#fff", margin: "0 auto 8px",
+            }}>{firebaseUser.isAnonymous ? "👤" : getInitials()}</div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{getDisplayName()}</div>
+            <div style={{ fontSize: 11, color: COLORS.gris, marginBottom: 6 }}>{firebaseUser.email || "Anónimo"}</div>
+            <div style={{ fontSize: 12, color: COLORS.verde, fontWeight: 600, marginBottom: 14 }}>⭐ {userPoints.toLocaleString()} pts</div>
+            <button onClick={() => { handleLogout(); setShowAuth(false); }} style={{
+              width: "100%", background: `${COLORS.rojo}18`, color: COLORS.rojo, border: `1px solid ${COLORS.rojo}33`,
+              borderRadius: 10, padding: "8px 0", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: FONTS.body,
+            }}>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
+      </>)}
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<RedSolidaria />);
+  </script>
+</body>
+</html>
