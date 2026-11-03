@@ -1,0 +1,12 @@
+# Sin dependencias todavía. Cada paquete nuevo requiere aprobación del equipo
+# y un ADR en docs/adr/ (ver 0003-persistencia-profilestore.md).
+[package]
+name = "colosseum/colosseum"
+version = "0.0.1"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+private = true
+
+[dependencies]
+
+[server-dependencies]

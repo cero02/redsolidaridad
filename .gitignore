@@ -1,0 +1,28 @@
+# Paquetes de Wally (se regeneran con `wally install`)
+/Packages/
+/ServerPackages/
+/DevPackages/
+
+# Builds de Rojo
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+!/assets/**/*.rbxm
+/build/
+
+# Studio y sistema
+*.rbxl.lock
+*.rbxlx.lock
+.DS_Store
+Thumbs.db
+
+# Definiciones generadas por selene / luau-lsp
+roblox.yml
+sourcemap.json
+globalTypes.d.luau
+
+# Secretos: nunca se suben (claves de Open Cloud, etc.)
+.env
+.env.*
+*.key

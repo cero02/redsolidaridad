@@ -1,0 +1,8 @@
+std = "roblox"
+
+[lints]
+# Prohibido dejar código muerto o variables ocultas: suelen esconder bugs.
+shadowing = "deny"
+unused_variable = "deny"
+global_usage = "deny"
+deprecated = "deny"

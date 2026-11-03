@@ -1,0 +1,11 @@
+# Toolchain de COLOSSEUM, con versiones fijadas.
+# En tu PC (Windows/macOS): instala Rokit y ejecuta `rokit install` en esta carpeta.
+# Mantener sincronizado con scripts/install-tools.sh (instalación vía cargo).
+# Cambiar una versión requiere aprobación y una nota en docs/adr/0004-toolchain.md.
+
+[tools]
+rojo = "rojo-rbx/rojo@7.7.1"
+selene = "Kampfkarren/selene@0.31.0"
+stylua = "JohnnyMorganz/StyLua@2.6.0"
+wally = "UpliftGames/wally@0.3.2"
+lune = "lune-org/lune@0.11.1"
