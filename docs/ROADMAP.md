@@ -1,6 +1,6 @@
 # Hoja de ruta de COLOSSEUM: Rise of the Beasts
 
-Visión completa en [VISION.md](VISION.md).
+Visión completa en [VISION.md](VISION.md). Diseño detallado en [design/](design/).
 
 Cada hito termina con: `scripts/check.sh` en verde, prueba manual en Studio documentada
 y aprobación del equipo antes de pasar al siguiente.
@@ -17,13 +17,13 @@ Se construye por hitos verticales: cada uno es jugable y se prueba antes de segu
 
 | Hito | Contenido | Hecho cuando… |
 |---|---|---|
-| 1.0 Base técnica | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio |
+| 1.0 Base técnica 🔨 código listo | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio (pendiente de prueba) |
 | 1.1 Sensación de combate | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor | Golpear "se siente bien" en la prueba del equipo |
 | 1.2 Hidra, fase 1 | Arena del Gran Coliseo (greybox), Hidra con ataques telegrafiados y punto débil, modo individual | Se puede ganar y perder de forma justa |
 | 1.3 Hidra completa + cooperativo | Tres fases, regeneración de cabezas, grupo de 1–4 jugadores, patrones según el grupo | Una partida de 8–12 min con amigos |
 | 1.4 Armas, esencias y definitiva | Tres armas, tres esencias, habilidad definitiva que se carga | Al menos tres construcciones distintas viables |
 | 1.5 Recompensas y progresión | Experiencia, niveles, desbloqueos, pantalla de resultados | Ganar abre una posibilidad nueva |
-| 1.6 Exhibición (propuesta) | Gradas del Gran Coliseo: jugadores que esperan pueden ver la partida | Por confirmar con el equipo |
+| 1.6 Espectadores | Gradas del Gran Coliseo, cámara de espectador, reacciones del público (solo cosméticas). Ver [design/ESPECTADORES.md](design/ESPECTADORES.md) | Ver una partida desde las gradas es divertido |
 | **Lanzamiento v1** | Pulido, rendimiento, anti-exploits, beta cerrada, cuestionario de madurez | Aprobación del equipo |
 
 ## Versión 2 — La gloria

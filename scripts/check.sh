@@ -3,6 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+if [ ! -d ServerPackages ]; then
+	echo "== Wally (instalar paquetes)"
+	wally install
+fi
+
 echo "== StyLua (formato)"
 stylua --check src tests
 

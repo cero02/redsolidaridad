@@ -17,8 +17,10 @@
 | `src/shared` | `ReplicatedStorage.Shared` | Sí |
 | `src/client` | `StarterPlayer.StarterPlayerScripts.Client` | Sí |
 
-Definido en `default.project.json`. Cuando se aprueben paquetes de Wally se añadirán
-`ReplicatedStorage.Packages` y `ServerStorage.ServerPackages`.
+| `ServerPackages` (Wally) | `ServerStorage.ServerPackages` | No |
+
+Definido en `default.project.json`. `ServerPackages/` se genera con `wally install` y no se
+sube a git (sí `wally.lock`).
 
 ## Estructura
 
@@ -66,7 +68,7 @@ Columna "Hito": ver `ROADMAP.md`.
 | `BeastService` | Bestias en el servidor: máquina de estados, fases, patrones adaptativos | 1.2 |
 | `LoadoutService` | Arma, armadura, esencias y habilidad definitiva del jugador | 1.4 |
 | `ProgressionService` | Experiencia, niveles, desbloqueos | 1.5 |
-| `SpectatorService` | Gradas y cámara de espectador | 1.6 (propuesto) |
+| `SpectatorService` | Gradas y cámara de espectador | 1.6 |
 | `LootService` | Cofres y tablas de botín (solo jugando) | v2 |
 | `QuestService` | Misiones | v2 |
 | `LeaderboardService` | Clasificaciones, Salón de leyendas | v2 |
@@ -114,7 +116,7 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 - Los golpes de la bestia se resuelven en el servidor con consultas espaciales y dejan
   margen por latencia: si el cliente vio el aviso a tiempo, esquivar debe funcionar.
 
-## Espectadores (hito 1.6, propuesto)
+## Espectadores (hito 1.6)
 
 - Los espectadores están en el mismo servidor que el combate, en las gradas.
 - No pueden interactuar con los luchadores; el servidor ignora cualquier petición de
@@ -122,6 +124,24 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 - La cámara de espectador es local (`CameraController`) y solo usa datos replicados.
 - Más adelante, espectar entre servidores (`MessagingService` / `MemoryStoreService`) se
   evaluará en un ADR propio.
+
+## Implementado (hito 1.0)
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `Lifecycle` | `shared/Util` | `Init` (sin ceder) → `Start` (cada uno en su hilo) |
+| `Loader` | `shared/Util` | Carga los ModuleScripts de una carpeta y los arranca |
+| `Signal`, `Log`, `RateLimiter` | `shared/Util` | Utilidades sin dependencias |
+| `Remotes` | `shared/Net` | Declaración central de Remotes (dirección, validadores, límites) |
+| `Check`, `Guard` | `shared/Net` | Validadores de argumentos y decisión de aceptar una petición |
+| `Client` | `shared/Net` | Acceso a los Remotes desde el cliente |
+| `NetService` | `server/Services` | Crea los Remotes y filtra cada petición |
+| `PlayerDataService` | `server/Services` | Perfiles con ProfileStore, migraciones |
+| `Schema`, `Migrations`, `DataConfig` | `server/Data` | Esquema versionado del perfil |
+| `ProfileController` | `client/Controllers` | Recibe el perfil público |
+
+Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
+`ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 
 ## Pruebas
 

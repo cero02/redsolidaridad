@@ -1,6 +1,6 @@
 # 0003 — Persistencia de datos: ProfileStore
 
-**Estado:** Propuesto (2026-11-03). **No instalado.** Requiere aprobación del equipo.
+**Estado:** Aceptado (2026-11-03), en prueba durante el hito 1.0. Aprobado por el equipo.
 
 ## Contexto
 Necesitamos guardar perfiles con bloqueo de sesión (evitar duplicación de objetos entre
@@ -38,3 +38,24 @@ de soporte activo.
 ## Consecuencias
 - Si se acepta: añadir Wally a `default.project.json` (`ServerStorage.ServerPackages`).
 - El adaptador permite cambiar de biblioteca sin tocar el resto del juego.
+
+## Revisión del código fuente (2026-11-03)
+
+- Paquete `lm-loleris/profilestore@1.0.3` descargado con Wally: un único archivo
+  `ProfileStore.luau` (2 242 líneas), licencia Apache-2.0, sin dependencias.
+- Servicios que usa: `DataStoreService`, `MessagingService`, `RunService` y
+  `HttpService:GenerateGUID` (solo genera identificadores; **no hace peticiones HTTP**).
+  Sin `loadstring`, sin `require` externos.
+- El paquete incluye `ProfileStoreTest.server.luau`, pero su `default.project.json` solo
+  exporta `ProfileStore.luau`: el script de pruebas **no entra** en el place (verificado
+  con `rojo build`).
+- En Studio sin acceso a la API, ProfileStore lo detecta y no guarda. Aun así usamos
+  `.Mock` en Studio por defecto (`DataConfig.USE_LIVE_DATA_IN_STUDIO`), lo que evita el
+  bloqueo conocido de `MessagingService` en Team Test.
+- Constantes por defecto: autoguardado cada 300 s, robo de sesión tras 40 s de conflicto.
+
+## Uso en COLOSSEUM
+
+`src/server/Services/PlayerDataService.luau` es el único módulo que lo usa: sesión por
+`UserId`, `AddUserId` (GDPR), `Reconcile`, migraciones propias (`Data/Migrations.luau`),
+expulsión si la sesión se pierde y `EndSession` al salir.

@@ -15,6 +15,9 @@
 		"ServerStorage": {
 			"ServerOnly": {
 				"$path": "src/serverOnly"
+			},
+			"ServerPackages": {
+				"$path": "ServerPackages"
 			}
 		},
 		"StarterPlayer": {

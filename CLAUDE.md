@@ -3,7 +3,7 @@
 Experiencia de Roblox: un gladiador desconocido que se convierte en leyenda combatiendo
 bestias míticas y conquistando sus poderes.
 
-Lee también: `docs/VISION.md` (diseño), `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md` y `docs/adr/`.
+Lee también: `docs/VISION.md` (visión), `docs/design/` (diseño detallado), `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md` y `docs/adr/`.
 
 ## Objetivo actual
 
@@ -89,6 +89,7 @@ produce un momento memorable. Mejor un sistema excelente que diez mediocres.
 ## Comandos
 
 ```bash
+wally install                           # paquetes (ProfileStore)
 ./scripts/check.sh                      # formato, lint, build y tests
 stylua src tests                        # formatear
 selene src tests                        # lint

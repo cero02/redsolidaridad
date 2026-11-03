@@ -1,5 +1,5 @@
-# Sin dependencias todavía. Cada paquete nuevo requiere aprobación del equipo
-# y un ADR en docs/adr/ (ver 0003-persistencia-profilestore.md).
+# Cada paquete nuevo requiere aprobación del equipo y un ADR en docs/adr/.
+# Versiones exactas (=) para que nada cambie sin revisión.
 [package]
 name = "colosseum/colosseum"
 version = "0.0.1"
@@ -10,3 +10,4 @@ private = true
 [dependencies]
 
 [server-dependencies]
+ProfileStore = "lm-loleris/profilestore@=1.0.3" # ADR 0003

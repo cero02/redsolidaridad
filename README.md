@@ -10,10 +10,13 @@ poderes. Ver la [visión de diseño](docs/VISION.md).
 ## Puesta en marcha (PC con Roblox Studio)
 
 1. Instala [Rokit](https://github.com/rojo-rbx/rokit) y ejecuta `rokit install` en esta carpeta.
-2. Instala el plugin de Rojo en Studio (`rojo plugin install`).
-3. Ejecuta `rojo serve`, abre un place vacío en Studio y pulsa **Connect** en el plugin.
-4. Pulsa **Play**: en la consola deben aparecer `[COLOSSEUM] servidor v0.0.1` y
-   `[COLOSSEUM] cliente v0.0.1`.
+2. Ejecuta `wally install` (descarga ProfileStore en `ServerPackages/`).
+3. Instala el plugin de Rojo en Studio (`rojo plugin install`).
+4. Ejecuta `rojo serve`, abre un place vacío en Studio y pulsa **Connect** en el plugin.
+5. Pulsa **Play**. En la consola (Output) deben aparecer:
+   - `[COLOSSEUM] servidor v0.1.0` y `[COLOSSEUM][Servidor] 2 módulos iniciados`
+   - `[COLOSSEUM][PlayerDataService] Studio: usando datos simulados (ProfileStore.Mock)`
+   - `[COLOSSEUM] cliente v0.1.0` y `[COLOSSEUM][ProfileController] Perfil recibido: nivel 1, arma Gladius`
 
 ## Calidad
 
@@ -31,6 +34,7 @@ Este repositorio alojaba antes la web **RedSolidaria**. Su código se conserva e
 
 - [CLAUDE.md](CLAUDE.md): reglas del proyecto
 - [Visión de diseño](docs/VISION.md)
+- [Diseño detallado](docs/design/): combate, Hidra, armas y esencias, progresión, espectadores
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Hoja de ruta](docs/ROADMAP.md)
 - [Seguridad](docs/SECURITY.md)
