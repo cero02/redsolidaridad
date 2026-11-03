@@ -72,8 +72,6 @@ Antes de trabajar fuera de la etapa en curso del ROADMAP, pide aprobación.
 - El código se edita fuera de Studio y se sincroniza con **Rojo** (`rojo serve` + plugin).
 - Roblox Studio solo funciona en Windows/macOS: las pruebas de juego se hacen en el PC
   del equipo. En el contenedor de Claude solo se ejecutan lint, formato, build y tests Lune.
-- `firebase-config.js` pertenece al proyecto anterior (RedSolidaria): no usar ni borrar
-  sin aprobación (ver ADR 0005).
 - Herramientas: ver `rokit.toml`. Instalación sin GitHub: `scripts/install-tools.sh`.
 
 ## Comandos
