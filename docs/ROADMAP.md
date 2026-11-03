@@ -1,48 +1,43 @@
-# Hoja de ruta de COLOSSEUM
+# Hoja de ruta de COLOSSEUM: Rise of the Beasts
 
-Cada etapa termina con: `scripts/check.sh` en verde, prueba manual en Studio documentada
-y aprobación del equipo antes de pasar a la siguiente.
+Visión completa en [VISION.md](VISION.md).
 
-## Etapa 0 — Entorno ✅ en curso
-- Repositorio, estructura de carpetas, Rojo y herramientas de calidad.
-- CLAUDE.md, ARCHITECTURE.md, SECURITY.md, ROADMAP.md y ADRs iniciales.
-- **Hecho cuando:** `rojo serve` sincroniza con Studio en el PC del equipo y aparecen los
-  mensajes `[COLOSSEUM] servidor` y `[COLOSSEUM] cliente` al pulsar Play.
+Cada hito termina con: `scripts/check.sh` en verde, prueba manual en Studio documentada
+y aprobación del equipo antes de pasar al siguiente.
 
-## Etapa 1 — Base técnica
-- Cargador de Services y Controllers (`Init` → `Start`).
-- Capa de red central: declaración, validación de tipos, límite de peticiones.
-- `PlayerDataService` (tras decidir el ADR 0003) con esquema versionado.
-- Registro de eventos y errores del servidor.
-- Tests Lune de validadores.
+## Etapa 0 — Entorno ✅
+- Repositorio, estructura, Rojo, herramientas de calidad y documentación.
+- **Pendiente:** confirmar en un PC con Studio que `rojo serve` sincroniza y que aparecen
+  los mensajes `[COLOSSEUM]` al pulsar Play.
 
-## Etapa 2 — Arena y combate 1 contra 1
-- Arena de prueba (greybox) con dos puntos de aparición y gradas.
-- Cola simple: los dos primeros jugadores en cola luchan.
-- Rondas: cuenta atrás, combate, victoria por derrota o tiempo, regreso al lobby.
-- Combate cuerpo a cuerpo básico (un arma, ataque y bloqueo) validado en el servidor.
+## Versión 1 — El nacimiento de COLOSSEUM
 
-## Etapa 3 — Espectadores → **v0.1 prototipo**
-- Jugadores que no luchan aparecen en las gradas.
-- Cámara de espectador (seguir a un luchador o vista general).
-- Interfaz: vida de ambos luchadores, tiempo y marcador.
-- **Hito v0.1:** prototipo funcional del coliseo con 1 contra 1 y espectadores,
-  probado con varios jugadores en Studio (Team Test o servidor local).
+Objetivo: **un combate contra la Hidra tan bueno que den ganas de invitar a amigos.**
+Se construye por hitos verticales: cada uno es jugable y se prueba antes de seguir.
 
-## Etapa 4 — Progresión y personalización
-- Estadísticas (victorias, derrotas, rachas), niveles y recompensas.
-- Cosméticos (armaduras, cascos) sin ventaja en combate.
+| Hito | Contenido | Hecho cuando… |
+|---|---|---|
+| 1.0 Base técnica | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio |
+| 1.1 Sensación de combate | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor | Golpear "se siente bien" en la prueba del equipo |
+| 1.2 Hidra, fase 1 | Arena del Gran Coliseo (greybox), Hidra con ataques telegrafiados y punto débil, modo individual | Se puede ganar y perder de forma justa |
+| 1.3 Hidra completa + cooperativo | Tres fases, regeneración de cabezas, grupo de 1–4 jugadores, patrones según el grupo | Una partida de 8–12 min con amigos |
+| 1.4 Armas, esencias y definitiva | Tres armas, tres esencias, habilidad definitiva que se carga | Al menos tres construcciones distintas viables |
+| 1.5 Recompensas y progresión | Experiencia, niveles, desbloqueos, pantalla de resultados | Ganar abre una posibilidad nueva |
+| 1.6 Exhibición (propuesta) | Gradas del Gran Coliseo: jugadores que esperan pueden ver la partida | Por confirmar con el equipo |
+| **Lanzamiento v1** | Pulido, rendimiento, anti-exploits, beta cerrada, cuestionario de madurez | Aprobación del equipo |
 
-## Etapa 5 — Bestias
-- Bestias controladas por el servidor (`PathfindingService`), animales y criaturas mitológicas.
-- Límites de NPC por servidor por rendimiento.
+## Versión 2 — La gloria
+Cofres (solo jugando), inventario, Forja y mejoras de armas, misiones, clasificaciones y
+Salón de leyendas.
 
-## Etapa 6 — Batallas navales
-- Prototipo de física de barcos controlado por el servidor (etapa de mayor riesgo técnico).
+## Versión 3 — El Imperio
+Nuevas bestias (León de ceniza, Minotauro, Dragón imperial), torneos PvP en la Arena de
+campeones, eventos imperiales y esencias combinables.
 
-## Etapa 7 — Monetización
-- Game Passes y Developer Products cosméticos o de comodidad.
-- `ProcessReceipt` idempotente, `PolicyService`, sin mecánicas de azar de pago.
+## Versión 4 — Expansión
+Batallas navales (Puerto imperial, Kraken), Catacumbas, criaturas legendarias y nuevos
+territorios.
 
-## Etapa 8 — Pulido y lanzamiento
-- Rendimiento, anti-exploits, analíticas, beta cerrada, cuestionario de madurez y lanzamiento.
+## Monetización
+Cosméticos y efectos visuales con productos oficiales de Roblox. Se planifica cuando el
+juego sea divertido; nunca antes de la v1.

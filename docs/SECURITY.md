@@ -51,6 +51,9 @@ para corregirla.
 ### 7. Azar y dinero
 - Prohibido: apuestas, cajas de botín de pago y cualquier azar ligado a Robux u objetos
   con valor monetario. No hay excepciones.
+- Cofres (v2): las tiradas se hacen solo en el servidor; las tablas de botín viven en
+  `ServerStorage`. Nada que se compre con Robux puede dar cofres, tiradas o llaves, ni
+  directa ni indirectamente. Las probabilidades se muestran al jugador.
 
 ### 8. Texto y comunicación
 - Todo texto de jugadores visible para otros pasa por el filtro de Roblox

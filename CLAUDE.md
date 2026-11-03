@@ -1,14 +1,20 @@
-# CLAUDE.md — Reglas del proyecto COLOSSEUM
+# CLAUDE.md — Reglas del proyecto COLOSSEUM: Rise of the Beasts
 
-Experiencia multijugador de Roblox inspirada en los espectáculos de la Antigua Roma:
-combates de gladiadores, batallas navales, bestias y espectadores.
+Experiencia de Roblox: un gladiador desconocido que se convierte en leyenda combatiendo
+bestias míticas y conquistando sus poderes.
 
-Lee también: `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md` y `docs/adr/`.
+Lee también: `docs/VISION.md` (diseño), `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md` y `docs/adr/`.
 
 ## Objetivo actual
 
-**v0.1: prototipo funcional del coliseo con combates 1 contra 1 y espectadores.**
-Antes de trabajar fuera de la etapa en curso del ROADMAP, pide aprobación.
+**Versión 1 — El nacimiento:** combate contra la Hidra, individual y cooperativo, con tres
+armas, tres esencias y progresión. Se construye por hitos (ver `docs/ROADMAP.md`).
+Antes de trabajar fuera del hito en curso, pide aprobación.
+
+## Regla de diseño
+
+Cada recompensa abre una posibilidad nueva, cada bestia cuenta una historia y cada combate
+produce un momento memorable. Mejor un sistema excelente que diez mediocres.
 
 ## Reglas obligatorias
 
@@ -35,7 +41,11 @@ Antes de trabajar fuera de la etapa en curso del ROADMAP, pide aprobación.
   con Robux u objetos que tengan valor monetario.
 - Solo mecanismos oficiales: Game Passes, Developer Products, servidores privados y
   otros que Roblox documente. Consultar `PolicyService` cuando proceda.
-- Nada de pagar para ganar en combate competitivo; preferir cosméticos y comodidad.
+- Nada de pagar para ganar: la monetización es cosmética (apariencia, efectos visuales).
+- Los cofres solo se obtienen jugando. Nunca se venden, ni directa ni indirectamente
+  (llaves, tiradas extra, multiplicadores o monedas canjeables por cofres).
+- Sin presión para volver: nada de castigos por desconectarse, rachas que se pierden ni
+  temporizadores que obliguen a entrar cada pocas horas.
 
 ### Código
 - Lenguaje: Luau, con `--!strict` en todos los módulos.
@@ -63,6 +73,8 @@ Antes de trabajar fuera de la etapa en curso del ROADMAP, pide aprobación.
 - Si una decisión cambia, se escribe un ADR nuevo que sustituye al anterior.
 
 ### Contenido
+- Recursos (modelos, sonidos, texturas, nombres) propios o con licencia válida. Las imágenes
+  de referencia solo marcan el tono; no se copian diseños de otros juegos o películas.
 - Todo texto escrito por jugadores se filtra con `TextService` o `TextChatService`.
 - El nivel de violencia (sangre, etc.) debe respetar la calificación de madurez que el
   equipo decida en Roblox; no añadir contenido gráfico sin aprobación.

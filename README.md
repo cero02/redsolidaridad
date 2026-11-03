@@ -1,8 +1,11 @@
-# COLOSSEUM
+# COLOSSEUM: Rise of the Beasts
 
-Experiencia multijugador de Roblox inspirada en los espectáculos de la Antigua Roma.
+> Entras como gladiador. Combates como guerrero. Evolucionas como una leyenda.
 
-**Estado:** Etapa 0 (entorno). Objetivo v0.1: coliseo con combates 1 contra 1 y espectadores.
+Experiencia de Roblox: combates contra bestias míticas, solos o en grupo, conquistando sus
+poderes. Ver la [visión de diseño](docs/VISION.md).
+
+**Estado:** Etapa 0 (entorno). Próximo: Versión 1, combate contra la Hidra.
 
 ## Puesta en marcha (PC con Roblox Studio)
 
@@ -27,6 +30,7 @@ Este repositorio alojaba antes la web **RedSolidaria**. Su código se conserva e
 ## Documentación
 
 - [CLAUDE.md](CLAUDE.md): reglas del proyecto
+- [Visión de diseño](docs/VISION.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Hoja de ruta](docs/ROADMAP.md)
 - [Seguridad](docs/SECURITY.md)

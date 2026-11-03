@@ -54,16 +54,25 @@ Se usa un cargador propio de pocas líneas en lugar de un framework externo
 
 | Service | Responsabilidad | Etapa |
 |---|---|---|
-| `PlayerDataService` | Cargar y guardar perfiles; esquema versionado | 1 |
-| `NetService` | Crear Remotes desde `Shared/Net`, validar, limitar peticiones | 1 |
-| `ArenaService` | Estado de la arena, puntos de aparición, gradas | 2 |
-| `MatchService` | Cola 1v1, rondas, cuenta atrás, ganador | 2 |
-| `CombatService` | Validar ataques, calcular golpes y daño | 2 |
-| `SpectatorService` | Quién observa, a qué combate, datos públicos del combate | 3 |
-| `ProgressionService` | Estadísticas, niveles, cosméticos | 4 |
-| `BeastService` | IA de bestias (servidor) | 5 |
-| `NavalService` | Barcos y batallas navales | 6 |
-| `MonetizationService` | Game Passes, Developer Products, `ProcessReceipt` | 7 |
+Columna "Hito": ver `ROADMAP.md`.
+
+| Service | Responsabilidad | Hito |
+|---|---|---|
+| `PlayerDataService` | Cargar y guardar perfiles; esquema versionado | 1.0 |
+| `NetService` | Crear Remotes desde `Shared/Net`, validar, limitar peticiones | 1.0 |
+| `CombatService` | Validar ataques, esquivas y bloqueos; calcular golpes y daño | 1.1 |
+| `ArenaService` | Estado del Gran Coliseo, puntos de aparición | 1.2 |
+| `EncounterService` | Partida: grupo, inicio, fases, victoria o derrota, 8–12 min | 1.2 |
+| `BeastService` | Bestias en el servidor: máquina de estados, fases, patrones adaptativos | 1.2 |
+| `LoadoutService` | Arma, armadura, esencias y habilidad definitiva del jugador | 1.4 |
+| `ProgressionService` | Experiencia, niveles, desbloqueos | 1.5 |
+| `SpectatorService` | Gradas y cámara de espectador | 1.6 (propuesto) |
+| `LootService` | Cofres y tablas de botín (solo jugando) | v2 |
+| `QuestService` | Misiones | v2 |
+| `LeaderboardService` | Clasificaciones, Salón de leyendas | v2 |
+| `EventService` | Eventos imperiales | v3 |
+| `NavalService` | Batallas navales | v4 |
+| `MonetizationService` | Game Passes, Developer Products, `ProcessReceipt` | por decidir |
 
 ## Controllers previstos (cliente)
 
@@ -92,7 +101,20 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 - Biblioteca: ProfileStore, **en evaluación** (ver `adr/0003-persistencia-profilestore.md`).
   El resto del código nunca la usa directamente, solo a través de `PlayerDataService`.
 
-## Espectadores (v0.1)
+## Bestias
+
+- Cada bestia es un módulo de datos en `src/serverOnly/Beasts/` (fases, ataques, puntos
+  débiles, pesos de patrones) y la lógica común vive en `BeastService`.
+- **Máquina de estados en el servidor:** fase → elegir patrón → telegrafiar (aviso al
+  cliente) → ejecutar → recuperación (ventana para castigar).
+- **Patrones adaptativos:** pesos ajustados por reglas según dificultad y grupo
+  (tamaño, armas, rol). Deterministas a partir de una semilla para poder reproducir y
+  equilibrar. Sin aprendizaje automático.
+- El servidor mantiene la propiedad de red de las bestias (`BasePart:SetNetworkOwner(nil)`).
+- Los golpes de la bestia se resuelven en el servidor con consultas espaciales y dejan
+  margen por latencia: si el cliente vio el aviso a tiempo, esquivar debe funcionar.
+
+## Espectadores (hito 1.6, propuesto)
 
 - Los espectadores están en el mismo servidor que el combate, en las gradas.
 - No pueden interactuar con los luchadores; el servidor ignora cualquier petición de
