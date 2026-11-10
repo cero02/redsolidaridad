@@ -174,6 +174,7 @@ function CombatService.Start(_self: typeof(CombatService))
 		end
 		fighter:setBlocking(blocking, os.clock())
 		syncHumanoid(player, fighter)
+		NetService.fireAll("CombatEvent", "Block", player.UserId, fighter.blocking)
 		sendState(player, fighter)
 	end)
 

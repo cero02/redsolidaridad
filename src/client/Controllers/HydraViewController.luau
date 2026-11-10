@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local HEAD_TAG = "HydraHead"
 local SEGMENTS = 9
+local WOBBLE = 0.9
 local NECK_COLOR = Color3.fromRGB(40, 85, 55)
 
 local HydraViewController = {}
@@ -52,11 +53,20 @@ local function update()
 				local p2 = head.Position
 				-- Punto de control elevado: el cuello se arquea como el de una serpiente.
 				local p1 = (p0 + p2) / 2 + Vector3.new(0, 7, 0)
+				-- Ondulación: cada cuello se mece a su ritmo; nula en los extremos.
+				local time = os.clock()
+				local phase = p0.X * 0.37 + p0.Z * 0.21
 				for index, segment in segments do
 					local t = index / (SEGMENTS + 1)
 					local a = p0:Lerp(p1, t)
 					local b = p1:Lerp(p2, t)
-					segment.Position = a:Lerp(b, t)
+					local sway = math.sin(math.pi * t) * WOBBLE
+					local offset = Vector3.new(
+						math.sin(time * 1.7 + index * 0.6 + phase),
+						math.cos(time * 1.3 + index * 0.5 + phase) * 0.5,
+						math.cos(time * 1.5 + index * 0.7 + phase)
+					) * sway
+					segment.Position = a:Lerp(b, t) + offset
 					segment.Transparency = 0
 				end
 			else

@@ -5,6 +5,17 @@
 1. En una segunda ventana de PowerShell: `cd Documents\colosseum` y `git pull`.
 2. `rojo serve` en marcha y Studio conectado. Pulsa **Jugar** (F5).
 
+## Novedades visuales (v0.4.1)
+
+- [ ] El personaje lleva **gladius** en la mano derecha y **escudo** rojo en el brazo izquierdo.
+- [ ] Al atacar, el brazo sube y baja, y la espada deja una **estela** blanca.
+- [ ] El golpe pesado empuja con el **escudo** (brazo izquierdo).
+- [ ] Al bloquear, el brazo del escudo se levanta.
+- [ ] La cámara tiembla un poco al golpear y más al recibir daño.
+- [ ] Los cuellos de la Hidra **ondulan**.
+- Si la espada apunta en una dirección rara o un brazo gira al revés, dímelo: depende del
+  tipo de avatar (R15 o R6) y se corrige con un número.
+
 ## La pelea completa
 
 ### Fase I — Las tres cabezas (igual que antes)
@@ -69,6 +80,7 @@ Números en `src/serverOnly/Config/Hydra.luau`.
 
 ## Limitaciones conocidas
 
-- Todo sigue siendo de bloques, sin animaciones ni sonidos.
+- Todo sigue siendo de bloques. Las animaciones son provisionales, hechas por código
+  (brazos al atacar y bloquear, estela de la espada, temblor de cámara). Sin sonidos.
 - Aún no hay experiencia ni desbloqueos (hito 1.5) ni más armas (hito 1.4).
 - El récord se guarda en el perfil; en Studio los datos son simulados y se pierden al parar.

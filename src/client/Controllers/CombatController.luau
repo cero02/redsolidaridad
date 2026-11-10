@@ -10,14 +10,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local CharacterAnimator = require(script.Parent.CharacterAnimator)
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
--- Muestra la zona de golpe mientras no haya animaciones. Quitar cuando existan.
-local SHOW_DEBUG_HITBOX = true
+-- Muestra la zona de golpe como una caja de color (solo para depurar).
+local SHOW_DEBUG_HITBOX = false
+
+local HIT_SHAKE = 0.25
+local HURT_SHAKE = 0.5
+local SHAKE_TIME = 0.15
 
 local ACTION_ATTACK = "ColosseumAttack"
 local ACTION_BLOCK = "ColosseumBlock"
@@ -69,6 +74,23 @@ local function showHitbox(plan: FighterState.AttackPlan)
 	end)
 end
 
+-- Temblor breve de cámara para dar peso a los golpes.
+local function shake(magnitude: number)
+	local character = localPlayer.Character
+	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+	if humanoid == nil then
+		return
+	end
+	task.spawn(function()
+		local start = os.clock()
+		while os.clock() - start < SHAKE_TIME do
+			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * 2 * magnitude
+			RunService.RenderStepped:Wait()
+		end
+		humanoid.CameraOffset = Vector3.zero
+	end)
+end
+
 local function requestAttack(kind: FighterState.AttackKind)
 	local state = fighter
 	if state == nil then
@@ -78,6 +100,10 @@ local function requestAttack(kind: FighterState.AttackKind)
 	if plan ~= nil then
 		NetClient.fire("CombatAttack", kind)
 		showHitbox(plan)
+		local character = localPlayer.Character
+		if character then
+			CharacterAnimator.playAttack(character, plan.kind, plan.step)
+		end
 	end
 end
 
@@ -129,12 +155,19 @@ local function onBlock(_name: string, inputState: Enum.UserInputState, _input: I
 	if state == nil then
 		return Enum.ContextActionResult.Pass
 	end
+	local character = localPlayer.Character
 	if inputState == Enum.UserInputState.Begin then
 		state:setBlocking(true, os.clock())
 		NetClient.fire("CombatBlock", true)
+		if character then
+			CharacterAnimator.setBlocking(character, state.blocking)
+		end
 	elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
 		state:setBlocking(false, os.clock())
 		NetClient.fire("CombatBlock", false)
+		if character then
+			CharacterAnimator.setBlocking(character, false)
+		end
 	end
 	return Enum.ContextActionResult.Pass
 end
@@ -153,10 +186,14 @@ end
 local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 	if kind == "Hit" and userId == localPlayer.UserId then
 		CombatHud.showMessage(`-{a}`, Color3.fromRGB(255, 255, 255))
+		shake(HIT_SHAKE)
 	elseif kind == "Defense" and userId == localPlayer.UserId then
 		local info = DEFENSE_MESSAGES[a]
 		if info then
 			CombatHud.showMessage(info.text, info.color)
+		end
+		if a == "Hit" or a == "GuardBroken" then
+			shake(HURT_SHAKE)
 		end
 	elseif kind == "Downed" and userId == localPlayer.UserId then
 		CombatHud.showMessage("Has caído…", Color3.fromRGB(255, 70, 70))
@@ -183,6 +220,11 @@ function CombatController.Start(_self: typeof(CombatController))
 		local state = fighter
 		if state ~= nil then
 			state:applySnapshot(snapshot, os.clock())
+			-- Si el servidor bajó la guardia (guardia rota, aturdimiento), se refleja.
+			local character = localPlayer.Character
+			if character and not snapshot.blocking then
+				CharacterAnimator.setBlocking(character, false)
+			end
 		end
 	end)
 	NetClient.on("CombatEvent", onCombatEvent)

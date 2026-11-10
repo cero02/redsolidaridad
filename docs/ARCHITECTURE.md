@@ -174,6 +174,13 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
   validado en el servidor.
 - `EncounterService` mide el tiempo y guarda el récord personal (`stats.bestHydraTime`).
 
+### Aspecto provisional (v0.4.1)
+
+- `EquipmentService` (servidor): gladius y escudo de bloques soldados al personaje.
+- `CharacterAnimator` (cliente): animación por código con `Motor6D.Transform` en
+  `RunService.Stepped`. El jugador local se anima al instante; los demás, con `CombatEvent`.
+- Cuando existan animaciones y modelos de artista, sustituyen a estos dos módulos.
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

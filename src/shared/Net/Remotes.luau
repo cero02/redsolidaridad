@@ -57,7 +57,7 @@ local Remotes: { [string]: Definition } = {
 		direction = "ToClient",
 	},
 	-- Sucesos de combate: (tipo, userId, ...). Tipos: Attack, Hit, Dodge, Defense,
-	-- Telegraph, Downed, Revived.
+	-- Telegraph, Block, Downed, Revived.
 	CombatEvent = {
 		kind = "Event",
 		direction = "ToClient",
