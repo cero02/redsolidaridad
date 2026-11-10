@@ -13,6 +13,8 @@ export type Stats = {
 	perfectParries: number,
 	revives: number,
 	headsSevered: number,
+	-- Mejor tiempo contra la Hidra en segundos (0 = aún sin victoria).
+	bestHydraTime: number,
 }
 
 export type Loadout = {
@@ -57,6 +59,7 @@ Schema.template = table.freeze({
 		perfectParries = 0,
 		revives = 0,
 		headsSevered = 0,
+		bestHydraTime = 0,
 	}),
 	unlockedWeapons = table.freeze({ Gladius = true }),
 	unlockedEssences = table.freeze({ Loba = true }),

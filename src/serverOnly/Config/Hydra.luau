@@ -1,16 +1,21 @@
 --!strict
--- La Hidra de Lerna, fase 1 (hito 1.2). Diseño: docs/design/HIDRA.md.
+-- La Hidra de Lerna: tres fases (hito 1.3). Diseño: docs/design/HIDRA.md.
 -- Valores iniciales para equilibrar. Tiempos en segundos, distancias en studs.
 
 return table.freeze({
-	INITIAL_HEADS = 3,
 	-- Huecos de cuello alrededor del cuerpo (límite de cabezas a la vez).
 	MAX_SLOTS = 5,
 	HEAD_HEALTH = 90,
 	-- Tiempo que tarda un cuello cortado en regenerar dos cabezas.
 	REGROW_TIME = 12,
-	-- Cuellos cauterizados necesarios para superar la fase.
-	CAUTERIZE_REQUIRED = 3,
+	-- Fases con cabezas mortales: cabezas al empezar y cuellos que hay que cauterizar.
+	-- Después llega la fase de la cabeza inmortal.
+	PHASES = table.freeze({
+		table.freeze({ HEADS = 3, REQUIRED = 3 }),
+		table.freeze({ HEADS = 5, REQUIRED = 3 }),
+	}),
+	-- Pausa entre fases (la Hidra se sumerge).
+	PHASE_TRANSITION_TIME = 4,
 	-- Duración del arma encendida tras usar un brasero.
 	WEAPON_LIT_TIME = 10,
 	-- Tras tantas regeneraciones, el anunciador da la pista del fuego.
@@ -47,6 +52,46 @@ return table.freeze({
 		RADIUS = 15,
 		-- Un jugador está "cerca" si está a menos de esta distancia del centro.
 		NEAR_RANGE = 30,
+	}),
+
+	-- Fase 2: tres mordiscos seguidos de cabezas distintas.
+	CHAIN_GAP = 0.4,
+
+	-- Fase 2: niebla venenosa en media arena.
+	CLOUD = table.freeze({
+		TELEGRAPH = 1.5,
+		DURATION = 6,
+		TICK = 1,
+		DAMAGE_PER_TICK = 5,
+		COOLDOWN = 18,
+	}),
+
+	-- Fase 2: la Hidra emerge bajo un jugador.
+	DIVE = table.freeze({
+		TELEGRAPH = 1.3,
+		DAMAGE = 35,
+		RADIUS = 7,
+	}),
+
+	-- Fase 2: cada tanto la Hidra apaga un brasero (siempre queda al menos uno).
+	EXTINGUISH_INTERVAL = 20,
+
+	-- Fase 3: la cabeza dorada. No se puede cortar: hay que aturdirla (parada perfecta o
+	-- golpe pesado cuando está en el suelo) y romper las cadenas de la roca.
+	IMMORTAL = table.freeze({
+		TELEGRAPH = 1.0,
+		DAMAGE = 40,
+		RANGE = 42,
+		WIDTH = 8,
+		LUNGE_TIME = 0.15,
+		RECOVERY = 1.8,
+		PARRY_STUN = 6,
+		RETURN_TIME = 0.5,
+		STUN = 6,
+		CHAIN_COUNT = 3,
+		CHAIN_HEALTH = 30,
+		CHAIN_RADIUS = 32,
+		ROCK_HEIGHT = 46,
 	}),
 
 	POND_TICK = 1,

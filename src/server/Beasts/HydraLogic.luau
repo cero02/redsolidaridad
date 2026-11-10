@@ -14,17 +14,16 @@ export type Head = {
 }
 
 export type Config = {
-	INITIAL_HEADS: number,
+	PHASES: { { HEADS: number, REQUIRED: number } },
 	MAX_SLOTS: number,
 	HEAD_HEALTH: number,
 	REGROW_TIME: number,
-	CAUTERIZE_REQUIRED: number,
 	[string]: any,
 }
 
 export type RegrowEvent = { slot: number, newSlot: number? }
 export type DamageResult = "Ignored" | "Damaged" | "Severed"
-export type Pattern = "Bite" | "Spit" | "Tail"
+export type Pattern = "Bite" | "Spit" | "Tail" | "Chain" | "Cloud" | "Dive"
 
 export type PatternContext = {
 	-- Hay una cabeza libre y algún jugador a su alcance.
@@ -35,6 +34,12 @@ export type PatternContext = {
 	lastPattern: Pattern?,
 	-- Veces seguidas que se ha usado lastPattern.
 	repeatCount: number,
+	-- Fase actual: desde la 2 se desbloquean cadena, nube y inmersión.
+	phase: number,
+	-- Cabezas libres para atacar (la cadena de mordiscos necesita al menos dos).
+	freeHeads: number,
+	-- La nube tóxica tiene recarga propia.
+	cloudReady: boolean,
 }
 
 export type TargetInfo = {
@@ -46,14 +51,20 @@ export type TargetInfo = {
 
 export type Hydra = {
 	heads: { Head },
+	-- Fase actual (1..n) entre las fases con cabezas mortales.
+	phase: number,
+	-- Cuellos cauterizados en la fase actual y los necesarios para superarla.
 	cauterizedCount: number,
+	requiredCount: number,
 	regrowCount: number,
 
 	damageHead: (self: Hydra, slot: number, damage: number, now: number) -> DamageResult,
 	cauterize: (self: Hydra, slot: number) -> boolean,
 	update: (self: Hydra, now: number) -> { RegrowEvent },
 	aliveSlots: (self: Hydra) -> { number },
-	isDefeated: (self: Hydra) -> boolean,
+	isPhaseCleared: (self: Hydra) -> boolean,
+	-- Pasa a la siguiente fase de cabezas. Devuelve false si no quedan más.
+	advancePhase: (self: Hydra) -> boolean,
 }
 
 local HydraLogic = {}
@@ -61,19 +72,28 @@ local HydraLogic = {}
 function HydraLogic.new(config: Config): Hydra
 	local hydra = {
 		heads = {},
+		phase = 1,
 		cauterizedCount = 0,
+		requiredCount = 0,
 		regrowCount = 0,
 	} :: Hydra
 
-	for slot = 1, config.MAX_SLOTS do
-		local alive = slot <= config.INITIAL_HEADS
-		hydra.heads[slot] = {
-			slot = slot,
-			status = if alive then "Alive" else "Empty",
-			health = if alive then config.HEAD_HEALTH else 0,
-			regrowAt = 0,
-		}
+	local function setupPhase(phase: number)
+		local phaseConfig = config.PHASES[phase]
+		hydra.phase = phase
+		hydra.cauterizedCount = 0
+		hydra.requiredCount = phaseConfig.REQUIRED
+		for slot = 1, config.MAX_SLOTS do
+			local alive = slot <= phaseConfig.HEADS
+			hydra.heads[slot] = {
+				slot = slot,
+				status = if alive then "Alive" else "Empty",
+				health = if alive then config.HEAD_HEALTH else 0,
+				regrowAt = 0,
+			}
+		end
 	end
+	setupPhase(1)
 
 	function hydra.damageHead(self: Hydra, slot: number, damage: number, now: number): DamageResult
 		local head = self.heads[slot]
@@ -135,14 +155,22 @@ function HydraLogic.new(config: Config): Hydra
 		return slots
 	end
 
-	function hydra.isDefeated(self: Hydra): boolean
-		return self.cauterizedCount >= config.CAUTERIZE_REQUIRED
+	function hydra.isPhaseCleared(self: Hydra): boolean
+		return self.cauterizedCount >= self.requiredCount
+	end
+
+	function hydra.advancePhase(self: Hydra): boolean
+		if self.phase >= #config.PHASES then
+			return false
+		end
+		setupPhase(self.phase + 1)
+		return true
 	end
 
 	return hydra
 end
 
-local PATTERN_ORDER: { Pattern } = { "Bite", "Spit", "Tail" }
+local PATTERN_ORDER: { Pattern } = { "Bite", "Spit", "Tail", "Chain", "Cloud", "Dive" }
 
 -- Pesos de cada ataque según la situación. Reglas deterministas: mismo contexto y misma
 -- tirada (`roll` en [0, 1)) dan siempre el mismo resultado.
@@ -153,7 +181,16 @@ function HydraLogic.patternWeights(context: PatternContext): { [Pattern]: number
 		Spit = 2 + 3 * context.farCount,
 		-- Los jugadores pegados al cuerpo atraen el coletazo.
 		Tail = if context.nearCount > 0 then 1 + 3 * context.nearCount else 0,
+		Chain = 0,
+		Cloud = 0,
+		Dive = 0,
 	}
+	if context.phase >= 2 then
+		weights.Chain = if context.canBite and context.freeHeads >= 2 then 4 else 0
+		weights.Cloud = if context.cloudReady then 2 else 0
+		-- La inmersión castiga a quien se queda lejos.
+		weights.Dive = 2 + context.farCount
+	end
 	-- Nunca el mismo ataque tres veces seguidas.
 	if context.lastPattern ~= nil and context.repeatCount >= 2 then
 		weights[context.lastPattern] = 0

@@ -163,6 +163,17 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 | `EncounterController` | `client/Controllers` | Anunciador y progreso |
 | `HydraViewController` | `client/Controllers` | Dibuja los cuellos (solo visual) |
 
+### Hito 1.3 (Hidra completa y cooperativo)
+
+- `HydraLogic` gestiona varias fases de cabezas (`PHASES` en la configuración) y desbloquea
+  ataques nuevos desde la fase 2 (cadena de mordiscos, nube tóxica, inmersión).
+- `HydraService` añade la cabeza inmortal, la roca y las cadenas. Cada cambio de fase
+  cancela los ataques en curso (`runId`) y reanuda el combate tras una pausa.
+- `CombatService` distingue **caído** de muerto: quien decide es un manejador que registra
+  `EncounterService` (`setZeroHealthHandler`). Reanimar: `ProximityPrompt` sobre el caído,
+  validado en el servidor.
+- `EncounterService` mide el tiempo y guarda el récord personal (`stats.bestHydraTime`).
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

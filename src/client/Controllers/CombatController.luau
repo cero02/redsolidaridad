@@ -158,6 +158,10 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 		if info then
 			CombatHud.showMessage(info.text, info.color)
 		end
+	elseif kind == "Downed" and userId == localPlayer.UserId then
+		CombatHud.showMessage("Has caído…", Color3.fromRGB(255, 70, 70))
+	elseif kind == "Revived" and userId == localPlayer.UserId then
+		CombatHud.showMessage("¡En pie, gladiador!", Color3.fromRGB(255, 215, 80))
 	elseif kind == "Telegraph" then
 		CombatHud.showMessage("¡Cuidado!", Color3.fromRGB(255, 90, 90))
 	end

@@ -78,6 +78,8 @@ export type FighterState = {
 	receiveHit: (self: FighterState, damage: number, impactTime: number, now: number) -> HitOutcome,
 	-- Daño que no se puede esquivar ni bloquear (veneno, entorno).
 	takeDamage: (self: FighterState, amount: number) -> (),
+	-- Levanta a un luchador caído con la vida indicada.
+	revive: (self: FighterState, health: number, now: number) -> (),
 	addDamageDealt: (self: FighterState, amount: number) -> (),
 	stun: (self: FighterState, duration: number, now: number) -> (),
 	isStunned: (self: FighterState, now: number) -> boolean,
@@ -252,6 +254,14 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 
 	function state.takeDamage(self: FighterState, amount: number)
 		self.health = math.max(0, self.health - math.max(0, amount))
+	end
+
+	function state.revive(self: FighterState, health: number, t: number)
+		self.health = math.clamp(health, 1, config.MAX_HEALTH)
+		self.blocking = false
+		stunnedUntil = -math.huge
+		busyUntil = t
+		comboStep = 0
 	end
 
 	function state.addDamageDealt(_self: FighterState, amount: number)

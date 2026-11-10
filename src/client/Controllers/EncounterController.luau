@@ -42,7 +42,7 @@ local function onAnnounce(text: string, seconds: number)
 	end)
 end
 
-local function onEncounterState(state: string, cauterized: number, required: number)
+local function onEncounterState(state: string, progress: string)
 	if state == "Idle" then
 		title.Text = ""
 	elseif state == "Intro" then
@@ -50,7 +50,7 @@ local function onEncounterState(state: string, cauterized: number, required: num
 	elseif state == "Ending" then
 		title.Text = "LA HIDRA DE LERNA · Fin del combate"
 	else
-		title.Text = `LA HIDRA DE LERNA · Cuellos cauterizados {cauterized}/{required}`
+		title.Text = `LA HIDRA DE LERNA · {progress}`
 	end
 end
 

@@ -18,5 +18,6 @@ return table.freeze({
 	-- Dónde vuelven los jugadores al terminar.
 	LOBBY_RETURN = table.freeze({ 0, 6, 10 }),
 
-	CROWD_SIZE = 220,
+	-- Espectadores de bloques en las gradas (bajar si el equipo va justo).
+	CROWD_SIZE = 120,
 })

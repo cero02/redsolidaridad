@@ -19,6 +19,10 @@ export type TargetHandler = (attacker: Player, damage: number, stun: number) -> 
 local CombatService = {}
 
 local fighters: { [Player]: Fighter } = {}
+-- Jugadores caídos: con 0 de vida pero aún no muertos (esperan reanimación).
+local downed: { [Player]: boolean } = {}
+-- Decide si un jugador que llega a 0 de vida queda caído (true) o muere (false).
+local zeroHealthHandler: ((player: Player) -> boolean)? = nil
 local targets: { [Model]: TargetHandler } = {}
 
 local function getHumanoid(player: Player): Humanoid?
@@ -38,7 +42,21 @@ end
 
 local function syncHumanoid(player: Player, fighter: Fighter)
 	local humanoid = getHumanoid(player)
-	if humanoid then
+	if humanoid == nil then
+		return
+	end
+	if fighter:isDead() and not downed[player] then
+		local handler = zeroHealthHandler
+		if handler ~= nil and handler(player) then
+			downed[player] = true
+			NetService.fire("CombatEvent", player, "Downed", player.UserId)
+		end
+	end
+	if downed[player] then
+		-- Caído: no muere todavía, pero no puede moverse.
+		humanoid.Health = 1
+		humanoid.WalkSpeed = 0
+	else
 		humanoid.Health = fighter.health
 		humanoid.WalkSpeed = if fighter.blocking then Combat.BLOCK_WALK_SPEED else Combat.WALK_SPEED
 	end
@@ -96,6 +114,7 @@ local function onCharacterAdded(player: Player, character: Model)
 	-- Hito 1.1: todos usan el Gladius. El equipamiento del perfil llega en el hito 1.4.
 	local fighter = FighterState.new(Weapons.Gladius :: any, Combat :: any, os.clock())
 	fighters[player] = fighter
+	downed[player] = nil
 
 	humanoid.MaxHealth = Combat.MAX_HEALTH
 	humanoid.Health = Combat.MAX_HEALTH
@@ -164,6 +183,7 @@ function CombatService.Start(_self: typeof(CombatService))
 	end
 	Players.PlayerRemoving:Connect(function(player: Player)
 		fighters[player] = nil
+		downed[player] = nil
 	end)
 end
 
@@ -186,7 +206,8 @@ function CombatService.hitPlayer(player: Player, damage: number, impactTime: num
 	end
 	local delay = math.max(0, impactTime + Combat.DEFENSE_LATENCY_GRACE - os.clock())
 	task.delay(delay, function()
-		if fighters[player] ~= fighter then
+		-- Un luchador caído no recibe más golpes.
+		if fighters[player] ~= fighter or fighter:isDead() then
 			return
 		end
 		local outcome = fighter:receiveHit(damage, impactTime, os.clock())
@@ -202,7 +223,7 @@ end
 -- Daño que no se puede esquivar ni bloquear (veneno, entorno).
 function CombatService.damagePlayer(player: Player, amount: number)
 	local fighter = fighters[player]
-	if fighter == nil then
+	if fighter == nil or fighter:isDead() then
 		return
 	end
 	fighter:takeDamage(amount)
@@ -219,6 +240,7 @@ function CombatService.resetFighter(player: Player)
 	end
 	local fighter = FighterState.new(Weapons.Gladius :: any, Combat :: any, os.clock())
 	fighters[player] = fighter
+	downed[player] = nil
 	local humanoid = getHumanoid(player)
 	if humanoid then
 		humanoid.Died:Connect(function()
@@ -229,6 +251,40 @@ function CombatService.resetFighter(player: Player)
 	end
 	syncHumanoid(player, fighter)
 	sendState(player, fighter)
+end
+
+-- Define quién decide si un jugador con 0 de vida queda caído en vez de morir.
+function CombatService.setZeroHealthHandler(handler: ((player: Player) -> boolean)?)
+	zeroHealthHandler = handler
+end
+
+function CombatService.isDowned(player: Player): boolean
+	return downed[player] == true
+end
+
+-- Levanta a un jugador caído con una fracción de su vida máxima.
+function CombatService.revive(player: Player, healthFraction: number)
+	local fighter = fighters[player]
+	if fighter == nil or not downed[player] then
+		return
+	end
+	downed[player] = nil
+	fighter:revive(Combat.MAX_HEALTH * healthFraction, os.clock())
+	syncHumanoid(player, fighter)
+	NetService.fire("CombatEvent", player, "Revived", player.UserId)
+	sendState(player, fighter)
+end
+
+-- Remata a un jugador caído (se acabó el tiempo o cayó todo el grupo).
+function CombatService.finishOff(player: Player)
+	if not downed[player] then
+		return
+	end
+	downed[player] = nil
+	local humanoid = getHumanoid(player)
+	if humanoid then
+		humanoid.Health = 0
+	end
 end
 
 function CombatService.isAlive(player: Player): boolean

@@ -1,7 +1,8 @@
 --!strict
--- Da cuerpo a la Hidra de Lerna (fase 1): construye su modelo de bloques, ejecuta sus
--- ataques con aviso previo y aplica las reglas de HydraLogic (cortar, cauterizar,
--- regenerar). Todo ocurre en el servidor. Diseño: docs/design/HIDRA.md.
+-- Da cuerpo a la Hidra de Lerna: construye su modelo de bloques, ejecuta sus ataques con
+-- aviso previo y aplica las reglas de HydraLogic. Tres fases: las tres cabezas, la furia
+-- (cinco cabezas y ataques nuevos) y la cabeza inmortal, que solo se vence enterrándola
+-- bajo la roca. Todo ocurre en el servidor. Diseño: docs/design/HIDRA.md.
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
@@ -11,6 +12,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local ArenaConfig = require(ServerStorage.ServerOnly.Config.Arena)
 local ArenaService = require(script.Parent.ArenaService)
 local CombatService = require(script.Parent.CombatService)
 local Config = require(ServerStorage.ServerOnly.Config.Hydra)
@@ -23,64 +25,97 @@ local SKIN = Color3.fromRGB(45, 95, 60)
 local SKIN_TELEGRAPH = Color3.fromRGB(255, 90, 40)
 local SKIN_STUNNED = Color3.fromRGB(240, 210, 60)
 local SKIN_HIT = Color3.fromRGB(255, 255, 255)
+local GOLD = Color3.fromRGB(255, 200, 60)
+local GOLD_STUNNED = Color3.fromRGB(150, 140, 120)
 local EYES = Color3.fromRGB(255, 230, 60)
 local STUMP_BLEEDING = Color3.fromRGB(200, 30, 30)
 local STUMP_BURNT = Color3.fromRGB(25, 20, 20)
 local MARKER_DANGER = Color3.fromRGB(255, 40, 40)
 local MARKER_POISON = Color3.fromRGB(110, 220, 60)
+local MARKER_WATER = Color3.fromRGB(150, 220, 255)
+local IRON = Color3.fromRGB(90, 90, 95)
 
-local HEAD_SIZE = Vector3.new(4.5, 4.5, 7)
 local REST_HEIGHT = 15
 local REST_DISTANCE = 9
 local GROUND_HEIGHT = 2.6
+local HINT_COOLDOWN = 4
+local ROMAN = { "I", "II", "III", "IV" }
+
+type BiteSettings = {
+	TELEGRAPH: number,
+	DAMAGE: number,
+	RANGE: number,
+	WIDTH: number,
+	LUNGE_TIME: number,
+	RECOVERY: number,
+	PARRY_STUN: number,
+	RETURN_TIME: number,
+	[string]: any,
+}
 
 type HeadRecord = {
 	slot: number,
+	immortal: boolean,
 	direction: Vector3,
 	model: Model,
 	part: Part,
 	eyes: { Part },
 	billboard: BillboardGui,
 	label: TextLabel,
-	stumpModel: Model,
-	stump: Part,
-	stumpBillboard: BillboardGui,
-	stumpLabel: TextLabel,
+	-- Solo las cabezas mortales tienen muñón.
+	stumpModel: Model?,
+	stump: Part?,
+	stumpBillboard: BillboardGui?,
+	stumpLabel: TextLabel?,
+	baseColor: Color3,
 	restCFrame: CFrame,
 	busy: boolean,
 	groundedUntil: number,
 }
 
+type Chain = { model: Model, post: Part, link: Part, health: number, broken: boolean }
 type AttackMemory = { lastAttackedAt: number, consecutive: number }
+type Mode = "Heads" | "Immortal"
 
 local HydraService = {}
 
--- La fase ha sido superada.
+-- La Hidra ha sido vencida.
 HydraService.Defeated = Signal.new() :: Signal.Signal<()>
 -- (texto, segundos, jugador o nil para todos los participantes).
 HydraService.Announcement = Signal.new() :: Signal.Signal<string, number, Player?>
--- (cuellos cauterizados, necesarios).
-HydraService.Progress = Signal.new() :: Signal.Signal<number, number>
+-- Texto de progreso para la interfaz.
+HydraService.Progress = Signal.new() :: Signal.Signal<string>
 
 local model: Model? = nil
 local markers: Folder? = nil
+local rock: Part? = nil
 local logic: HydraLogic.Hydra? = nil
 local heads: { [number]: HeadRecord } = {}
+local immortalHead: HeadRecord? = nil
+local chains: { Chain } = {}
 local getParticipants: () -> { Player } = function()
 	return {}
 end
 
 local active = false
 local runId = 0
+local mode: Mode = "Heads"
 local attacking = false
 local nextAttackAt = 0
 local lastPattern: HydraLogic.Pattern? = nil
 local repeatCount = 0
 local severedOnce = false
+local cloudReadyAt = 0
+local nextExtinguishAt = 0
+local immortalStunnedUntil = 0
+local immortalStunnedOnce = false
+local immortalBites = 0
+local brokenChains = 0
 local random = Random.new()
 
 local litUntil: { [Player]: number } = {}
 local attackMemory: { [Player]: AttackMemory } = {}
+local lastHintAt: { [Player]: number } = {}
 
 local function isRunning(id: number): boolean
 	return active and runId == id
@@ -99,6 +134,31 @@ end
 
 local function announce(text: string, seconds: number, player: Player?)
 	HydraService.Announcement:Fire(text, seconds, player)
+end
+
+-- Pista personal, como mucho una cada pocos segundos para no saturar.
+local function hint(player: Player, text: string)
+	local now = os.clock()
+	local last = lastHintAt[player]
+	if last == nil or now - last >= HINT_COOLDOWN then
+		lastHintAt[player] = now
+		announce(text, 3, player)
+	end
+end
+
+local function fireProgress()
+	local hydra = logic
+	if hydra == nil then
+		return
+	end
+	if mode == "Immortal" then
+		HydraService.Progress:Fire(`La cabeza inmortal · Cadenas rotas {brokenChains}/{#chains}`)
+	else
+		local numeral = ROMAN[hydra.phase] or tostring(hydra.phase)
+		HydraService.Progress:Fire(
+			`Fase {numeral} · Cuellos cauterizados {hydra.cauterizedCount}/{hydra.requiredCount}`
+		)
+	end
 end
 
 local function tween(part: Part, goal: CFrame, seconds: number, style: Enum.EasingStyle)
@@ -176,37 +236,151 @@ local function setHeadVisible(record: HeadRecord, visible: boolean)
 end
 
 local function setStumpState(record: HeadRecord, state: "Hidden" | "Bleeding" | "Burnt")
-	record.stump.Transparency = if state == "Hidden" then 1 else 0
-	record.stump.CanQuery = state == "Bleeding"
-	record.stump.Color = if state == "Burnt" then STUMP_BURNT else STUMP_BLEEDING
-	record.stump.Material = if state == "Burnt" then Enum.Material.Slate else Enum.Material.Neon
-	record.stumpBillboard.Enabled = state ~= "Hidden"
+	local stump, billboard, label = record.stump, record.stumpBillboard, record.stumpLabel
+	if stump == nil or billboard == nil or label == nil then
+		return
+	end
+	stump.Transparency = if state == "Hidden" then 1 else 0
+	stump.CanQuery = state == "Bleeding"
+	stump.Color = if state == "Burnt" then STUMP_BURNT else STUMP_BLEEDING
+	stump.Material = if state == "Burnt" then Enum.Material.Slate else Enum.Material.Neon
+	billboard.Enabled = state ~= "Hidden"
 	if state == "Burnt" then
-		record.stumpLabel.Text = "Cauterizado"
+		label.Text = "Cauterizado"
 	end
 end
 
 local function refreshHeadLabel(record: HeadRecord)
 	local hydra = logic
-	if hydra then
+	if hydra and not record.immortal then
 		record.label.Text = `{math.ceil(hydra.heads[record.slot].health)}`
 	end
+end
+
+-- ¿Puede esta cabeza atacar o recibir golpes ahora mismo?
+local function headUsable(record: HeadRecord): boolean
+	if record.immortal then
+		return mode == "Immortal"
+	end
+	local hydra = logic
+	return hydra ~= nil and mode == "Heads" and hydra.heads[record.slot].status == "Alive"
+end
+
+local function refreshAllHeads()
+	local hydra = logic
+	if hydra == nil then
+		return
+	end
+	for slot, record in heads do
+		local alive = mode == "Heads" and hydra.heads[slot].status == "Alive"
+		setHeadVisible(record, alive)
+		if alive then
+			refreshHeadLabel(record)
+		end
+	end
+	local golden = immortalHead
+	if golden then
+		setHeadVisible(golden, mode == "Immortal")
+	end
+end
+
+-- Devuelve todas las cabezas a su postura inicial y oculta los muñones.
+local function resetHeadPoses()
+	for _, record in heads do
+		record.busy = false
+		record.groundedUntil = 0
+		record.part.CFrame = record.restCFrame
+		setHeadColor(record, record.baseColor)
+		setStumpState(record, "Hidden")
+	end
+	local golden = immortalHead
+	if golden then
+		golden.busy = false
+		golden.groundedUntil = 0
+		golden.part.CFrame = golden.restCFrame
+		setHeadColor(golden, golden.baseColor)
+	end
+end
+
+local mainLoop: (id: number) -> ()
+
+-- Corta todos los ataques en curso, oculta a la Hidra y, tras una pausa, prepara la
+-- siguiente fase con `setup` y reanuda el combate.
+local function restartAfter(seconds: number, setup: () -> ())
+	runId += 1
+	local id = runId
+	attacking = false
+	local folder = markers
+	if folder then
+		folder:ClearAllChildren()
+	end
+	for _, record in heads do
+		setHeadVisible(record, false)
+		setStumpState(record, "Hidden")
+	end
+
+	task.delay(seconds, function()
+		if not isRunning(id) then
+			return
+		end
+		setup()
+		resetHeadPoses()
+		refreshAllHeads()
+		fireProgress()
+		task.spawn(mainLoop, id)
+	end)
 end
 
 local function finish()
 	active = false
 	runId += 1
-	for _, record in heads do
-		setHeadVisible(record, false)
-		if record.stump.Material == Enum.Material.Neon then
-			setStumpState(record, "Hidden")
-		end
-	end
 	local folder = markers
 	if folder then
 		folder:ClearAllChildren()
 	end
+	for _, record in heads do
+		setHeadVisible(record, false)
+		setStumpState(record, "Hidden")
+	end
+
+	-- La roca cae y entierra la cabeza inmortal.
+	local center = ArenaService.getCenter()
+	local golden = immortalHead
+	local stone = rock
+	if golden and stone and mode == "Immortal" then
+		golden.part.CFrame = CFrame.new(center + Vector3.new(0, 4, 0))
+		local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		TweenService:Create(stone, info, { Position = center + Vector3.new(0, 9, 0) }):Play()
+		task.delay(0.7, function()
+			setHeadVisible(golden, false)
+		end)
+	end
 	HydraService.Defeated:Fire()
+end
+
+local function startImmortalPhase()
+	announce("Las cabezas se retiran… algo dorado asciende desde el fondo.", Config.PHASE_TRANSITION_TIME, nil)
+	restartAfter(Config.PHASE_TRANSITION_TIME, function()
+		mode = "Immortal"
+		immortalStunnedUntil = 0
+		immortalStunnedOnce = false
+		immortalBites = 0
+		lastPattern = nil
+		repeatCount = 0
+		ArenaService.relightAllBraziers()
+		announce("¡LA CABEZA INMORTAL! Ningún acero puede cortarla…", 5, nil)
+	end)
+end
+
+local function startNextHeadPhase()
+	announce("La Hidra se hunde… ¡y el agua empieza a hervir!", Config.PHASE_TRANSITION_TIME, nil)
+	restartAfter(Config.PHASE_TRANSITION_TIME, function()
+		lastPattern = nil
+		repeatCount = 0
+		cloudReadyAt = os.clock() + 6
+		nextExtinguishAt = os.clock() + Config.EXTINGUISH_INTERVAL
+		announce("¡LA FURIA DE LA HIDRA! Cinco cabezas emergen del pantano.", 5, nil)
+	end)
 end
 
 local function isWeaponLit(player: Player): boolean
@@ -216,27 +390,31 @@ end
 
 local function onStumpHit(record: HeadRecord, attacker: Player)
 	local hydra = logic
-	if hydra == nil or not active then
+	if hydra == nil or not active or mode ~= "Heads" then
 		return
 	end
 	if not isWeaponLit(attacker) then
-		announce("El cuello vuelve a crecer… ¡Enciende tu arma en un brasero!", 3, attacker)
+		hint(attacker, "El cuello vuelve a crecer… ¡Enciende tu arma en un brasero!")
 		return
 	end
-	if hydra:cauterize(record.slot) then
-		setStumpState(record, "Burnt")
-		HydraService.Progress:Fire(hydra.cauterizedCount, Config.CAUTERIZE_REQUIRED)
-		if hydra:isDefeated() then
-			finish()
-		else
-			announce(`¡Cuello cauterizado! ({hydra.cauterizedCount}/{Config.CAUTERIZE_REQUIRED})`, 3, nil)
-		end
+	if not hydra:cauterize(record.slot) then
+		return
+	end
+	setStumpState(record, "Burnt")
+	fireProgress()
+
+	if not hydra:isPhaseCleared() then
+		announce(`¡Cuello cauterizado! ({hydra.cauterizedCount}/{hydra.requiredCount})`, 3, nil)
+	elseif hydra:advancePhase() then
+		startNextHeadPhase()
+	else
+		startImmortalPhase()
 	end
 end
 
 local function onHeadHit(record: HeadRecord, damage: number)
 	local hydra = logic
-	if hydra == nil or not active then
+	if hydra == nil or not active or mode ~= "Heads" then
 		return
 	end
 	local result = hydra:damageHead(record.slot, damage, os.clock())
@@ -261,31 +439,105 @@ local function onHeadHit(record: HeadRecord, damage: number)
 	setHeadColor(record, SKIN_HIT)
 	task.delay(0.1, function()
 		if record.part.Color == SKIN_HIT then
-			setHeadColor(record, if previous == SKIN_HIT then SKIN else previous)
+			setHeadColor(record, if previous == SKIN_HIT then record.baseColor else previous)
 		end
 	end)
 end
 
-local function buildHead(parent: Instance, slot: number): HeadRecord
+local function stunImmortal()
+	local golden = immortalHead
+	if golden == nil or mode ~= "Immortal" then
+		return
+	end
+	immortalStunnedUntil = os.clock() + Config.IMMORTAL.STUN
+	golden.groundedUntil = immortalStunnedUntil
+	setHeadColor(golden, GOLD_STUNNED)
+	golden.label.Text = "ATURDIDA"
+	if not immortalStunnedOnce then
+		immortalStunnedOnce = true
+		announce("¡Está aturdida! ¡LAS CADENAS! ¡Soltad la roca sobre ella!", 5, nil)
+	else
+		announce("¡Aturdida! ¡A las cadenas!", 2.5, nil)
+	end
+end
+
+local function onImmortalHit(attacker: Player, stun: number)
+	local golden = immortalHead
+	if golden == nil or not active or mode ~= "Immortal" then
+		return
+	end
+	local now = os.clock()
+	if now < immortalStunnedUntil then
+		hint(attacker, "No puede morir… ¡pero la roca sí puede enterrarla! ¡Las cadenas!")
+	elseif now < golden.groundedUntil and stun >= 0.5 then
+		-- Un golpe pesado mientras está en el suelo la aturde.
+		stunImmortal()
+	else
+		hint(attacker, "Tu acero rebota en sus escamas doradas. Un golpe PESADO cuando caiga al suelo…")
+	end
+end
+
+local function onChainHit(chain: Chain, attacker: Player, damage: number)
+	if chain.broken or not active then
+		return
+	end
+	if mode ~= "Immortal" then
+		hint(attacker, "Una cadena enorme sujeta la roca sobre el estanque. Ahora no cede.")
+		return
+	end
+	if os.clock() >= immortalStunnedUntil then
+		hint(attacker, "La cabeza dorada vigila las cadenas. ¡Atúrdela primero!")
+		return
+	end
+
+	chain.health -= damage
+	chain.post.Color = SKIN_HIT
+	task.delay(0.1, function()
+		if not chain.broken then
+			chain.post.Color = IRON
+		end
+	end)
+	if chain.health > 0 then
+		return
+	end
+
+	chain.broken = true
+	chain.link:Destroy()
+	chain.post.Color = STUMP_BURNT
+	chain.post.CanQuery = false
+	brokenChains += 1
+	fireProgress()
+	if brokenChains >= #chains then
+		finish()
+	else
+		announce(`¡Cadena rota! ({brokenChains}/{#chains}) La roca se tambalea…`, 3, nil)
+	end
+end
+
+local function buildHead(parent: Instance, slot: number, immortal: boolean): HeadRecord
 	local center = ArenaService.getCenter()
 	local pondRadius = ArenaService.getPondRadius()
 	-- Los cuellos se reparten en abanico hacia la entrada de los gladiadores (+Z).
-	local angle = math.rad(90 + (slot - (Config.MAX_SLOTS + 1) / 2) * 38)
+	local angle = if immortal then math.rad(90) else math.rad(90 + (slot - (Config.MAX_SLOTS + 1) / 2) * 38)
 	local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local scale = if immortal then 1.5 else 1
+	local baseColor = if immortal then GOLD else SKIN
 
-	local restPosition = center + direction * REST_DISTANCE + Vector3.new(0, REST_HEIGHT, 0)
+	local restPosition = center
+		+ direction * REST_DISTANCE
+		+ Vector3.new(0, REST_HEIGHT + (if immortal then 4 else 0), 0)
 	local restCFrame = CFrame.lookAt(restPosition, restPosition + direction + Vector3.new(0, -0.35, 0))
 
 	local headModel = Instance.new("Model")
-	headModel.Name = `Head{slot}`
+	headModel.Name = if immortal then "ImmortalHead" else `Head{slot}`
 
 	local part = Instance.new("Part")
 	part.Name = "Head"
 	part.Anchored = true
 	part.CanCollide = false
-	part.Size = HEAD_SIZE
-	part.Color = SKIN
-	part.Material = Enum.Material.Slate
+	part.Size = Vector3.new(4.5, 4.5, 7) * scale
+	part.Color = baseColor
+	part.Material = if immortal then Enum.Material.Neon else Enum.Material.Slate
 	part.CFrame = restCFrame
 	part:SetAttribute("NeckBase", center + direction * 4 + Vector3.new(0, 4, 0))
 	part.Parent = headModel
@@ -296,14 +548,14 @@ local function buildHead(parent: Instance, slot: number): HeadRecord
 		local eye = Instance.new("Part")
 		eye.Name = "Eye"
 		eye.Shape = Enum.PartType.Ball
-		eye.Size = Vector3.new(1, 1, 1)
-		eye.Color = EYES
+		eye.Size = Vector3.new(1, 1, 1) * scale
+		eye.Color = if immortal then Color3.fromRGB(255, 60, 60) else EYES
 		eye.Material = Enum.Material.Neon
 		eye.CanCollide = false
 		eye.CanQuery = false
 		eye.CanTouch = false
 		eye.Massless = true
-		eye.CFrame = restCFrame * CFrame.new(side * 1.6, 1.2, -2.6)
+		eye.CFrame = restCFrame * CFrame.new(side * 1.6 * scale, 1.2 * scale, -2.6 * scale)
 		eye.Parent = headModel
 
 		local weld = Instance.new("WeldConstraint")
@@ -313,9 +565,39 @@ local function buildHead(parent: Instance, slot: number): HeadRecord
 		table.insert(eyes, eye)
 	end
 
-	local billboard, label = makeBillboard(part, 4)
+	local billboard, label = makeBillboard(part, 4 * scale)
+	if immortal then
+		label.Text = "INMORTAL"
+		label.TextColor3 = GOLD
+	end
 	CollectionService:AddTag(part, HEAD_TAG)
 	headModel.Parent = parent
+
+	local record: HeadRecord = {
+		slot = slot,
+		immortal = immortal,
+		direction = direction,
+		model = headModel,
+		part = part,
+		eyes = eyes,
+		billboard = billboard,
+		label = label,
+		stumpModel = nil,
+		stump = nil,
+		stumpBillboard = nil,
+		stumpLabel = nil,
+		baseColor = baseColor,
+		restCFrame = restCFrame,
+		busy = false,
+		groundedUntil = 0,
+	}
+
+	if immortal then
+		CombatService.registerTarget(headModel, function(attacker: Player, _damage: number, stun: number)
+			onImmortalHit(attacker, stun)
+		end)
+		return record
+	end
 
 	-- El muñón queda al borde del estanque, al alcance de los gladiadores.
 	local stumpModel = Instance.new("Model")
@@ -331,22 +613,10 @@ local function buildHead(parent: Instance, slot: number): HeadRecord
 	local stumpBillboard, stumpLabel = makeBillboard(stump, 4.5)
 	stumpModel.Parent = parent
 
-	local record: HeadRecord = {
-		slot = slot,
-		direction = direction,
-		model = headModel,
-		part = part,
-		eyes = eyes,
-		billboard = billboard,
-		label = label,
-		stumpModel = stumpModel,
-		stump = stump,
-		stumpBillboard = stumpBillboard,
-		stumpLabel = stumpLabel,
-		restCFrame = restCFrame,
-		busy = false,
-		groundedUntil = 0,
-	}
+	record.stumpModel = stumpModel
+	record.stump = stump
+	record.stumpBillboard = stumpBillboard
+	record.stumpLabel = stumpLabel
 
 	CombatService.registerTarget(headModel, function(_attacker: Player, damage: number, _stun: number)
 		onHeadHit(record, damage)
@@ -357,17 +627,69 @@ local function buildHead(parent: Instance, slot: number): HeadRecord
 	return record
 end
 
-local function refreshAllHeads()
-	local hydra = logic
-	if hydra == nil then
-		return
-	end
-	for slot, record in heads do
-		local status = hydra.heads[slot].status
-		setHeadVisible(record, status == "Alive")
-		if status == "Alive" then
-			refreshHeadLabel(record)
-		end
+-- La roca suspendida sobre el estanque y las cadenas que la sujetan.
+local function buildRockAndChains(parent: Instance)
+	local settings = Config.IMMORTAL
+	local center = ArenaService.getCenter()
+	local rockPosition = center + Vector3.new(0, settings.ROCK_HEIGHT, 0)
+
+	local stone = Instance.new("Part")
+	stone.Name = "Rock"
+	stone.Shape = Enum.PartType.Ball
+	stone.Size = Vector3.new(24, 24, 24)
+	stone.Anchored = true
+	stone.CanCollide = false
+	stone.CanQuery = false
+	stone.Color = Color3.fromRGB(110, 105, 100)
+	stone.Material = Enum.Material.Slate
+	stone.Position = rockPosition
+	stone.Parent = parent
+	rock = stone
+
+	chains = {}
+	for index = 1, settings.CHAIN_COUNT do
+		local angle = math.rad(30 + (index - 1) * (360 / settings.CHAIN_COUNT))
+		local base = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * settings.CHAIN_RADIUS
+
+		local chainModel = Instance.new("Model")
+		chainModel.Name = `Chain{index}`
+
+		local post = Instance.new("Part")
+		post.Name = "Post"
+		post.Anchored = true
+		post.Size = Vector3.new(3, 7, 3)
+		post.Color = IRON
+		post.Material = Enum.Material.Metal
+		post.CFrame = CFrame.new(base + Vector3.new(0, 3.5, 0))
+		post.Parent = chainModel
+		chainModel.PrimaryPart = post
+
+		local top = base + Vector3.new(0, 7, 0)
+		local link = Instance.new("Part")
+		link.Name = "Link"
+		link.Anchored = true
+		link.CanCollide = false
+		link.CanQuery = false
+		link.CastShadow = false
+		link.Color = IRON
+		link.Material = Enum.Material.Metal
+		link.Size = Vector3.new(0.7, 0.7, (rockPosition - top).Magnitude)
+		link.CFrame = CFrame.lookAt((top + rockPosition) / 2, rockPosition)
+		link.Parent = chainModel
+
+		chainModel.Parent = parent
+
+		local chain: Chain = {
+			model = chainModel,
+			post = post,
+			link = link,
+			health = settings.CHAIN_HEALTH,
+			broken = false,
+		}
+		table.insert(chains, chain)
+		CombatService.registerTarget(chainModel, function(attacker: Player, damage: number, _stun: number)
+			onChainHit(chain, attacker, damage)
+		end)
 	end
 end
 
@@ -381,7 +703,7 @@ local function handleRegrow(event: HydraLogic.RegrowEvent)
 		if record then
 			record.busy = false
 			record.part.CFrame = record.restCFrame
-			setHeadColor(record, SKIN)
+			setHeadColor(record, record.baseColor)
 			setStumpState(record, "Hidden")
 		end
 	end
@@ -398,22 +720,21 @@ end
 
 local function updateStumpTimers(now: number)
 	local hydra = logic
-	if hydra == nil then
+	if hydra == nil or mode ~= "Heads" then
 		return
 	end
 	for slot, record in heads do
 		local head = hydra.heads[slot]
-		if head.status == "Severed" then
-			record.stumpLabel.Text = `¡Fuego! {math.max(0, math.ceil(head.regrowAt - now))}`
+		local label = record.stumpLabel
+		if head.status == "Severed" and label then
+			label.Text = `¡Fuego! {math.max(0, math.ceil(head.regrowAt - now))}`
 		end
 	end
 end
 
 -- Mordisco: una cabeza se echa atrás, marca una franja en el suelo y se lanza.
 -- Después queda en el suelo unos segundos: es la ocasión de golpearla.
-local function bite(id: number, record: HeadRecord, targetPosition: Vector3)
-	local settings = Config.BITE
-	local hydra = logic :: HydraLogic.Hydra
+local function bite(id: number, record: HeadRecord, targetPosition: Vector3, settings: BiteSettings)
 	local center = ArenaService.getCenter()
 	local pondRadius = ArenaService.getPondRadius()
 
@@ -440,7 +761,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3)
 	tween(record.part, record.restCFrame * CFrame.new(0, 3, 4), 0.4, Enum.EasingStyle.Quad)
 
 	task.wait(settings.TELEGRAPH - settings.LUNGE_TIME)
-	if not isRunning(id) or hydra.heads[record.slot].status ~= "Alive" then
+	if not isRunning(id) or not headUsable(record) then
 		marker:Destroy()
 		record.busy = false
 		return
@@ -460,14 +781,19 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3)
 		return
 	end
 
-	setHeadColor(record, SKIN)
+	setHeadColor(record, record.baseColor)
 	record.groundedUntil = os.clock() + settings.RECOVERY
 	for _, player in getParticipants() do
 		local root = getRoot(player)
 		if root and distanceToSegment(flat(root.Position), startPosition, endPosition) <= settings.WIDTH / 2 + 1 then
 			CombatService.hitPlayer(player, settings.DAMAGE, impactTime, function()
 				-- Parada perfecta: la cabeza queda aturdida más tiempo.
-				if hydra.heads[record.slot].status == "Alive" then
+				if not isRunning(id) or not headUsable(record) then
+					return
+				end
+				if record.immortal then
+					stunImmortal()
+				else
 					record.groundedUntil = os.clock() + settings.PARRY_STUN
 					setHeadColor(record, SKIN_STUNNED)
 				end
@@ -477,11 +803,14 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3)
 
 	-- La recuperación va en su propio hilo para no frenar el siguiente ataque.
 	task.spawn(function()
-		while isRunning(id) and hydra.heads[record.slot].status == "Alive" and os.clock() < record.groundedUntil do
+		while isRunning(id) and headUsable(record) and os.clock() < record.groundedUntil do
 			task.wait(0.1)
 		end
-		if isRunning(id) and hydra.heads[record.slot].status == "Alive" then
-			setHeadColor(record, SKIN)
+		if isRunning(id) and headUsable(record) then
+			setHeadColor(record, record.baseColor)
+			if record.immortal then
+				record.label.Text = "INMORTAL"
+			end
 			tween(record.part, record.restCFrame, settings.RETURN_TIME, Enum.EasingStyle.Quad)
 			task.wait(settings.RETURN_TIME)
 		end
@@ -553,16 +882,97 @@ local function tailSweep(id: number, targetPosition: Vector3)
 	Debris:AddItem(marker, 0.2)
 end
 
+-- Nube tóxica (fase 2): niebla venenosa sobre la mitad de la arena con más gladiadores.
+local function toxicCloud(id: number, positions: { Vector3 })
+	local settings = Config.CLOUD
+	local center = ArenaService.getCenter()
+	local radius = ArenaConfig.RADIUS
+	cloudReadyAt = os.clock() + settings.COOLDOWN
+
+	local balance = 0
+	for _, position in positions do
+		balance += if position.X >= center.X then 1 else -1
+	end
+	local axis = if balance >= 0 then Vector3.xAxis else -Vector3.xAxis
+
+	announce("¡La Hidra inhala! ¡Huid de la niebla!", settings.TELEGRAPH + 1, nil)
+	for _, record in heads do
+		if headUsable(record) and not record.busy then
+			setHeadColor(record, MARKER_POISON)
+		end
+	end
+	local marker = makeMarker(
+		Vector3.new(radius, 0.2, radius * 2),
+		CFrame.new(center + axis * (radius / 2) + Vector3.new(0, 0.12, 0)),
+		MARKER_POISON,
+		false
+	)
+
+	task.wait(settings.TELEGRAPH)
+	for _, record in heads do
+		if record.part.Color == MARKER_POISON then
+			setHeadColor(record, record.baseColor)
+		end
+	end
+	if not isRunning(id) then
+		marker:Destroy()
+		return
+	end
+	marker.Transparency = 0.4
+
+	task.spawn(function()
+		local ticks = math.floor(settings.DURATION / settings.TICK)
+		for _ = 1, ticks do
+			task.wait(settings.TICK)
+			if not isRunning(id) then
+				break
+			end
+			for _, player in getParticipants() do
+				local root = getRoot(player)
+				if root and (flat(root.Position) - center):Dot(axis) > 0 then
+					CombatService.damagePlayer(player, settings.DAMAGE_PER_TICK)
+				end
+			end
+		end
+		marker:Destroy()
+	end)
+end
+
+-- Inmersión (fase 2): burbujas bajo un gladiador y la Hidra emerge de golpe.
+local function dive(id: number, targetPosition: Vector3)
+	local settings = Config.DIVE
+	local impactTime = os.clock() + settings.TELEGRAPH
+	local marker = makeCircleMarker(targetPosition, settings.RADIUS, MARKER_WATER)
+
+	task.wait(settings.TELEGRAPH)
+	if not isRunning(id) then
+		marker:Destroy()
+		return
+	end
+	for _, player in getParticipants() do
+		local root = getRoot(player)
+		if root and (flat(root.Position) - targetPosition).Magnitude <= settings.RADIUS then
+			CombatService.hitPlayer(player, settings.DAMAGE, impactTime)
+		end
+	end
+
+	-- Columna de agua (solo visual).
+	marker.Size = Vector3.new(14, settings.RADIUS * 2, settings.RADIUS * 2)
+	marker.CFrame = CFrame.new(targetPosition + Vector3.new(0, 7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	marker.Transparency = 0.45
+	Debris:AddItem(marker, 0.35)
+end
+
 local function runAttack(id: number)
 	local hydra = logic
 	if hydra == nil then
 		return
 	end
-	local settings = Config
 	local center = ArenaService.getCenter()
 	local now = os.clock()
+	local biteSettings: BiteSettings = if mode == "Immortal" then Config.IMMORTAL :: any else Config.BITE :: any
 
-	-- Situación de los gladiadores vivos.
+	-- Situación de los gladiadores en pie.
 	local players = {}
 	local positions = {}
 	local nearCount, farCount = 0, 0
@@ -573,10 +983,10 @@ local function runAttack(id: number)
 			local distance = (position - center).Magnitude
 			table.insert(players, player)
 			table.insert(positions, position)
-			if distance <= settings.TAIL.NEAR_RANGE then
+			if distance <= Config.TAIL.NEAR_RANGE then
 				nearCount += 1
 			end
-			if distance > settings.BITE.RANGE then
+			if distance > biteSettings.RANGE then
 				farCount += 1
 			end
 		end
@@ -586,9 +996,16 @@ local function runAttack(id: number)
 	end
 
 	local freeHeads = {}
-	for _, slot in hydra:aliveSlots() do
-		if not heads[slot].busy then
-			table.insert(freeHeads, heads[slot])
+	if mode == "Immortal" then
+		local golden = immortalHead
+		if golden and not golden.busy and now >= immortalStunnedUntil then
+			table.insert(freeHeads, golden)
+		end
+	else
+		for _, slot in hydra:aliveSlots() do
+			if not heads[slot].busy then
+				table.insert(freeHeads, heads[slot])
+			end
 		end
 	end
 
@@ -598,6 +1015,10 @@ local function runAttack(id: number)
 		farCount = farCount,
 		lastPattern = lastPattern,
 		repeatCount = repeatCount,
+		-- La cabeza inmortal solo usa los ataques básicos.
+		phase = if mode == "Immortal" then 1 else hydra.phase,
+		freeHeads = #freeHeads,
+		cloudReady = now >= cloudReadyAt,
 	}, random:NextNumber())
 
 	if pattern == lastPattern then
@@ -607,16 +1028,21 @@ local function runAttack(id: number)
 		repeatCount = 1
 	end
 
-	-- Candidatos según el ataque: el mordisco y el coletazo necesitan alcance.
+	if pattern == "Cloud" then
+		toxicCloud(id, positions)
+		return
+	end
+
+	-- Candidatos según el ataque: mordiscos y coletazo necesitan alcance.
 	local candidates = {}
 	local infos = {}
 	for index, player in players do
 		local distance = (positions[index] - center).Magnitude
 		local eligible = true
-		if pattern == "Bite" then
-			eligible = distance <= settings.BITE.RANGE
+		if pattern == "Bite" or pattern == "Chain" then
+			eligible = distance <= biteSettings.RANGE
 		elseif pattern == "Tail" then
-			eligible = distance <= settings.TAIL.NEAR_RANGE
+			eligible = distance <= Config.TAIL.NEAR_RANGE
 		end
 		if eligible then
 			local memory = attackMemory[player]
@@ -649,15 +1075,49 @@ local function runAttack(id: number)
 	end
 
 	if pattern == "Bite" then
-		bite(id, freeHeads[random:NextInteger(1, #freeHeads)], targetPosition)
+		local record = freeHeads[random:NextInteger(1, #freeHeads)]
+		if record.immortal then
+			immortalBites += 1
+			if immortalBites == 3 and not immortalStunnedOnce then
+				announce("El anunciador: «¡Una parada perfecta podría aturdirla!»", 4, nil)
+			end
+		end
+		bite(id, record, targetPosition, biteSettings)
+	elseif pattern == "Chain" then
+		-- Hasta tres cabezas muerden una tras otra, cada una donde esté el gladiador.
+		for index = 1, math.min(3, #freeHeads) do
+			local root = getRoot(target)
+			if root == nil or not isRunning(id) then
+				break
+			end
+			task.spawn(bite, id, freeHeads[index], flat(root.Position), biteSettings)
+			task.wait(Config.CHAIN_GAP)
+		end
+		task.wait(biteSettings.TELEGRAPH)
 	elseif pattern == "Tail" then
 		tailSweep(id, targetPosition)
+	elseif pattern == "Dive" then
+		dive(id, targetPosition)
 	else
 		spit(id, targetPosition)
 	end
 end
 
-local function mainLoop(id: number)
+-- En la furia, la Hidra apaga un brasero de vez en cuando (siempre queda uno encendido).
+local function extinguishBrazier()
+	local lit = {}
+	for index = 1, ArenaService.getBrazierCount() do
+		if ArenaService.isBrazierLit(index) then
+			table.insert(lit, index)
+		end
+	end
+	if #lit > 1 then
+		ArenaService.setBrazierLit(lit[random:NextInteger(1, #lit)], false)
+		announce("¡La Hidra ha apagado un brasero! Reavivad el fuego.", 3.5, nil)
+	end
+end
+
+function mainLoop(id: number)
 	local hydra = logic :: HydraLogic.Hydra
 	local center = ArenaService.getCenter()
 	local pondRadius = ArenaService.getPondRadius()
@@ -667,10 +1127,17 @@ local function mainLoop(id: number)
 	while isRunning(id) do
 		local now = os.clock()
 
-		for _, event in hydra:update(now) do
-			handleRegrow(event)
+		if mode == "Heads" then
+			for _, event in hydra:update(now) do
+				handleRegrow(event)
+			end
+			updateStumpTimers(now)
+
+			if hydra.phase >= 2 and now >= nextExtinguishAt then
+				nextExtinguishAt = now + Config.EXTINGUISH_INTERVAL
+				extinguishBrazier()
+			end
 		end
-		updateStumpTimers(now)
 
 		-- El estanque está envenenado.
 		if now >= nextPondTick then
@@ -687,8 +1154,11 @@ local function mainLoop(id: number)
 			attacking = true
 			task.spawn(function()
 				runAttack(id)
-				attacking = false
-				nextAttackAt = os.clock() + Config.ATTACK_INTERVAL
+				-- Si la fase cambió mientras tanto, este hilo ya no manda.
+				if runId == id then
+					attacking = false
+					nextAttackAt = os.clock() + Config.ATTACK_INTERVAL
+				end
 			end)
 		end
 
@@ -751,18 +1221,22 @@ function HydraService.spawn(participants: () -> { Player })
 	folder.Parent = hydraModel
 	markers = folder
 
+	mode = "Heads"
+	brokenChains = 0
 	logic = HydraLogic.new(Config :: any)
 	heads = {}
 	for slot = 1, Config.MAX_SLOTS do
-		local record = buildHead(hydraModel, slot)
-		heads[slot] = record
-		setStumpState(record, "Hidden")
+		heads[slot] = buildHead(hydraModel, slot, false)
 	end
+	immortalHead = buildHead(hydraModel, 0, true)
+	buildRockAndChains(hydraModel)
+	resetHeadPoses()
 	refreshAllHeads()
+	ArenaService.relightAllBraziers()
 
 	hydraModel.Parent = Workspace
 	model = hydraModel
-	HydraService.Progress:Fire(0, Config.CAUTERIZE_REQUIRED)
+	fireProgress()
 end
 
 -- Empieza a atacar.
@@ -777,6 +1251,7 @@ function HydraService.begin()
 	repeatCount = 0
 	severedOnce = false
 	table.clear(attackMemory)
+	table.clear(lastHintAt)
 	task.spawn(mainLoop, runId)
 end
 
@@ -785,16 +1260,30 @@ function HydraService.despawn()
 	runId += 1
 	for _, record in heads do
 		CombatService.unregisterTarget(record.model)
-		CombatService.unregisterTarget(record.stumpModel)
+		local stumpModel = record.stumpModel
+		if stumpModel then
+			CombatService.unregisterTarget(stumpModel)
+		end
+	end
+	local golden = immortalHead
+	if golden then
+		CombatService.unregisterTarget(golden.model)
+	end
+	for _, chain in chains do
+		CombatService.unregisterTarget(chain.model)
 	end
 	heads = {}
+	chains = {}
+	immortalHead = nil
 	logic = nil
 	markers = nil
+	rock = nil
 	local current = model
 	if current then
 		current:Destroy()
 	end
 	model = nil
+	ArenaService.relightAllBraziers()
 end
 
 return HydraService

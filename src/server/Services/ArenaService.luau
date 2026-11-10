@@ -32,6 +32,16 @@ ArenaService.BrazierTriggered = Signal.new() :: Signal.Signal<Player>
 
 local center = Vector3.new(Config.CENTER[1], Config.FLOOR_Y, Config.CENTER[3])
 
+type Brazier = { fire: Fire, light: PointLight, prompt: ProximityPrompt, lit: boolean }
+local braziers: { Brazier } = {}
+
+local function applyBrazier(brazier: Brazier)
+	brazier.fire.Enabled = brazier.lit
+	brazier.light.Enabled = brazier.lit
+	brazier.prompt.ActionText = if brazier.lit then "Encender arma" else "Reavivar el fuego"
+	brazier.prompt.HoldDuration = if brazier.lit then 0.4 else 2
+end
+
 local function makePart(
 	parent: Instance,
 	name: string,
@@ -93,7 +103,10 @@ local function makeRing(
 		local position = center
 			+ Vector3.new(math.cos(angle) * radius, height / 2 - Config.FLOOR_Y, math.sin(angle) * radius)
 		local lookAt = Vector3.new(center.X, position.Y, center.Z)
-		makePart(parent, name, Vector3.new(length, height, depth), CFrame.lookAt(position, lookAt), color, material)
+		local segment =
+			makePart(parent, name, Vector3.new(length, height, depth), CFrame.lookAt(position, lookAt), color, material)
+		-- Sin sombras: el coliseo es grande y así rinde mejor en equipos modestos.
+		segment.CastShadow = false
 	end
 end
 
@@ -161,8 +174,15 @@ local function buildBraziers(parent: Instance)
 		light.Parent = bowl
 
 		local prompt = addPrompt(bowl, "Encender arma", "Brasero", 0.4)
+		local brazier: Brazier = { fire = fire, light = light, prompt = prompt, lit = true }
+		table.insert(braziers, brazier)
 		prompt.Triggered:Connect(function(player: Player)
-			ArenaService.BrazierTriggered:Fire(player)
+			if brazier.lit then
+				ArenaService.BrazierTriggered:Fire(player)
+			else
+				brazier.lit = true
+				applyBrazier(brazier)
+			end
 		end)
 	end
 end
@@ -276,6 +296,26 @@ end
 function ArenaService.Init(_self: typeof(ArenaService))
 	buildArena()
 	buildLobbyGate()
+end
+
+function ArenaService.getBrazierCount(): number
+	return #braziers
+end
+
+function ArenaService.isBrazierLit(index: number): boolean
+	return braziers[index].lit
+end
+
+function ArenaService.setBrazierLit(index: number, lit: boolean)
+	local brazier = braziers[index]
+	brazier.lit = lit
+	applyBrazier(brazier)
+end
+
+function ArenaService.relightAllBraziers()
+	for index = 1, #braziers do
+		ArenaService.setBrazierLit(index, true)
+	end
 end
 
 -- Centro de la arena a la altura del suelo.

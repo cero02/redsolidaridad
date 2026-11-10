@@ -56,7 +56,8 @@ local Remotes: { [string]: Definition } = {
 		kind = "Event",
 		direction = "ToClient",
 	},
-	-- Sucesos de combate: (tipo, userId, ...). Tipos: Attack, Hit, Dodge, Defense, Telegraph.
+	-- Sucesos de combate: (tipo, userId, ...). Tipos: Attack, Hit, Dodge, Defense,
+	-- Telegraph, Downed, Revived.
 	CombatEvent = {
 		kind = "Event",
 		direction = "ToClient",
@@ -67,7 +68,7 @@ local Remotes: { [string]: Definition } = {
 		kind = "Event",
 		direction = "ToClient",
 	},
-	-- Estado del combate contra la bestia: (estado, cuellos cauterizados, necesarios).
+	-- Estado del combate contra la bestia: (estado, texto de progreso).
 	EncounterState = {
 		kind = "Event",
 		direction = "ToClient",
