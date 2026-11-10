@@ -7,8 +7,7 @@ y aprobación del equipo antes de pasar al siguiente.
 
 ## Etapa 0 — Entorno ✅
 - Repositorio, estructura, Rojo, herramientas de calidad y documentación.
-- **Pendiente:** confirmar en un PC con Studio que `rojo serve` sincroniza y que aparecen
-  los mensajes `[COLOSSEUM]` al pulsar Play.
+- Confirmado el 2026-11-10: `rojo serve` sincroniza con Studio en el PC del equipo.
 
 ## Versión 1 — El nacimiento de COLOSSEUM
 
@@ -17,8 +16,8 @@ Se construye por hitos verticales: cada uno es jugable y se prueba antes de segu
 
 | Hito | Contenido | Hecho cuando… |
 |---|---|---|
-| 1.0 Base técnica 🔨 código listo | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio (pendiente de prueba) |
-| 1.1 Sensación de combate 🔨 código listo | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor. Prueba: [testing/HITO_1.1.md](testing/HITO_1.1.md) | Golpear "se siente bien" en la prueba del equipo (pendiente; faltan animaciones y sonidos) |
+| 1.0 Base técnica ✅ | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio (arranca en Studio, 2026-11-10) |
+| 1.1 Sensación de combate 🔨 funciona en Studio | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor. Prueba: [testing/HITO_1.1.md](testing/HITO_1.1.md) | Golpear "se siente bien" en la prueba del equipo (prueba básica superada el 2026-11-10; faltan animaciones, sonidos y ajuste fino) |
 | 1.2 Hidra, fase 1 | Arena del Gran Coliseo (greybox), Hidra con ataques telegrafiados y punto débil, modo individual | Se puede ganar y perder de forma justa |
 | 1.3 Hidra completa + cooperativo | Tres fases, regeneración de cabezas, grupo de 1–4 jugadores, patrones según el grupo | Una partida de 8–12 min con amigos |
 | 1.4 Armas, esencias y definitiva | Tres armas, tres esencias, habilidad definitiva que se carga | Al menos tres construcciones distintas viables |
