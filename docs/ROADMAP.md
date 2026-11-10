@@ -18,7 +18,7 @@ Se construye por hitos verticales: cada uno es jugable y se prueba antes de segu
 | Hito | Contenido | Hecho cuando… |
 |---|---|---|
 | 1.0 Base técnica 🔨 código listo | Cargador de Services/Controllers, red validada, persistencia (ADR 0003), registros | Un perfil se guarda y se recupera en Studio (pendiente de prueba) |
-| 1.1 Sensación de combate | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor | Golpear "se siente bien" en la prueba del equipo |
+| 1.1 Sensación de combate 🔨 código listo | Una arma, ataque, esquiva y bloqueo contra un muñeco de prueba, validado en servidor. Prueba: [testing/HITO_1.1.md](testing/HITO_1.1.md) | Golpear "se siente bien" en la prueba del equipo (pendiente; faltan animaciones y sonidos) |
 | 1.2 Hidra, fase 1 | Arena del Gran Coliseo (greybox), Hidra con ataques telegrafiados y punto débil, modo individual | Se puede ganar y perder de forma justa |
 | 1.3 Hidra completa + cooperativo | Tres fases, regeneración de cabezas, grupo de 1–4 jugadores, patrones según el grupo | Una partida de 8–12 min con amigos |
 | 1.4 Armas, esencias y definitiva | Tres armas, tres esencias, habilidad definitiva que se carga | Al menos tres construcciones distintas viables |

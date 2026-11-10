@@ -1,0 +1,3 @@
+--!strict
+-- Vacío a propósito. Un script llamado "Health" en StarterCharacterScripts sustituye al
+-- script de Roblox que regenera la vida: en COLOSSEUM la vida la decide CombatService.

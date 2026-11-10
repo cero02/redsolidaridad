@@ -140,6 +140,17 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 | `Schema`, `Migrations`, `DataConfig` | `server/Data` | Esquema versionado del perfil |
 | `ProfileController` | `client/Controllers` | Recibe el perfil público |
 
+### Hito 1.1 (combate)
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `FighterState` | `shared/Combat` | Reglas puras del luchador: combo, aguante, esquiva, bloqueo, parada, definitiva. Lo usan el servidor (autoridad) y el cliente (predicción) |
+| `Combat`, `Weapons` | `shared/Config` | Números de diseño |
+| `CombatService` | `server/Services` | Valida acciones, calcula golpes con `GetPartBoundsInBox`, resuelve golpes recibidos con margen de latencia. `registerTarget` y `hitPlayer` son la interfaz para bestias |
+| `TrainingDummyService` | `server/Services` | Muñeco provisional que recibe golpes y ataca con aviso |
+| `CombatController`, `CombatHud` | `client` | Entrada (PC, mando, móvil), predicción e interfaz mínima |
+| `Health` (vacío) | `StarterCharacterScripts` | Desactiva la regeneración de vida por defecto de Roblox |
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 
