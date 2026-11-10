@@ -1,6 +1,8 @@
 --!strict
 -- Animación de combate por código: mueve los brazos de los gladiadores al atacar y al
--- bloquear ajustando las articulaciones (Motor6D.Transform) en cada fotograma.
+-- bloquear girando la base de la articulación del hombro (Motor6D.C0). Se usa C0 y no
+-- Transform porque las animaciones de Roblox reescriben Transform en cada fotograma;
+-- C0 se combina con ellas en lugar de competir.
 -- Es provisional: se sustituirá por animaciones hechas en el editor de Studio.
 
 local Players = game:GetService("Players")
@@ -23,6 +25,11 @@ type Entry = {
 	isR15: boolean,
 	right: Motor6D?,
 	left: Motor6D?,
+	-- Posición original de cada articulación, para girar sobre ella y restaurarla.
+	rightBase: CFrame,
+	leftBase: CFrame,
+	rightMoved: boolean,
+	leftMoved: boolean,
 	trail: Trail?,
 	attack: Attack?,
 	attackStart: number,
@@ -46,13 +53,19 @@ end
 local function getEntry(character: Model): Entry
 	local entry = entries[character]
 	if entry == nil then
-		local right = findMotor(character, "RightShoulder")
-		local isR15 = right ~= nil
+		local r15Right = findMotor(character, "RightShoulder")
+		local isR15 = r15Right ~= nil
+		local right = if isR15 then r15Right else findMotor(character, "Right Shoulder")
+		local left = findMotor(character, if isR15 then "LeftShoulder" else "Left Shoulder")
 		local trail = character:FindFirstChild("SlashTrail", true)
 		entry = {
 			isR15 = isR15,
-			right = if isR15 then right else findMotor(character, "Right Shoulder"),
-			left = findMotor(character, if isR15 then "LeftShoulder" else "Left Shoulder"),
+			right = right,
+			left = left,
+			rightBase = if right then right.C0 else CFrame.identity,
+			leftBase = if left then left.C0 else CFrame.identity,
+			rightMoved = false,
+			leftMoved = false,
 			trail = if trail and trail:IsA("Trail") then trail else nil,
 			attack = nil,
 			attackStart = 0,
@@ -145,11 +158,31 @@ local function updateEntry(entry: Entry, deltaTime: number, now: number)
 	end
 
 	local right, left = entry.right, entry.left
-	if right and rightRaise ~= nil then
-		right.Transform = armTransform(entry.isR15, 1, rightRaise, rightSpread)
+	if right then
+		if rightRaise ~= nil then
+			right.C0 = entry.rightBase * armTransform(entry.isR15, 1, rightRaise, rightSpread)
+			entry.rightMoved = true
+		elseif entry.rightMoved then
+			right.C0 = entry.rightBase
+			entry.rightMoved = false
+		end
 	end
-	if left and leftRaise ~= nil then
-		left.Transform = armTransform(entry.isR15, -1, leftRaise, 0)
+	if left then
+		if leftRaise ~= nil then
+			left.C0 = entry.leftBase * armTransform(entry.isR15, -1, leftRaise, 0)
+			entry.leftMoved = true
+		elseif entry.leftMoved then
+			left.C0 = entry.leftBase
+			entry.leftMoved = false
+		end
+	end
+	-- La estela puede llegar después que el personaje: se busca hasta encontrarla.
+	if entry.trail == nil and attack ~= nil and right then
+		local character = right:FindFirstAncestorOfClass("Model")
+		local found = if character then character:FindFirstChild("SlashTrail", true) else nil
+		if found and found:IsA("Trail") then
+			entry.trail = found
+		end
 	end
 	local trail = entry.trail
 	if trail and trail.Enabled ~= trailOn then
@@ -180,7 +213,6 @@ function CharacterAnimator.Start(_self: typeof(CharacterAnimator))
 		end
 	end)
 
-	-- Stepped: después de las animaciones de Roblox y antes de dibujar.
 	RunService.Stepped:Connect(function(_time: number, deltaTime: number)
 		local now = os.clock()
 		for character, entry in entries do
