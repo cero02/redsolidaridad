@@ -76,6 +76,8 @@ export type FighterState = {
 	tryDodge: (self: FighterState, now: number) -> (boolean, string?),
 	setBlocking: (self: FighterState, blocking: boolean, now: number) -> (),
 	receiveHit: (self: FighterState, damage: number, impactTime: number, now: number) -> HitOutcome,
+	-- Daño que no se puede esquivar ni bloquear (veneno, entorno).
+	takeDamage: (self: FighterState, amount: number) -> (),
 	addDamageDealt: (self: FighterState, amount: number) -> (),
 	stun: (self: FighterState, duration: number, now: number) -> (),
 	isStunned: (self: FighterState, now: number) -> boolean,
@@ -246,6 +248,10 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 
 		self.health = math.max(0, self.health - damage)
 		return { result = "Hit", damageTaken = damage, closeDodge = false }
+	end
+
+	function state.takeDamage(self: FighterState, amount: number)
+		self.health = math.max(0, self.health - math.max(0, amount))
 	end
 
 	function state.addDamageDealt(_self: FighterState, amount: number)

@@ -209,4 +209,16 @@ T.test("todas las armas tienen ataques con tiempos y daños positivos", function
 	end
 end)
 
+T.test("takeDamage ignora esquiva y bloqueo y no baja de 0", function()
+	local f = newFighter()
+	f:setBlocking(true, 0)
+	f:tryDodge(0)
+	f:takeDamage(30)
+	T.expectEqual(f.health, Combat.MAX_HEALTH - 30)
+	f:takeDamage(-50)
+	T.expectEqual(f.health, Combat.MAX_HEALTH - 30, "el daño negativo no cura")
+	f:takeDamage(1000)
+	T.expectEqual(f.health, 0)
+end)
+
 T.finish()

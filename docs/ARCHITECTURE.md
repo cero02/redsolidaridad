@@ -151,6 +151,18 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 | `CombatController`, `CombatHud` | `client` | Entrada (PC, mando, móvil), predicción e interfaz mínima |
 | `Health` (vacío) | `StarterCharacterScripts` | Desactiva la regeneración de vida por defecto de Roblox |
 
+### Hito 1.2 (arena e Hidra, fase 1)
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `HydraLogic` | `server/Beasts` | Reglas puras: cabezas, cortar, regenerar, cauterizar, elección adaptativa de ataque y de objetivo |
+| `Hydra`, `Arena` | `serverOnly/Config` | Números de diseño (el cliente no los ve) |
+| `ArenaService` | `server/Services` | Genera el coliseo, los braseros y la puerta del foro |
+| `HydraService` | `server/Services` | Modelo de bloques, ataques con aviso (mordisco, veneno, coletazo), muñones y fuego |
+| `EncounterService` | `server/Services` | Partida: participantes, presentación, victoria o derrota, regreso |
+| `EncounterController` | `client/Controllers` | Anunciador y progreso |
+| `HydraViewController` | `client/Controllers` | Dibuja los cuellos (solo visual) |
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

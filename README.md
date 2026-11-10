@@ -13,8 +13,8 @@ poderes. Ver la [visión de diseño](docs/VISION.md).
 2. Ejecuta `wally install` (descarga ProfileStore en `ServerPackages/`).
 3. Instala el plugin de Rojo en Studio (`rojo plugin install`).
 4. Ejecuta `rojo serve`, abre un place vacío en Studio y pulsa **Connect** en el plugin.
-5. Pulsa **Play** y sigue la [prueba del hito 1.1](docs/testing/HITO_1.1.md): verás un muñeco
-   de entrenamiento y las barras de vida, aguante y definitiva.
+5. Pulsa **Play** y sigue la [prueba del hito 1.2](docs/testing/HITO_1.2.md): entra por la
+   puerta dorada al Gran Coliseo y enfréntate a la Hidra.
 
 ## Calidad
 

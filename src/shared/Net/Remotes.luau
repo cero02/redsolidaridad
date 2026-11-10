@@ -61,6 +61,17 @@ local Remotes: { [string]: Definition } = {
 		kind = "Event",
 		direction = "ToClient",
 	},
+
+	-- Mensaje del anunciador del coliseo: (texto, segundos).
+	Announce = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- Estado del combate contra la bestia: (estado, cuellos cauterizados, necesarios).
+	EncounterState = {
+		kind = "Event",
+		direction = "ToClient",
+	},
 }
 
 return table.freeze(Remotes)

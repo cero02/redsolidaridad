@@ -199,4 +199,41 @@ function CombatService.hitPlayer(player: Player, damage: number, impactTime: num
 	end)
 end
 
+-- Daño que no se puede esquivar ni bloquear (veneno, entorno).
+function CombatService.damagePlayer(player: Player, amount: number)
+	local fighter = fighters[player]
+	if fighter == nil then
+		return
+	end
+	fighter:takeDamage(amount)
+	syncHumanoid(player, fighter)
+	NetService.fire("CombatEvent", player, "Defense", player.UserId, "Hit", amount)
+	sendState(player, fighter)
+end
+
+-- Devuelve al jugador a su estado inicial (vida y aguante al máximo) si está vivo.
+function CombatService.resetFighter(player: Player)
+	local old = fighters[player]
+	if old == nil then
+		return
+	end
+	local fighter = FighterState.new(Weapons.Gladius :: any, Combat :: any, os.clock())
+	fighters[player] = fighter
+	local humanoid = getHumanoid(player)
+	if humanoid then
+		humanoid.Died:Connect(function()
+			if fighters[player] == fighter then
+				fighters[player] = nil
+			end
+		end)
+	end
+	syncHumanoid(player, fighter)
+	sendState(player, fighter)
+end
+
+function CombatService.isAlive(player: Player): boolean
+	local fighter = fighters[player]
+	return fighter ~= nil and not fighter:isDead()
+end
+
 return CombatService
