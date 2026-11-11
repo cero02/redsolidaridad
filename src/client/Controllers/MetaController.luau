@@ -13,10 +13,12 @@ local TweenService = game:GetService("TweenService")
 
 local Codex = require(ReplicatedStorage.Shared.Config.Codex)
 local DecreeCalendar = require(ReplicatedStorage.Shared.Meta.DecreeCalendar)
+local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Progression = require(ReplicatedStorage.Shared.Meta.Progression)
 local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local Titles = require(ReplicatedStorage.Shared.Config.Titles)
+local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
 local GOLD = Color3.fromRGB(255, 210, 110)
 local PARCHMENT = Color3.fromRGB(40, 28, 20)
@@ -36,6 +38,9 @@ type Profile = {
 	codex: { string },
 	bestHydraTime: number,
 	hydraKills: number,
+	loadout: { weapon: string, essence: string },
+	unlockedWeapons: { string },
+	unlockedEssences: { string },
 	[string]: any,
 }
 
@@ -53,6 +58,8 @@ local newsFrame: Frame
 local discoveryFrame: Frame
 local resultsFrame: Frame
 local codexFrame: ScrollingFrame
+local armoryButton: TextButton
+local armoryFrame: Frame
 
 local profile: Profile? = nil
 local decreeEndsAt = 0
@@ -104,6 +111,96 @@ local function titleColor(id: string): Color3
 	return Color3.fromRGB(c[1], c[2], c[3])
 end
 
+-- Armería ------------------------------------------------------------------
+
+local WEAPON_ORDER = { "Gladius", "Hasta", "Martillo" }
+local ESSENCE_ORDER = { "Loba", "Aguila", "Hidra" }
+
+local function armoryEntry(parent: Instance, order: number, title: string, body: string, owned: boolean, selected: boolean, onClick: () -> ())
+	local button = create("TextButton", {
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, 76),
+		BackgroundColor3 = if selected then Color3.fromRGB(90, 60, 20) else Color3.fromRGB(35, 25, 20),
+		BackgroundTransparency = if owned then 0.1 else 0.5,
+		BorderSizePixel = 0,
+		AutoButtonColor = owned,
+		Text = "",
+	}, parent)
+	corner(button, 6)
+	if selected then
+		create("UIStroke", { Color = GOLD, Thickness = 2 }, button)
+	end
+	label({
+		Size = UDim2.new(1, -12, 0, 22),
+		Position = UDim2.fromOffset(6, 4),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = if owned then GOLD else Color3.fromRGB(150, 150, 150),
+		Font = Enum.Font.Antique,
+		Text = (if owned then "" else "🔒 ") .. title,
+	}, button)
+	label({
+		Size = UDim2.new(1, -12, 1, -30),
+		Position = UDim2.fromOffset(6, 28),
+		TextScaled = false,
+		TextSize = 13,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Font = Enum.Font.Gotham,
+		TextColor3 = if owned then Color3.new(1, 1, 1) else Color3.fromRGB(170, 170, 170),
+		Text = body,
+	}, button)
+	if owned then
+		button.Activated:Connect(onClick)
+	end
+end
+
+local function refreshArmory()
+	local current = profile
+	if current == nil then
+		return
+	end
+	for _, column in { armoryFrame:FindFirstChild("Weapons"), armoryFrame:FindFirstChild("Essences") } do
+		for _, child in (column :: Instance):GetChildren() do
+			if child:IsA("TextButton") then
+				child:Destroy()
+			end
+		end
+	end
+	local ownedWeapons: { [string]: boolean } = {}
+	for _, id in current.unlockedWeapons do
+		ownedWeapons[id] = true
+	end
+	local ownedEssences: { [string]: boolean } = {}
+	for _, id in current.unlockedEssences do
+		ownedEssences[id] = true
+	end
+	local loadout = current.loadout
+
+	for order, id in WEAPON_ORDER do
+		local weapon = Weapons[id]
+		local owned = ownedWeapons[id] == true
+		local body = `{weapon.description}\nDefinitiva: {weapon.ultimate.name}. {weapon.ultimate.description}`
+		if not owned then
+			body = `Se desbloquea en el nivel {weapon.unlockLevel}.\n{weapon.description}`
+		end
+		armoryEntry(armoryFrame:FindFirstChild("Weapons") :: Instance, order, weapon.displayName, body, owned, loadout.weapon == id, function()
+			NetClient.fire("SetLoadout", id, loadout.essence)
+		end)
+	end
+	for order, id in ESSENCE_ORDER do
+		local essence = Essences[id]
+		local owned = ownedEssences[id] == true
+		local body = `{essence.power}\nPasiva: {essence.passive}`
+		if not owned then
+			body = `{essence.how}\n{essence.power}`
+		end
+		armoryEntry(armoryFrame:FindFirstChild("Essences") :: Instance, order, essence.name, body, owned, loadout.essence == id, function()
+			NetClient.fire("SetLoadout", loadout.weapon, id)
+		end)
+	end
+end
+
 -- Progreso ------------------------------------------------------------------
 
 local function refreshProgress()
@@ -128,6 +225,9 @@ local function refreshProgress()
 	titleButton.Text = if title then `Título: «{title.name}» ▸` else "Título ▸"
 	titleButton.TextColor3 = titleColor(current.equippedTitle)
 	codexButton.Text = `Códice {#current.codex}/{#Codex}`
+	if armoryFrame and armoryFrame.Visible then
+		refreshArmory()
+	end
 end
 
 local function cycleTitle()
@@ -356,7 +456,7 @@ local function build()
 	}, progress)
 
 	titleButton = create("TextButton", {
-		Size = UDim2.fromOffset(196, 26),
+		Size = UDim2.fromOffset(150, 26),
 		Position = UDim2.fromOffset(12, 76),
 		BackgroundColor3 = PARCHMENT,
 		BackgroundTransparency = PANEL_TRANSPARENCY,
@@ -370,8 +470,8 @@ local function build()
 	titleButton.Activated:Connect(cycleTitle)
 
 	codexButton = create("TextButton", {
-		Size = UDim2.fromOffset(98, 26),
-		Position = UDim2.fromOffset(214, 76),
+		Size = UDim2.fromOffset(72, 26),
+		Position = UDim2.fromOffset(166, 76),
 		BackgroundColor3 = Color3.fromRGB(70, 40, 90),
 		BackgroundTransparency = PANEL_TRANSPARENCY,
 		BorderSizePixel = 0,
@@ -381,6 +481,19 @@ local function build()
 		Text = "Códice",
 	}, gui)
 	corner(codexButton, 6)
+
+	armoryButton = create("TextButton", {
+		Size = UDim2.fromOffset(70, 26),
+		Position = UDim2.fromOffset(242, 76),
+		BackgroundColor3 = Color3.fromRGB(110, 40, 30),
+		BackgroundTransparency = PANEL_TRANSPARENCY,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBold,
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(255, 220, 180),
+		Text = "Armería",
+	}, gui)
+	corner(armoryButton, 6)
 
 	-- Edicto semanal y Juegos Imperiales.
 	local decree = panel({ Size = UDim2.fromOffset(300, 96), Position = UDim2.fromOffset(12, 108) }, gui)
@@ -531,6 +644,39 @@ local function build()
 		codexFrame.Visible = not codexFrame.Visible
 		if codexFrame.Visible then
 			refreshCodex()
+		end
+	end)
+
+	-- Armería: dos columnas (armas y esencias).
+	armoryFrame = panel({
+		Size = UDim2.fromOffset(560, 330),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		BackgroundTransparency = 0.08,
+		Visible = false,
+	}, gui)
+	create("UIStroke", { Color = GOLD, Thickness = 2 }, armoryFrame)
+	label({
+		Size = UDim2.new(1, 0, 0, 30),
+		Position = UDim2.fromOffset(0, 6),
+		TextColor3 = GOLD,
+		Font = Enum.Font.Antique,
+		Text = "ARMERÍA DEL LUDUS",
+	}, armoryFrame)
+	for index, name in { "Weapons", "Essences" } do
+		local column = create("Frame", {
+			Name = name,
+			Size = UDim2.new(0.5, -18, 1, -50),
+			Position = UDim2.new((index - 1) * 0.5, 12, 0, 42),
+			BackgroundTransparency = 1,
+		}, armoryFrame)
+		create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, column)
+	end
+	armoryButton.Activated:Connect(function()
+		armoryFrame.Visible = not armoryFrame.Visible
+		codexFrame.Visible = false
+		if armoryFrame.Visible then
+			refreshArmory()
 		end
 	end)
 

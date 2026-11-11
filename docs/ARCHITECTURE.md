@@ -199,6 +199,17 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
 recompensas al terminar. El perfil pasa a la versión 2 del esquema (migración en
 `Data/Migrations.luau`).
 
+### Hito 1.4 (armas, esencias y definitivas)
+
+- `Weapons` y `Essences` (`shared/Config`): tres armas con definitiva y tres esencias.
+- `FighterState` añade inmunidad, esquivas gratis, bonus de daño, curación, aguante extra
+  y `tryUltimate`.
+- `LoadoutService` (servidor): armería; valida desbloqueos y bloquea cambios en la arena
+  (atributo `InArena` que pone `EncounterService`).
+- `CombatService`: crea el luchador con el equipo del perfil, ejecuta esencias (Z) y
+  definitivas (R) con daño en zona (`GetPartBoundsInRadius`) y la regeneración de la Hidra.
+- `EquipmentService` construye el arma elegida; `CharacterAnimator` anima cada una.
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

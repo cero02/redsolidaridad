@@ -55,6 +55,8 @@ export type PublicProfile = {
 	codex: { string },
 	bestHydraTime: number,
 	hydraKills: number,
+	unlockedWeapons: { string },
+	unlockedEssences: { string },
 }
 
 local Schema = {}
@@ -107,6 +109,8 @@ function Schema.toPublic(data: ProfileData): PublicProfile
 		codex = keys(data.codex),
 		bestHydraTime = data.stats.bestHydraTime,
 		hydraKills = data.stats.hydraKills,
+		unlockedWeapons = keys(data.unlockedWeapons),
+		unlockedEssences = keys(data.unlockedEssences),
 	}
 end
 

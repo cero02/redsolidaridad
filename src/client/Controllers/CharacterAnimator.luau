@@ -49,6 +49,7 @@ type Entry = {
 	trail: Trail?,
 	slash: Part?,
 	attack: Attack?,
+	weaponId: string,
 	attackStart: number,
 	heavy: boolean,
 	step: number,
@@ -132,6 +133,7 @@ local function getEntry(character: Model): Entry
 			trail = nil,
 			slash = nil,
 			attack = nil,
+			weaponId = "Gladius",
 			attackStart = 0,
 			heavy = false,
 			step = 1,
@@ -231,7 +233,18 @@ local function updateSlash(entry: Entry, attack: Attack, elapsed: number)
 	end
 
 	local reach = attack.reach
-	if entry.heavy then
+	if entry.weaponId == "Hasta" then
+		-- Estocada: una línea que sale disparada hacia delante.
+		slash.Color = SLASH_COLOR
+		slash.Size = Vector3.new(0.3, 0.3, reach * math.max(0.2, alpha))
+		slash.CFrame = root.CFrame * CFrame.new(0.6, 0.3, -(reach * alpha / 2 + 1))
+	elseif entry.weaponId == "Martillo" then
+		-- Mazazo: barrido vertical ancho de arriba abajo.
+		slash.Color = BASH_COLOR
+		slash.Size = Vector3.new(attack.width * 0.6, 0.4, reach)
+		local sweep = CFrame.Angles(lerp(math.rad(85), math.rad(-15), alpha), 0, 0)
+		slash.CFrame = root.CFrame * sweep * CFrame.new(0, 0.4, -(reach / 2 + 0.6))
+	elseif entry.heavy then
 		-- Golpe de escudo: una onda que avanza.
 		slash.Color = BASH_COLOR
 		slash.Size = Vector3.new(4 + 2 * alpha, 4 + 2 * alpha, 0.3)
@@ -253,8 +266,8 @@ local function updateSlash(entry: Entry, attack: Attack, elapsed: number)
 	slash.Transparency = 0.15 + 0.8 * alpha
 end
 
-function CharacterAnimator.playAttack(character: Model, kind: string, step: number)
-	local weapon = Weapons.Gladius
+function CharacterAnimator.playAttack(character: Model, kind: string, step: number, weaponId: string?)
+	local weapon = Weapons[weaponId or "Gladius"] or Weapons.Gladius
 	local attack = if kind == "Heavy" then weapon.heavy else weapon.light[step]
 	if attack == nil then
 		return
@@ -262,6 +275,7 @@ function CharacterAnimator.playAttack(character: Model, kind: string, step: numb
 	local entry = getEntry(character)
 	removeSlash(entry)
 	entry.attack = attack :: any
+	entry.weaponId = weapon.id
 	entry.attackStart = os.clock()
 	entry.heavy = kind == "Heavy"
 	entry.step = step
@@ -307,7 +321,15 @@ local function updateEntry(entry: Entry, deltaTime: number, now: number)
 			removeSlash(entry)
 		else
 			updateSlash(entry, attack, elapsed)
-			if entry.heavy then
+			if entry.weaponId == "Hasta" then
+				-- La lanza se echa atrás y se proyecta hacia delante.
+				rightRaise = attackCurve(attack, elapsed, 0, math.rad(35), math.rad(95))
+				trailOn = elapsed >= attack.windup * 0.5 and elapsed <= attack.windup + attack.active + 0.08
+			elseif entry.weaponId == "Martillo" then
+				-- El martillo sube por encima de la cabeza y cae con todo su peso.
+				rightRaise = attackCurve(attack, elapsed, 0, math.rad(190), math.rad(-10))
+				trailOn = elapsed >= attack.windup * 0.6 and elapsed <= attack.windup + attack.active + 0.1
+			elseif entry.heavy then
 				-- Golpe de escudo: el brazo izquierdo retrocede y empuja hacia delante.
 				leftRaise = attackCurve(attack, elapsed, 0, BASH_BACK, BASH_FORWARD)
 			else
@@ -346,7 +368,7 @@ end
 function CharacterAnimator.Start(_self: typeof(CharacterAnimator))
 	-- Los demás jugadores se animan con los sucesos del servidor. El jugador local se
 	-- anima al instante desde CombatController, así que sus propios sucesos se ignoran.
-	NetClient.on("CombatEvent", function(kind: string, userId: number, a: any, b: any)
+	NetClient.on("CombatEvent", function(kind: string, userId: number, a: any, b: any, c: any)
 		if userId == localPlayer.UserId then
 			return
 		end
@@ -355,7 +377,7 @@ function CharacterAnimator.Start(_self: typeof(CharacterAnimator))
 			return
 		end
 		if kind == "Attack" then
-			CharacterAnimator.playAttack(character, a, b)
+			CharacterAnimator.playAttack(character, a, b, c)
 		elseif kind == "Block" then
 			CharacterAnimator.setBlocking(character, a == true)
 		end

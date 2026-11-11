@@ -190,7 +190,7 @@ end)
 
 T.test("applySnapshot sustituye la predicción por el estado del servidor", function()
 	local f = newFighter()
-	f:applySnapshot({ health = 40, stamina = 10, ultimate = 55, blocking = true }, 5)
+	f:applySnapshot({ health = 40, stamina = 10, maxStamina = 100, ultimate = 55, blocking = true }, 5)
 	local s = f:snapshot(5)
 	T.expectEqual(s.health, 40)
 	T.expectEqual(s.stamina, 10)
@@ -229,6 +229,82 @@ T.test("revive levanta a un caído y puede volver a actuar", function()
 	T.expectEqual(f.health, 40)
 	T.expectEqual(f:isDead(), false)
 	assert(f:tryAttack("Light", 5), "debería poder atacar")
+end)
+
+T.test("la pasiva de aguante amplía el máximo", function()
+	local f = FighterState.new(gladius, Combat, 0, { staminaBonus = 0.1 })
+	T.expectEqual(f.maxStamina, Combat.MAX_STAMINA * 1.1)
+	T.expectEqual(f.stamina, Combat.MAX_STAMINA * 1.1)
+	f:tryDodge(0)
+	T.expectEqual(f:snapshot(100).stamina, Combat.MAX_STAMINA * 1.1, "se recupera hasta el nuevo máximo")
+end)
+
+T.test("Testudo: inmune a golpes y a daño de entorno mientras dura", function()
+	local f = newFighter()
+	f:grantInvulnerability(4, 0)
+	T.expectEqual(f:receiveHit(50, 2, 2.2).result, "Shielded")
+	f:takeDamage(30, 3)
+	T.expectEqual(f.health, Combat.MAX_HEALTH)
+	T.expectEqual(f:receiveHit(15, 4.1, 4.3).result, "Hit", "ya terminó")
+end)
+
+T.test("esquivas gratis mientras dura el Instinto", function()
+	local f = newFighter()
+	f:setFreeDodgesUntil(10)
+	T.expectEqual((f:tryDodge(0)), true)
+	T.expectEqual(f.stamina, Combat.MAX_STAMINA, "no gasta aguante")
+	T.expectEqual((f:tryDodge(11)), true)
+	T.expectEqual(f.stamina, Combat.MAX_STAMINA - gladius.dodgeCost, "después sí gasta")
+end)
+
+T.test("el bonus de daño solo dura lo indicado", function()
+	local f = newFighter()
+	f:setDamageBonus(0.3, 6)
+	T.expectEqual(f:damageMultiplier(5), 1.3)
+	T.expectEqual(f:damageMultiplier(6.1), 1)
+end)
+
+T.test("la definitiva necesita el medidor lleno y lo vacía", function()
+	local f = newFighter()
+	T.expectEqual(f:tryUltimate(0), false)
+	f:addDamageDealt(100000)
+	T.expectEqual(f:tryUltimate(0), true)
+	T.expectEqual(f.ultimate, 0)
+	T.expectEqual(f:tryUltimate(0), false)
+end)
+
+T.test("aturdido no puede usar la definitiva", function()
+	local f = newFighter()
+	f:addDamageDealt(100000)
+	f:stun(1, 0)
+	T.expectEqual(f:tryUltimate(0.5), false)
+	T.expectEqual(f.ultimate, Combat.ULTIMATE_MAX, "no se pierde")
+end)
+
+T.test("curar no supera el máximo ni levanta a un caído", function()
+	local f = newFighter()
+	f:takeDamage(30)
+	f:heal(1000)
+	T.expectEqual(f.health, Combat.MAX_HEALTH)
+	f:takeDamage(1000)
+	f:heal(50)
+	T.expectEqual(f.health, 0)
+end)
+
+T.test("cada arma tiene definitiva y nivel de desbloqueo coherente", function()
+	local Progression = require("../src/shared/Config/Progression")
+	for id, weapon in Weapons do
+		assert(weapon.ultimate and #weapon.ultimate.name > 0, `{id}: sin definitiva`)
+		if weapon.unlockLevel > 1 then
+			local found = false
+			for _, unlock in Progression.UNLOCKS[weapon.unlockLevel] or {} do
+				if unlock.kind == "Weapon" and unlock.id == id then
+					found = true
+				end
+			end
+			assert(found, `{id}: no se desbloquea en el nivel {weapon.unlockLevel}`)
+		end
+	end
 end)
 
 T.finish()

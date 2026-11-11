@@ -5,6 +5,7 @@
 
 local Players = game:GetService("Players")
 
+local LoadoutService = require(script.Parent.LoadoutService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ProgressionService = require(script.Parent.ProgressionService)
 
@@ -42,10 +43,37 @@ local function attach(part: Part, to: BasePart, offset: CFrame)
 	weld.Parent = part
 end
 
-local function equip(character: Model)
+-- Estela del arma: el cliente la activa durante el golpe.
+local function addTrail(part: BasePart, halfLength: number)
+	local base = Instance.new("Attachment")
+	base.Position = Vector3.new(0, 0, halfLength)
+	base.Parent = part
+	local tip = Instance.new("Attachment")
+	tip.Position = Vector3.new(0, 0, -halfLength)
+	tip.Parent = part
+	local trail = Instance.new("Trail")
+	trail.Name = "SlashTrail"
+	trail.Attachment0 = base
+	trail.Attachment1 = tip
+	trail.Lifetime = 0.18
+	trail.Color = ColorSequence.new(Color3.new(1, 1, 1))
+	trail.Transparency = NumberSequence.new(0.35, 1)
+	trail.LightEmission = 0.6
+	trail.Enabled = false
+	trail.Parent = part
+end
+
+-- Construye el arma (y el escudo si procede) en la mano del personaje. La empuñadura se
+-- une a la mano con un Weld llamado GripWeld (el cliente puede girarlo para animar) y el
+-- resto va soldado a la empuñadura. La pieza principal se llama siempre "Blade".
+local function equip(character: Model, weaponId: string)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid == nil or character:FindFirstChild("Equipment") ~= nil then
+	if humanoid == nil then
 		return
+	end
+	local old = character:FindFirstChild("Equipment")
+	if old then
+		old:Destroy()
 	end
 	local isR15 = humanoid.RigType == Enum.HumanoidRigType.R15
 	local hand = character:WaitForChild(if isR15 then "RightHand" else "Right Arm", 10)
@@ -58,10 +86,7 @@ local function equip(character: Model)
 	equipment.Name = "Equipment"
 	equipment.Parent = character
 
-	-- Gladius: apunta hacia delante con el brazo bajado y hacia arriba al levantarlo.
 	local gripY = if isR15 then -0.15 else -0.9
-	-- La empuñadura se une a la mano con un Weld (el cliente puede girarlo para animar
-	-- la espada); la guarda y la hoja van soldadas a la empuñadura.
 	local handle = makePart(equipment, "Handle", Vector3.new(0.25, 0.3, 0.9), LEATHER, Enum.Material.Wood)
 	handle.CFrame = hand.CFrame * CFrame.new(0, gripY, -0.1)
 	local grip = Instance.new("Weld")
@@ -70,28 +95,39 @@ local function equip(character: Model)
 	grip.Part1 = handle
 	grip.C0 = CFrame.new(0, gripY, -0.1)
 	grip.Parent = handle
+
+	if weaponId == "Hasta" then
+		-- Lanza: asta larga de madera y punta de hierro. Sin escudo.
+		local shaft = makePart(equipment, "Blade", Vector3.new(0.22, 0.22, 7.5), LEATHER, Enum.Material.Wood)
+		attach(shaft, handle, CFrame.new(0, 0, -2.2))
+		local point = makePart(equipment, "Point", Vector3.new(0.45, 0.2, 1.4), STEEL, Enum.Material.Metal)
+		attach(point, handle, CFrame.new(0, 0, -6.6))
+		local ring = makePart(equipment, "Collar", Vector3.new(0.35, 0.35, 0.3), GOLD, Enum.Material.Metal)
+		attach(ring, handle, CFrame.new(0, 0, -5.9))
+		addTrail(shaft, 3.5)
+		return
+	end
+
+	if weaponId == "Martillo" then
+		-- Martillo del Coloso: mango largo y cabeza enorme de piedra con bandas doradas.
+		local shaft = makePart(equipment, "Shaft", Vector3.new(0.3, 0.3, 4.2), LEATHER, Enum.Material.Wood)
+		attach(shaft, handle, CFrame.new(0, 0, -1.6))
+		local head = makePart(equipment, "Blade", Vector3.new(1.8, 1.8, 2.6), Color3.fromRGB(120, 115, 110), Enum.Material.Slate)
+		attach(head, handle, CFrame.new(0, 0, -3.9) * CFrame.Angles(0, math.rad(90), 0))
+		for _, side in { -1, 1 } do
+			local band = makePart(equipment, "Band", Vector3.new(1.9, 1.9, 0.25), GOLD, Enum.Material.Metal)
+			attach(band, handle, CFrame.new(side * 0.9, 0, -3.9) * CFrame.Angles(0, math.rad(90), 0))
+		end
+		addTrail(head, 1.2)
+		return
+	end
+
+	-- Gladius y escudo.
 	local guard = makePart(equipment, "Guard", Vector3.new(1, 0.3, 0.2), GOLD, Enum.Material.Metal)
 	attach(guard, handle, CFrame.new(0, 0, -0.5))
 	local blade = makePart(equipment, "Blade", Vector3.new(0.18, 0.5, 3), STEEL, Enum.Material.Metal)
 	attach(blade, handle, CFrame.new(0, 0, -2.1))
-
-	-- Estela del tajo: el cliente la activa durante el golpe.
-	local base = Instance.new("Attachment")
-	base.Position = Vector3.new(0, 0, 1.4)
-	base.Parent = blade
-	local tip = Instance.new("Attachment")
-	tip.Position = Vector3.new(0, 0, -1.5)
-	tip.Parent = blade
-	local trail = Instance.new("Trail")
-	trail.Name = "SlashTrail"
-	trail.Attachment0 = base
-	trail.Attachment1 = tip
-	trail.Lifetime = 0.18
-	trail.Color = ColorSequence.new(Color3.new(1, 1, 1))
-	trail.Transparency = NumberSequence.new(0.35, 1)
-	trail.LightEmission = 0.6
-	trail.Enabled = false
-	trail.Parent = blade
+	addTrail(blade, 1.45)
 
 	-- Escudo en el antebrazo izquierdo, hacia fuera.
 	local shield = makePart(equipment, "Shield", Vector3.new(0.25, 2.4, 2), IMPERIAL_RED, Enum.Material.Wood)
@@ -190,8 +226,17 @@ local function applyCosmetics(player: Player)
 end
 
 local function onAppearanceLoaded(player: Player, character: Model)
-	equip(character)
+	equip(character, (LoadoutService.get(player)))
 	applyCosmetics(player)
+end
+
+-- Al cambiar de arma en la armería se rehace el equipamiento y sus cosméticos.
+local function onLoadoutChanged(player: Player)
+	local character = player.Character
+	if character and player:HasAppearanceLoaded() then
+		equip(character, (LoadoutService.get(player)))
+		applyCosmetics(player)
+	end
 end
 
 local function onPlayerAdded(player: Player)
@@ -207,6 +252,7 @@ end
 
 function EquipmentService.Start(_self: typeof(EquipmentService))
 	ProgressionService.CosmeticsChanged:Connect(applyCosmetics)
+	LoadoutService.Changed:Connect(onLoadoutChanged)
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	for _, player in Players:GetPlayers() do
 		onPlayerAdded(player)

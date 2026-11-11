@@ -50,7 +50,7 @@ export type AttackPlan = {
 	attack: Attack,
 }
 
-export type DefenseResult = "Dodged" | "Parried" | "Blocked" | "GuardBroken" | "Hit"
+export type DefenseResult = "Shielded" | "Dodged" | "Parried" | "Blocked" | "GuardBroken" | "Hit"
 
 export type HitOutcome = {
 	result: DefenseResult,
@@ -61,8 +61,14 @@ export type HitOutcome = {
 export type Snapshot = {
 	health: number,
 	stamina: number,
+	maxStamina: number,
 	ultimate: number,
 	blocking: boolean,
+}
+
+export type Options = {
+	-- Fracción de aguante máximo extra (pasiva de la Loba).
+	staminaBonus: number?,
 }
 
 export type FighterState = {
@@ -76,8 +82,18 @@ export type FighterState = {
 	tryDodge: (self: FighterState, now: number) -> (boolean, string?),
 	setBlocking: (self: FighterState, blocking: boolean, now: number) -> (),
 	receiveHit: (self: FighterState, damage: number, impactTime: number, now: number) -> HitOutcome,
-	-- Daño que no se puede esquivar ni bloquear (veneno, entorno).
-	takeDamage: (self: FighterState, amount: number) -> (),
+	-- Daño que no se puede esquivar ni bloquear (veneno, entorno). Si se pasa `now`, la
+	-- inmunidad (Testudo) lo anula.
+	takeDamage: (self: FighterState, amount: number, now: number?) -> (),
+	heal: (self: FighterState, amount: number) -> (),
+	-- Gasta el medidor lleno. Devuelve true si la definitiva se puede usar.
+	tryUltimate: (self: FighterState, now: number) -> boolean,
+	grantInvulnerability: (self: FighterState, duration: number, now: number) -> (),
+	isInvulnerable: (self: FighterState, now: number) -> boolean,
+	setFreeDodgesUntil: (self: FighterState, untilTime: number) -> (),
+	setDamageBonus: (self: FighterState, bonus: number, untilTime: number) -> (),
+	damageMultiplier: (self: FighterState, now: number) -> number,
+	maxStamina: number,
 	-- Levanta a un luchador caído con la vida indicada.
 	revive: (self: FighterState, health: number, now: number) -> (),
 	addDamageDealt: (self: FighterState, amount: number) -> (),
@@ -90,14 +106,21 @@ export type FighterState = {
 
 local FighterState = {}
 
-function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): FighterState
+function FighterState.new(weapon: Weapon, config: CombatConfig, now: number, options: Options?): FighterState
+	local maxStamina = config.MAX_STAMINA * (1 + (if options and options.staminaBonus then options.staminaBonus else 0))
 	local state = {
 		health = config.MAX_HEALTH,
-		stamina = config.MAX_STAMINA,
+		stamina = maxStamina,
+		maxStamina = maxStamina,
 		ultimate = 0,
 		blocking = false,
 		weapon = weapon,
 	} :: FighterState
+
+	local invulnerableUntil = -math.huge
+	local freeDodgesUntil = -math.huge
+	local damageBonus = 0
+	local damageBonusUntil = -math.huge
 
 	-- Estado interno (no se replica).
 	local busyUntil = -math.huge
@@ -114,8 +137,7 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 	local function regen(t: number)
 		local regenFrom = math.max(staminaUpdatedAt, lastStaminaSpendAt + config.STAMINA_REGEN_DELAY)
 		if t > regenFrom then
-			state.stamina =
-				math.min(config.MAX_STAMINA, state.stamina + (t - regenFrom) * config.STAMINA_REGEN_PER_SECOND)
+			state.stamina = math.min(maxStamina, state.stamina + (t - regenFrom) * config.STAMINA_REGEN_PER_SECOND)
 		end
 		staminaUpdatedAt = math.max(staminaUpdatedAt, t)
 	end
@@ -184,10 +206,13 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 			return false, "recarga"
 		end
 		regen(t)
-		if self.stamina < self.weapon.dodgeCost then
+		local cost = if t < freeDodgesUntil then 0 else self.weapon.dodgeCost
+		if self.stamina < cost then
 			return false, "sin aguante"
 		end
-		spendStamina(self.weapon.dodgeCost, t)
+		if cost > 0 then
+			spendStamina(cost, t)
+		end
 		self.blocking = false
 		dodgeStartedAt = t
 		nextDodgeAt = t + config.DODGE_COOLDOWN
@@ -212,6 +237,10 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 	function state.receiveHit(self: FighterState, damage: number, impactTime: number, t: number): HitOutcome
 		if self:isDead() then
 			return { result = "Hit", damageTaken = 0, closeDodge = false }
+		end
+		-- Testudo: inmune a todo mientras dure.
+		if impactTime < invulnerableUntil then
+			return { result = "Shielded", damageTaken = 0, closeDodge = false }
 		end
 		local grace = config.DEFENSE_LATENCY_GRACE
 
@@ -252,8 +281,46 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 		return { result = "Hit", damageTaken = damage, closeDodge = false }
 	end
 
-	function state.takeDamage(self: FighterState, amount: number)
+	function state.takeDamage(self: FighterState, amount: number, t: number?)
+		if t ~= nil and t < invulnerableUntil then
+			return
+		end
 		self.health = math.max(0, self.health - math.max(0, amount))
+	end
+
+	function state.heal(self: FighterState, amount: number)
+		if not self:isDead() then
+			self.health = math.min(config.MAX_HEALTH, self.health + math.max(0, amount))
+		end
+	end
+
+	function state.tryUltimate(self: FighterState, t: number): boolean
+		if self:isDead() or self:isStunned(t) or self.ultimate < config.ULTIMATE_MAX then
+			return false
+		end
+		self.ultimate = 0
+		return true
+	end
+
+	function state.grantInvulnerability(_self: FighterState, duration: number, t: number)
+		invulnerableUntil = math.max(invulnerableUntil, t + duration)
+	end
+
+	function state.isInvulnerable(_self: FighterState, t: number): boolean
+		return t < invulnerableUntil
+	end
+
+	function state.setFreeDodgesUntil(_self: FighterState, untilTime: number)
+		freeDodgesUntil = untilTime
+	end
+
+	function state.setDamageBonus(_self: FighterState, bonus: number, untilTime: number)
+		damageBonus = bonus
+		damageBonusUntil = untilTime
+	end
+
+	function state.damageMultiplier(_self: FighterState, t: number): number
+		return if t < damageBonusUntil then 1 + damageBonus else 1
 	end
 
 	function state.revive(self: FighterState, health: number, t: number)
@@ -279,6 +346,7 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number): Fi
 		return {
 			health = self.health,
 			stamina = self.stamina,
+			maxStamina = maxStamina,
 			ultimate = self.ultimate,
 			blocking = self.blocking,
 		}

@@ -44,6 +44,27 @@ local Remotes: { [string]: Definition } = {
 		args = {},
 		rate = { capacity = 4, perSecond = 3 },
 	},
+	-- Poder de la esencia equipada (tecla Z).
+	CombatEssence = {
+		kind = "Event",
+		direction = "ToServer",
+		args = {},
+		rate = { capacity = 3, perSecond = 1 },
+	},
+	-- Habilidad definitiva del arma (tecla R).
+	CombatUltimate = {
+		kind = "Event",
+		direction = "ToServer",
+		args = {},
+		rate = { capacity = 3, perSecond = 1 },
+	},
+	-- Elegir arma y esencia en la armería (el servidor comprueba que estén desbloqueadas).
+	SetLoadout = {
+		kind = "Event",
+		direction = "ToServer",
+		args = { Check.string(16), Check.string(16) },
+		rate = { capacity = 4, perSecond = 1 },
+	},
 	CombatBlock = {
 		kind = "Event",
 		direction = "ToServer",
@@ -51,13 +72,14 @@ local Remotes: { [string]: Definition } = {
 		rate = { capacity = 10, perSecond = 8 },
 	},
 
-	-- Estado autoritativo del propio luchador: { health, stamina, ultimate, blocking }.
+	-- Estado autoritativo del propio luchador: { health, stamina, maxStamina, ultimate,
+	-- blocking, weapon, essence, essenceReadyIn }.
 	CombatState = {
 		kind = "Event",
 		direction = "ToClient",
 	},
 	-- Sucesos de combate: (tipo, userId, ...). Tipos: Attack, Hit, Dodge, Defense,
-	-- Telegraph, Block, Downed, Revived.
+	-- Telegraph, Block, Downed, Revived, Ultimate, Essence.
 	CombatEvent = {
 		kind = "Event",
 		direction = "ToClient",

@@ -42,7 +42,7 @@ T.test("toPublic solo expone datos públicos", function()
 	table.sort(keys)
 	T.expectEqual(
 		table.concat(keys, ","),
-		"bestHydraTime,codex,equippedTitle,hydraKills,level,loadout,unlockedTitles,xp"
+		"bestHydraTime,codex,equippedTitle,hydraKills,level,loadout,unlockedEssences,unlockedTitles,unlockedWeapons,xp"
 	)
 end)
 

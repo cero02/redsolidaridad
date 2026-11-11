@@ -15,6 +15,8 @@ local CombatHud = {}
 
 local bars: { [string]: Frame } = {}
 local message: TextLabel? = nil
+local essenceLabel: TextLabel? = nil
+local ultimateLabel: TextLabel? = nil
 local messageToken = 0
 
 local function createBar(parent: Instance, name: string, order: number, color: Color3)
@@ -62,6 +64,26 @@ function CombatHud.create()
 	text.Parent = gui
 	message = text
 
+	for index, name in { "Essence", "Ultimate" } do
+		local ability = Instance.new("TextLabel")
+		ability.Name = name
+		ability.Size = UDim2.fromOffset(BAR_WIDTH, 18)
+		ability.Position = UDim2.new(0, 16 + BAR_WIDTH + 12, 1, -(16 + (4 - index) * (BAR_HEIGHT + 6)) - 2)
+		ability.BackgroundTransparency = 1
+		ability.TextScaled = true
+		ability.TextXAlignment = Enum.TextXAlignment.Left
+		ability.Font = Enum.Font.GothamBold
+		ability.TextColor3 = Color3.fromRGB(220, 220, 220)
+		ability.TextStrokeTransparency = 0.3
+		ability.Text = ""
+		ability.Parent = gui
+		if name == "Essence" then
+			essenceLabel = ability
+		else
+			ultimateLabel = ability
+		end
+	end
+
 	gui.Parent = playerGui
 end
 
@@ -72,10 +94,22 @@ local function setBar(name: string, value: number, max: number)
 	end
 end
 
-function CombatHud.update(health: number, stamina: number, ultimate: number)
+function CombatHud.update(health: number, stamina: number, ultimate: number, maxStamina: number?)
 	setBar("Health", health, Combat.MAX_HEALTH)
-	setBar("Stamina", stamina, Combat.MAX_STAMINA)
+	setBar("Stamina", stamina, maxStamina or Combat.MAX_STAMINA)
 	setBar("Ultimate", ultimate, Combat.ULTIMATE_MAX)
+end
+
+-- Texto de la esencia y de la definitiva junto a las barras.
+function CombatHud.updateAbilities(essenceText: string, ultimateText: string, ultimateReady: boolean)
+	local essence, ultimate = essenceLabel, ultimateLabel
+	if essence then
+		essence.Text = essenceText
+	end
+	if ultimate then
+		ultimate.Text = ultimateText
+		ultimate.TextColor3 = if ultimateReady then Color3.fromRGB(255, 215, 80) else Color3.fromRGB(220, 220, 220)
+	end
 end
 
 function CombatHud.showMessage(text: string, color: Color3?)

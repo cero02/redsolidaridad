@@ -22,6 +22,8 @@ local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local ProgressionService = require(script.Parent.ProgressionService)
 
 local INTRO_TIME = 6
+-- Atributo que bloquea la armería mientras se lucha (lo lee LoadoutService).
+local IN_ARENA = "InArena"
 local VICTORY_TIME = 10
 local DEFEAT_TIME = 5
 
@@ -152,6 +154,15 @@ local function reward(player: Player, won: boolean, elapsed: number)
 
 	local levelBefore = data.level
 	local levelResult = ProgressionService.grantXp(player, rewardResult.total)
+	local unlocks = if levelResult then table.clone(levelResult.unlocks) else {}
+
+	-- La primera victoria arranca su esencia a la Hidra: una posibilidad nueva.
+	if won and not data.unlockedEssences.Hidra then
+		data.unlockedEssences.Hidra = true
+		table.insert(unlocks, { kind = "Essence", id = "Hidra", name = "Esencia de la Hidra (equípala en la armería)" })
+		EventService.news(`¡{player.DisplayName} ha arrancado la Esencia de la Hidra!`)
+		ProgressionService.refresh(player)
+	end
 
 	-- Títulos de hazañas (se conceden después de la experiencia para lucir el último).
 	if won then
@@ -184,7 +195,7 @@ local function reward(player: Player, won: boolean, elapsed: number)
 		level = data.level,
 		xp = data.xp,
 		xpToNext = Progression.xpToNext(progressionConfig, data.level),
-		unlocks = if levelResult then levelResult.unlocks else {},
+		unlocks = unlocks,
 		nextLevel = nextLevel,
 		nextUnlocks = nextUnlocks,
 		decree = decree.name,
@@ -206,6 +217,7 @@ local function removeParticipant(player: Player)
 	end
 	table.remove(participants, index)
 	matchStats[player] = nil
+	player:SetAttribute(IN_ARENA, nil)
 	clearRevivePrompt(player)
 	local connection = deathConnections[player]
 	if connection then
@@ -395,6 +407,7 @@ local function addParticipant(player: Player): boolean
 
 	table.insert(participants, player)
 	matchStats[player] = { parries = 0, revives = 0, downs = 0 }
+	player:SetAttribute(IN_ARENA, true)
 	deathConnections[player] = humanoid.Died:Connect(function()
 		onParticipantLost(player, true)
 	end)

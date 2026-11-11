@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local CharacterAnimator = require(script.Parent.CharacterAnimator)
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
+local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
@@ -27,6 +28,12 @@ local SHAKE_TIME = 0.15
 local ACTION_ATTACK = "ColosseumAttack"
 local ACTION_BLOCK = "ColosseumBlock"
 local ACTION_DODGE = "ColosseumDodge"
+local ACTION_ESSENCE = "ColosseumEssence"
+local ACTION_ULTIMATE = "ColosseumUltimate"
+
+-- Salto del Picado (Esencia del Águila).
+local EAGLE_UP_SPEED = 70
+local EAGLE_UP_TIME = 0.3
 
 local DEFENSE_MESSAGES: { [string]: { text: string, color: Color3 } } = {
 	Dodged = { text = "¡Esquivado!", color = Color3.fromRGB(120, 200, 255) },
@@ -34,6 +41,7 @@ local DEFENSE_MESSAGES: { [string]: { text: string, color: Color3 } } = {
 	Blocked = { text = "Bloqueado", color = Color3.fromRGB(200, 200, 200) },
 	GuardBroken = { text = "¡Guardia rota!", color = Color3.fromRGB(255, 120, 60) },
 	Hit = { text = "¡Golpeado!", color = Color3.fromRGB(255, 70, 70) },
+	Shielded = { text = "¡Testudo!", color = Color3.fromRGB(255, 215, 80) },
 }
 
 local localPlayer = Players.LocalPlayer
@@ -42,6 +50,10 @@ local CombatController = {}
 
 local fighter: FighterState.FighterState? = nil
 local attackPressedAt: number? = nil
+-- Equipo actual (lo dicta el servidor en cada CombatState).
+local weaponId = "Gladius"
+local essenceId = "Loba"
+local essenceReadyAt = 0
 local diagnosticShown = false
 
 local function getRoot(): BasePart?
@@ -92,6 +104,8 @@ local function shake(magnitude: number)
 	end)
 end
 
+local push: (velocityVector: Vector3, duration: number) -> ()
+
 local function requestAttack(kind: FighterState.AttackKind)
 	local state = fighter
 	if state == nil then
@@ -103,7 +117,16 @@ local function requestAttack(kind: FighterState.AttackKind)
 		showHitbox(plan)
 		local character = localPlayer.Character
 		if character then
-			CharacterAnimator.playAttack(character, plan.kind, plan.step)
+			CharacterAnimator.playAttack(character, plan.kind, plan.step, weaponId)
+			-- Estocada a la carrera de la Hasta: impulso hacia delante.
+			local lunge = plan.attack.lunge
+			local root = getRoot()
+			if lunge and root then
+				task.delay(plan.attack.windup * 0.5, function()
+					local look = root.CFrame.LookVector
+					push(Vector3.new(look.X, 0, look.Z).Unit * lunge, plan.attack.active + 0.08)
+				end)
+			end
 			-- Diagnóstico en pantalla, una sola vez, si el avatar no se puede animar.
 			if not diagnosticShown then
 				diagnosticShown = true
@@ -114,6 +137,25 @@ local function requestAttack(kind: FighterState.AttackKind)
 			end
 		end
 	end
+end
+
+-- Empuja al propio personaje (su física la controla este cliente).
+function push(velocityVector: Vector3, duration: number)
+	local root = getRoot()
+	if root == nil then
+		return
+	end
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = root
+	local velocity = Instance.new("LinearVelocity")
+	velocity.Attachment0 = attachment
+	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
+	velocity.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	velocity.MaxForce = 100000
+	velocity.VectorVelocity = velocityVector
+	velocity.Parent = root
+	Debris:AddItem(velocity, duration)
+	Debris:AddItem(attachment, duration)
 end
 
 local function dash()
@@ -132,17 +174,7 @@ local function dash()
 	direction = Vector3.new(direction.X, 0, direction.Z).Unit
 
 	-- POR VERIFICAR en Studio: ajustar fuerza y sensación del impulso.
-	local attachment = Instance.new("Attachment")
-	attachment.Parent = root
-	local velocity = Instance.new("LinearVelocity")
-	velocity.Attachment0 = attachment
-	velocity.RelativeTo = Enum.ActuatorRelativeTo.World
-	velocity.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
-	velocity.MaxForce = 100000
-	velocity.VectorVelocity = direction * Combat.DODGE_SPEED
-	velocity.Parent = root
-	Debris:AddItem(velocity, Combat.DODGE_DURATION)
-	Debris:AddItem(attachment, Combat.DODGE_DURATION)
+	push(direction * Combat.DODGE_SPEED, Combat.DODGE_DURATION)
 end
 
 local function onAttack(_name: string, inputState: Enum.UserInputState, _input: InputObject)
@@ -210,11 +242,53 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 		CombatHud.showMessage("¡En pie, gladiador!", Color3.fromRGB(255, 215, 80))
 	elseif kind == "Telegraph" then
 		CombatHud.showMessage("¡Cuidado!", Color3.fromRGB(255, 90, 90))
+	elseif kind == "Ultimate" and a == "TestudoAlly" then
+		CombatHud.showMessage("¡Un aliado te cubre con su Testudo!", Color3.fromRGB(255, 215, 80))
+	elseif kind == "Ultimate" and userId == localPlayer.UserId then
+		local weapon = Weapons[weaponId]
+		CombatHud.showMessage(`¡{string.upper(weapon.ultimate.name)}!`, Color3.fromRGB(255, 215, 80))
+		shake(HURT_SHAKE)
 	end
 end
 
 local function newFighter()
-	fighter = FighterState.new(Weapons.Gladius :: any, Combat :: any, os.clock())
+	local essence = Essences[essenceId]
+	fighter = FighterState.new(Weapons[weaponId] :: any, Combat :: any, os.clock(), {
+		staminaBonus = if essence then essence.staminaBonus else nil,
+	})
+end
+
+local function onEssence(_name: string, inputState: Enum.UserInputState, _input: InputObject)
+	if inputState ~= Enum.UserInputState.Begin then
+		return Enum.ContextActionResult.Pass
+	end
+	if os.clock() < essenceReadyAt then
+		CombatHud.showMessage("Esencia recargándose…", Color3.fromRGB(200, 200, 200))
+		return Enum.ContextActionResult.Pass
+	end
+	NetClient.fire("CombatEssence")
+	-- Predicción: la recarga empieza ya; el servidor la corrige si no la aceptó.
+	local essence = Essences[essenceId]
+	if essence then
+		essenceReadyAt = os.clock() + essence.cooldown
+		if essence.id == "Aguila" then
+			push(Vector3.new(0, EAGLE_UP_SPEED, 0), EAGLE_UP_TIME)
+		end
+	end
+	return Enum.ContextActionResult.Pass
+end
+
+local function onUltimate(_name: string, inputState: Enum.UserInputState, _input: InputObject)
+	local state = fighter
+	if inputState ~= Enum.UserInputState.Begin or state == nil then
+		return Enum.ContextActionResult.Pass
+	end
+	if state.ultimate < Combat.ULTIMATE_MAX then
+		CombatHud.showMessage("La definitiva aún no está cargada", Color3.fromRGB(200, 200, 200))
+		return Enum.ContextActionResult.Pass
+	end
+	NetClient.fire("CombatUltimate")
+	return Enum.ContextActionResult.Pass
 end
 
 function CombatController.Start(_self: typeof(CombatController))
@@ -225,10 +299,19 @@ function CombatController.Start(_self: typeof(CombatController))
 		newFighter()
 	end
 
-	NetClient.on("CombatState", function(snapshot: FighterState.Snapshot)
+	NetClient.on("CombatState", function(snapshot: { [string]: any })
+		-- Si cambió el equipo (armería), se rehace la predicción con la nueva arma.
+		if snapshot.weapon and (snapshot.weapon ~= weaponId or snapshot.essence ~= essenceId) then
+			weaponId = snapshot.weapon
+			essenceId = snapshot.essence
+			newFighter()
+		end
+		if snapshot.essenceReadyIn ~= nil then
+			essenceReadyAt = os.clock() + snapshot.essenceReadyIn
+		end
 		local state = fighter
 		if state ~= nil then
-			state:applySnapshot(snapshot, os.clock())
+			state:applySnapshot(snapshot :: any, os.clock())
 			-- Si el servidor bajó la guardia (guardia rota, aturdimiento), se refleja.
 			local character = localPlayer.Character
 			if character and not snapshot.blocking then
@@ -256,13 +339,33 @@ function CombatController.Start(_self: typeof(CombatController))
 	ContextActionService:BindAction(ACTION_DODGE, onDodge, true, Enum.KeyCode.Q, Enum.KeyCode.ButtonB)
 	ContextActionService:SetTitle(ACTION_ATTACK, "Atacar")
 	ContextActionService:SetTitle(ACTION_BLOCK, "Bloquear")
+	ContextActionService:BindAction(ACTION_ESSENCE, onEssence, true, Enum.KeyCode.Z, Enum.KeyCode.ButtonX)
+	ContextActionService:BindAction(ACTION_ULTIMATE, onUltimate, true, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
 	ContextActionService:SetTitle(ACTION_DODGE, "Esquivar")
+	ContextActionService:SetTitle(ACTION_ESSENCE, "Esencia")
+	ContextActionService:SetTitle(ACTION_ULTIMATE, "Definitiva")
 
 	RunService.Heartbeat:Connect(function()
 		local state = fighter
 		if state ~= nil then
 			local snapshot = state:snapshot(os.clock())
-			CombatHud.update(snapshot.health, snapshot.stamina, snapshot.ultimate)
+			CombatHud.update(snapshot.health, snapshot.stamina, snapshot.ultimate, snapshot.maxStamina)
+			local essence = Essences[essenceId]
+			local weapon = Weapons[weaponId]
+			local remaining = essenceReadyAt - os.clock()
+			CombatHud.updateAbilities(
+				if essence
+					then (if remaining > 0
+						then `Z · {essence.name}: {math.ceil(remaining)} s`
+						else `Z · {essence.name}: lista`)
+					else "",
+				if weapon
+					then (if snapshot.ultimate >= Combat.ULTIMATE_MAX
+						then `R · {weapon.ultimate.name}: ¡LISTA!`
+						else `R · {weapon.ultimate.name}: {math.floor(snapshot.ultimate)} %`)
+					else "",
+				snapshot.ultimate >= Combat.ULTIMATE_MAX
+			)
 		end
 	end)
 end
