@@ -33,6 +33,7 @@ Este repositorio alojaba antes la web **RedSolidaria**. Su código se conserva e
 - [CLAUDE.md](CLAUDE.md): reglas del proyecto
 - [Visión de diseño](docs/VISION.md)
 - [Diseño detallado](docs/design/): combate, Hidra, armas y esencias, progresión, espectadores
+- [Modelos 3D para la Hidra](docs/ARTE_3D.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Hoja de ruta](docs/ROADMAP.md)
 - [Seguridad](docs/SECURITY.md)

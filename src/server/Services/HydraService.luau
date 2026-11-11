@@ -68,7 +68,12 @@ type HeadRecord = {
 	model: Model,
 	part: Part,
 	-- Piezas decorativas soldadas a la cabeza (ojos, fauces, crestas…).
-	decor: { Part },
+	decor: { BasePart },
+	-- Transparencia original de cada pieza (los modelos 3D pueden traer piezas translúcidas).
+	decorTransparency: { [BasePart]: number },
+	-- Con modelo 3D la zona de golpe es invisible y el aviso de color va en un Highlight.
+	customModel: boolean,
+	highlight: Highlight?,
 	billboard: BillboardGui,
 	label: TextLabel,
 	-- Solo las cabezas mortales tienen muñón.
@@ -251,15 +256,26 @@ end
 
 local function setHeadColor(record: HeadRecord, color: Color3)
 	record.part.Color = color
+	local highlight = record.highlight
+	if highlight then
+		-- La cabeza dorada siempre brilla; las demás solo durante avisos y golpes.
+		highlight.FillColor = color
+		highlight.Enabled = record.part.Transparency < 1 and (record.immortal or color ~= record.baseColor)
+	end
 end
 
 local function setHeadVisible(record: HeadRecord, visible: boolean)
-	record.part.Transparency = if visible then 0 else 1
+	-- Con modelo 3D la zona de golpe nunca se ve, pero sigue recibiendo golpes.
+	record.part.Transparency = if visible and not record.customModel then 0 else 1
 	record.part.CanQuery = visible
 	for _, piece in record.decor do
-		piece.Transparency = if visible then 0 else 1
+		piece.Transparency = if visible then record.decorTransparency[piece] or 0 else 1
 	end
 	record.billboard.Enabled = visible
+	local highlight = record.highlight
+	if highlight then
+		highlight.Enabled = visible and (record.immortal or record.part.Color ~= record.baseColor)
+	end
 end
 
 local function setStumpState(record: HeadRecord, state: "Hidden" | "Bleeding" | "Burnt")
@@ -562,6 +578,69 @@ local function onChainHit(chain: Chain, attacker: Player, damage: number)
 	end
 end
 
+-- Modelos 3D opcionales -----------------------------------------------------------
+-- Si en ServerStorage existe una carpeta "HydraModels" con modelos llamados "Head",
+-- "GoldenHead" o "Body", se usan en lugar de los bloques. Guía: docs/ARTE_3D.md.
+-- El frente de cada modelo debe mirar hacia su LookVector (−Z); si no, se puede corregir
+-- con el atributo numérico "Rotacion" (grados alrededor del eje vertical).
+
+local CUSTOM_FOLDER = "HydraModels"
+
+local function findCustomModel(name: string): Model?
+	local folder = ServerStorage:FindFirstChild(CUSTOM_FOLDER)
+	local found = if folder then folder:FindFirstChild(name) else nil
+	return if found and found:IsA("Model") then found else nil
+end
+
+-- Clona un modelo, lo escala para que su tamaño mayor sea `targetSize`, lo coloca en
+-- `cframe` y lo suelda a `anchor`. Elimina cualquier script que traiga (seguridad: los
+-- modelos de la Creator Store pueden incluir código ajeno).
+local function attachCustomModel(
+	source: Model,
+	parent: Instance,
+	anchor: BasePart?,
+	cframe: CFrame,
+	targetSize: number
+): { BasePart }
+	local clone = source:Clone()
+	for _, descendant in clone:GetDescendants() do
+		if descendant:IsA("LuaSourceContainer") then
+			descendant:Destroy()
+		end
+	end
+	local extents = clone:GetExtentsSize()
+	local largest = math.max(extents.X, extents.Y, extents.Z)
+	if largest > 0 then
+		clone:ScaleTo(clone:GetScale() * targetSize / largest)
+	end
+	local rotation = source:GetAttribute("Rotacion")
+	local turn = if typeof(rotation) == "number" then CFrame.Angles(0, math.rad(rotation), 0) else CFrame.identity
+	clone:PivotTo(cframe * turn)
+
+	local parts: { BasePart } = {}
+	for _, descendant in clone:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CanCollide = false
+			descendant.CanQuery = false
+			descendant.CanTouch = false
+			descendant.CastShadow = false
+			descendant.Massless = true
+			if anchor then
+				descendant.Anchored = false
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = anchor
+				weld.Part1 = descendant
+				weld.Parent = descendant
+			else
+				descendant.Anchored = true
+			end
+			table.insert(parts, descendant)
+		end
+	end
+	clone.Parent = parent
+	return parts
+end
+
 -- Pieza decorativa soldada a `anchor`, colocada con `offset` respecto a `base`.
 local function decorPart(
 	parent: Instance,
@@ -719,7 +798,25 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	part.Parent = headModel
 	headModel.PrimaryPart = part
 
-	local decor = buildHeadDecor(headModel, part, restCFrame, scale, immortal)
+	local customHead = findCustomModel(if immortal then "GoldenHead" else "Head")
+		or (if immortal then findCustomModel("Head") else nil)
+	local decor: { BasePart }
+	local decorTransparency: { [BasePart]: number } = {}
+	local highlight: Highlight? = nil
+	if customHead then
+		decor = attachCustomModel(customHead, headModel, part, restCFrame, part.Size.Magnitude * 1.15)
+		for _, piece in decor do
+			decorTransparency[piece] = piece.Transparency
+		end
+		local glow = Instance.new("Highlight")
+		glow.FillTransparency = 0.45
+		glow.OutlineTransparency = 0.2
+		glow.Enabled = false
+		glow.Parent = headModel
+		highlight = glow
+	else
+		decor = buildHeadDecor(headModel, part, restCFrame, scale, immortal) :: any
+	end
 
 	local billboard, label = makeBillboard(part, 4 * scale)
 	if immortal then
@@ -736,6 +833,9 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 		model = headModel,
 		part = part,
 		decor = decor,
+		decorTransparency = decorTransparency,
+		customModel = customHead ~= nil,
+		highlight = highlight,
 		billboard = billboard,
 		label = label,
 		stumpModel = nil,
@@ -1557,6 +1657,25 @@ end
 -- Cuerpo de cuatro patas con garras, púas en el lomo y cola rizada. Mira hacia la entrada
 -- de los gladiadores (+Z). Solo decorativo: no recibe golpes.
 function buildBody(parent: Instance, center: Vector3): Part
+	local customBody = findCustomModel("Body")
+	if customBody then
+		-- Ancla invisible (el cuerpo no recibe golpes) y el modelo anclado en su sitio.
+		local anchor = Instance.new("Part")
+		anchor.Name = "Body"
+		anchor.Anchored = true
+		anchor.CanCollide = false
+		anchor.CanQuery = false
+		anchor.Transparency = 1
+		anchor.Size = Vector3.new(1, 1, 1)
+		anchor.CFrame = CFrame.lookAt(center + Vector3.new(0, 7, -4), center + Vector3.new(0, 7, 10))
+		anchor.Parent = parent
+		local parts = attachCustomModel(customBody, parent, nil, anchor.CFrame, 30)
+		-- El cuerpo sí bloquea el paso para que no se atraviese.
+		for _, piece in parts do
+			piece.CanCollide = true
+		end
+		return anchor
+	end
 	local function piece(
 		name: string,
 		size: Vector3,
