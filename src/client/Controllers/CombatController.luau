@@ -42,6 +42,7 @@ local CombatController = {}
 
 local fighter: FighterState.FighterState? = nil
 local attackPressedAt: number? = nil
+local diagnosticShown = false
 
 local function getRoot(): BasePart?
 	local character = localPlayer.Character
@@ -103,6 +104,14 @@ local function requestAttack(kind: FighterState.AttackKind)
 		local character = localPlayer.Character
 		if character then
 			CharacterAnimator.playAttack(character, plan.kind, plan.step)
+			-- Diagnóstico en pantalla, una sola vez, si el avatar no se puede animar.
+			if not diagnosticShown then
+				diagnosticShown = true
+				local problem = CharacterAnimator.getProblem(character)
+				if problem then
+					CombatHud.showMessage(problem, Color3.fromRGB(255, 200, 90))
+				end
+			end
 		end
 	end
 end

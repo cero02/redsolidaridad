@@ -53,12 +53,20 @@ local function equip(character: Model)
 
 	-- Gladius: apunta hacia delante con el brazo bajado y hacia arriba al levantarlo.
 	local gripY = if isR15 then -0.15 else -0.9
+	-- La empuñadura se une a la mano con un Weld (el cliente puede girarlo para animar
+	-- la espada); la guarda y la hoja van soldadas a la empuñadura.
 	local handle = makePart(equipment, "Handle", Vector3.new(0.25, 0.3, 0.9), LEATHER, Enum.Material.Wood)
-	attach(handle, hand, CFrame.new(0, gripY, -0.1))
+	handle.CFrame = hand.CFrame * CFrame.new(0, gripY, -0.1)
+	local grip = Instance.new("Weld")
+	grip.Name = "GripWeld"
+	grip.Part0 = hand
+	grip.Part1 = handle
+	grip.C0 = CFrame.new(0, gripY, -0.1)
+	grip.Parent = handle
 	local guard = makePart(equipment, "Guard", Vector3.new(1, 0.3, 0.2), GOLD, Enum.Material.Metal)
-	attach(guard, hand, CFrame.new(0, gripY, -0.6))
+	attach(guard, handle, CFrame.new(0, 0, -0.5))
 	local blade = makePart(equipment, "Blade", Vector3.new(0.18, 0.5, 3), STEEL, Enum.Material.Metal)
-	attach(blade, hand, CFrame.new(0, gripY, -2.2))
+	attach(blade, handle, CFrame.new(0, 0, -2.1))
 
 	-- Estela del tajo: el cliente la activa durante el golpe.
 	local base = Instance.new("Attachment")
