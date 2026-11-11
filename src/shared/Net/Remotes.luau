@@ -63,6 +63,40 @@ local Remotes: { [string]: Definition } = {
 		direction = "ToClient",
 	},
 
+	-- Pilares (docs/design/PILARES.md) ------------------------------------------------
+	-- Perfil público actualizado (nivel, experiencia, títulos, códice…).
+	ProgressUpdate = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- Resultado de una partida: { won, time, record, total, lines, level, unlocks… }.
+	MatchResults = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- Descubrimiento del Códice: (id, descubiertos, total).
+	Discovery = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- Noticias del servidor para todos: (texto).
+	WorldNews = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- Estado de los eventos: { decree, decreeRemaining, gamesRemaining, offerings, goal }.
+	WorldEvents = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+	-- El jugador elige qué título lucir (el servidor comprueba que lo tiene).
+	EquipTitle = {
+		kind = "Event",
+		direction = "ToServer",
+		args = { Check.string(32) },
+		rate = { capacity = 4, perSecond = 1 },
+	},
+
 	-- Mensaje del anunciador del coliseo: (texto, segundos).
 	Announce = {
 		kind = "Event",

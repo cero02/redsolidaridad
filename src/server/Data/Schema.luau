@@ -4,7 +4,7 @@
 -- sin tablas mixtas ni listas con huecos. Para cambios: subir la versión y añadir una
 -- migración en Migrations.luau. Diseño: docs/design/PROGRESION.md.
 
-local SCHEMA_VERSION = 1
+local SCHEMA_VERSION = 2
 
 export type Stats = {
 	matchesPlayed: number,
@@ -35,6 +35,14 @@ export type ProfileData = {
 	settings: {
 		damageNumbers: boolean,
 	},
+	-- v2: títulos, códice y decretos (docs/design/PILARES.md).
+	unlockedTitles: { [string]: boolean },
+	equippedTitle: string,
+	codex: { [string]: boolean },
+	-- Día (UTC, días desde 1970) de la última victoria: para el bonus diario.
+	lastWinDay: number,
+	-- Victorias por decreto (id -> número).
+	decreeWins: { [string]: number },
 }
 
 -- Lo que el cliente puede ver de su propio perfil.
@@ -42,6 +50,11 @@ export type PublicProfile = {
 	level: number,
 	xp: number,
 	loadout: Loadout,
+	equippedTitle: string,
+	unlockedTitles: { string },
+	codex: { string },
+	bestHydraTime: number,
+	hydraKills: number,
 }
 
 local Schema = {}
@@ -66,13 +79,34 @@ Schema.template = table.freeze({
 	unlockedCosmetics = table.freeze({}),
 	loadout = table.freeze({ weapon = "Gladius", essence = "Loba" }),
 	settings = table.freeze({ damageNumbers = true }),
+	unlockedTitles = table.freeze({ Tiro = true }),
+	equippedTitle = "Tiro",
+	codex = table.freeze({}),
+	lastWinDay = 0,
+	decreeWins = table.freeze({}),
 }) :: ProfileData
+
+local function keys(set: { [string]: boolean }): { string }
+	local list = {}
+	for key, value in set do
+		if value then
+			table.insert(list, key)
+		end
+	end
+	table.sort(list)
+	return list
+end
 
 function Schema.toPublic(data: ProfileData): PublicProfile
 	return {
 		level = data.level,
 		xp = data.xp,
 		loadout = { weapon = data.loadout.weapon, essence = data.loadout.essence },
+		equippedTitle = data.equippedTitle,
+		unlockedTitles = keys(data.unlockedTitles),
+		codex = keys(data.codex),
+		bestHydraTime = data.stats.bestHydraTime,
+		hydraKills = data.stats.hydraKills,
 	}
 end
 

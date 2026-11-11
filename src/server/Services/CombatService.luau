@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
 local NetService = require(script.Parent.NetService)
+local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
 type Fighter = FighterState.FighterState
@@ -19,6 +20,9 @@ export type TargetHandler = (attacker: Player, damage: number, stun: number) -> 
 local CombatService = {}
 
 local fighters: { [Player]: Fighter } = {}
+
+-- Un jugador ha hecho una parada perfecta.
+CombatService.Parried = Signal.new() :: Signal.Signal<Player>
 -- Jugadores caídos: con 0 de vida pero aún no muertos (esperan reanimación).
 local downed: { [Player]: boolean } = {}
 -- Decide si un jugador que llega a 0 de vida queda caído (true) o muere (false).
@@ -215,8 +219,11 @@ function CombatService.hitPlayer(player: Player, damage: number, impactTime: num
 		syncHumanoid(player, fighter)
 		NetService.fire("CombatEvent", player, "Defense", player.UserId, outcome.result, outcome.damageTaken)
 		sendState(player, fighter)
-		if outcome.result == "Parried" and onParried ~= nil then
-			onParried()
+		if outcome.result == "Parried" then
+			CombatService.Parried:Fire(player)
+			if onParried ~= nil then
+				onParried()
+			end
 		end
 	end)
 end

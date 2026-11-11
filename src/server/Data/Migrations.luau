@@ -7,8 +7,25 @@ export type Migration = (data: { [string]: any }) -> ()
 
 local Migrations = {}
 
--- Migraciones del juego: [versión de origen] = función. Vacío en la versión 1.
-Migrations.list = {} :: { [number]: Migration }
+-- Migraciones del juego: [versión de origen] = función.
+Migrations.list = {
+	-- v1 → v2: títulos, códice y decretos. Reconcile ya añade los campos vacíos; aquí se
+	-- conceden los títulos de rango que el jugador ya merecía por su nivel.
+	[1] = function(data: { [string]: any })
+		local titles = data.unlockedTitles or {}
+		titles.Tiro = true
+		local level = if typeof(data.level) == "number" then data.level else 1
+		for _, rank in { { 5, "Veteranus" }, { 10, "PrimusPalus" }, { 15, "Campeon" }, { 20, "Rudiarius" } } do
+			if level >= rank[1] then
+				titles[rank[2]] = true
+			end
+		end
+		data.unlockedTitles = titles
+		if typeof(data.equippedTitle) ~= "string" or data.equippedTitle == "" then
+			data.equippedTitle = "Tiro"
+		end
+	end,
+} :: { [number]: Migration }
 
 -- Aplica en orden todas las migraciones necesarias hasta targetVersion.
 -- Devuelve la lista de versiones aplicadas. Lanza error si falta una migración o si los

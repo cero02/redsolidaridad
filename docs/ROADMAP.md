@@ -21,7 +21,7 @@ Se construye por hitos verticales: cada uno es jugable y se prueba antes de segu
 | 1.2 Hidra, fase 1 ✅ | Arena del Gran Coliseo (bloques, generada por código), Hidra con tres ataques con aviso, cortar y cauterizar cuellos. Prueba: [testing/HITO_1.2.md](testing/HITO_1.2.md) | Victoria completa conseguida en Studio (2026-11-10) |
 | 1.3 Hidra completa + cooperativo 🔨 código listo | Tres fases (furia y cabeza inmortal), braseros que se apagan, caídos y reanimación, récord personal de tiempo. Prueba: [testing/HITO_1.3.md](testing/HITO_1.3.md) | Una partida de 8–12 min con amigos (pendiente de prueba en Studio) |
 | 1.4 Armas, esencias y definitiva | Tres armas, tres esencias, habilidad definitiva que se carga | Al menos tres construcciones distintas viables |
-| 1.5 Recompensas y progresión | Experiencia, niveles, desbloqueos, pantalla de resultados | Ganar abre una posibilidad nueva |
+| 1.5 Recompensas, progresión y pilares 🔨 código listo | XP, niveles, rangos, desbloqueos y cosméticos; títulos y Salón de Leyendas; Códice de secretos; Edicto semanal y Juegos Imperiales; Hermandad, Mentor y ofrendas. Prueba: [testing/PILARES.md](testing/PILARES.md) | Ganar abre una posibilidad nueva (pendiente de prueba en Studio) |
 | 1.6 Espectadores | Gradas del Gran Coliseo, cámara de espectador, reacciones del público (solo cosméticas). Ver [design/ESPECTADORES.md](design/ESPECTADORES.md) | Ver una partida desde las gradas es divertido |
 | **Lanzamiento v1** | Pulido, rendimiento, anti-exploits, beta cerrada, cuestionario de madurez | Aprobación del equipo |
 

@@ -29,6 +29,8 @@ local ArenaService = {}
 ArenaService.GateTriggered = Signal.new() :: Signal.Signal<Player>
 -- Un jugador enciende su arma en un brasero.
 ArenaService.BrazierTriggered = Signal.new() :: Signal.Signal<Player>
+-- Un jugador reaviva un brasero apagado.
+ArenaService.BrazierRelit = Signal.new() :: Signal.Signal<Player>
 
 local center = Vector3.new(Config.CENTER[1], Config.FLOOR_Y, Config.CENTER[3])
 
@@ -182,6 +184,7 @@ local function buildBraziers(parent: Instance)
 			else
 				brazier.lit = true
 				applyBrazier(brazier)
+				ArenaService.BrazierRelit:Fire(player)
 			end
 		end)
 	end

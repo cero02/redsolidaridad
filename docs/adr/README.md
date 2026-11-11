@@ -11,3 +11,4 @@ Cada decisión técnica relevante se documenta aquí como `NNNN-titulo.md`, con:
 | 0004 | Toolchain y versiones fijadas | Aceptado |
 | 0005 | Reutilizar el repositorio `redsolidaridad` | Aceptado |
 | 0006 | La Versión 1 es PvE contra la Hidra | Aceptado |
+| 0007 | Retención: cinco pilares y FOMO sano | Aceptado |

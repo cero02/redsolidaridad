@@ -13,6 +13,9 @@ Antes de trabajar fuera del hito en curso, pide aprobación.
 
 ## Regla de diseño
 
+Cinco pilares de retención (ver `docs/design/PILARES.md` y ADR 0007): progreso, presumir,
+FOMO sano (todo vuelve, nada se castiga, nada de pago), sentirse inteligente y comunidad.
+
 Cada recompensa abre una posibilidad nueva, cada bestia cuenta una historia y cada combate
 produce un momento memorable. Mejor un sistema excelente que diez mediocres.
 

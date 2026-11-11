@@ -85,6 +85,16 @@ HydraService.Defeated = Signal.new() :: Signal.Signal<()>
 HydraService.Announcement = Signal.new() :: Signal.Signal<string, number, Player?>
 -- Texto de progreso para la interfaz.
 HydraService.Progress = Signal.new() :: Signal.Signal<string>
+-- Hazaña que puede revelar un secreto del Códice: (jugador o nil para todo el grupo, id).
+HydraService.Feat = Signal.new() :: Signal.Signal<Player?, string>
+-- Se ha superado una fase (1, 2 o 3).
+HydraService.PhaseCleared = Signal.new() :: Signal.Signal<number>
+
+export type Modifiers = {
+	attackIntervalScale: number,
+	regrowTimeScale: number,
+	damageTakenScale: number,
+}
 
 local model: Model? = nil
 local markers: Folder? = nil
@@ -112,6 +122,12 @@ local immortalStunnedOnce = false
 local immortalBites = 0
 local brokenChains = 0
 local random = Random.new()
+
+-- Modificadores del Decreto del César activo.
+local attackIntervalScale = 1
+local damageScale = 1
+local lastCauterizeAt: { [Player]: number } = {}
+local DUPLEX_WINDOW = 10
 
 local litUntil: { [Player]: number } = {}
 local attackMemory: { [Player]: AttackMemory } = {}
@@ -355,6 +371,10 @@ local function finish()
 			setHeadVisible(golden, false)
 		end)
 	end
+	if mode == "Immortal" then
+		HydraService.PhaseCleared:Fire(#Config.PHASES + 1)
+		HydraService.Feat:Fire(nil, "SaxumCadit")
+	end
 	HydraService.Defeated:Fire()
 end
 
@@ -403,6 +423,17 @@ local function onStumpHit(record: HeadRecord, attacker: Player)
 	setStumpState(record, "Burnt")
 	fireProgress()
 
+	HydraService.Feat:Fire(attacker, "IgnisPurgat")
+	local now = os.clock()
+	local previous = lastCauterizeAt[attacker]
+	if previous ~= nil and now - previous <= DUPLEX_WINDOW then
+		HydraService.Feat:Fire(attacker, "DuplexSigillum")
+	end
+	lastCauterizeAt[attacker] = now
+
+	if hydra:isPhaseCleared() then
+		HydraService.PhaseCleared:Fire(hydra.phase)
+	end
 	if not hydra:isPhaseCleared() then
 		announce(`¡Cuello cauterizado! ({hydra.cauterizedCount}/{hydra.requiredCount})`, 3, nil)
 	elseif hydra:advancePhase() then
@@ -444,10 +475,13 @@ local function onHeadHit(record: HeadRecord, damage: number)
 	end)
 end
 
-local function stunImmortal()
+local function stunImmortal(by: Player?)
 	local golden = immortalHead
 	if golden == nil or mode ~= "Immortal" then
 		return
+	end
+	if by then
+		HydraService.Feat:Fire(by, "CaputAureum")
 	end
 	immortalStunnedUntil = os.clock() + Config.IMMORTAL.STUN
 	golden.groundedUntil = immortalStunnedUntil
@@ -471,7 +505,7 @@ local function onImmortalHit(attacker: Player, stun: number)
 		hint(attacker, "No puede morir… ¡pero la roca sí puede enterrarla! ¡Las cadenas!")
 	elseif now < golden.groundedUntil and stun >= 0.5 then
 		-- Un golpe pesado mientras está en el suelo la aturde.
-		stunImmortal()
+		stunImmortal(attacker)
 	else
 		hint(attacker, "Tu acero rebota en sus escamas doradas. Un golpe PESADO cuando caiga al suelo…")
 	end
@@ -709,6 +743,10 @@ local function handleRegrow(event: HydraLogic.RegrowEvent)
 	end
 	refreshAllHeads()
 
+	if hydra.phase == 1 and #hydra:aliveSlots() >= Config.MAX_SLOTS then
+		HydraService.Feat:Fire(nil, "HydraMultiplex")
+	end
+
 	if hydra.regrowCount >= Config.HINT_AFTER_REGROWS then
 		announce("¡Vuelven a crecer! Solo el FUEGO de los braseros sella sus cuellos.", 5, nil)
 	elseif event.newSlot ~= nil then
@@ -786,13 +824,13 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 	for _, player in getParticipants() do
 		local root = getRoot(player)
 		if root and distanceToSegment(flat(root.Position), startPosition, endPosition) <= settings.WIDTH / 2 + 1 then
-			CombatService.hitPlayer(player, settings.DAMAGE, impactTime, function()
+			CombatService.hitPlayer(player, settings.DAMAGE * damageScale, impactTime, function()
 				-- Parada perfecta: la cabeza queda aturdida más tiempo.
 				if not isRunning(id) or not headUsable(record) then
 					return
 				end
 				if record.immortal then
-					stunImmortal()
+					stunImmortal(player)
 				else
 					record.groundedUntil = os.clock() + settings.PARRY_STUN
 					setHeadColor(record, SKIN_STUNNED)
@@ -840,7 +878,7 @@ local function spit(id: number, targetPosition: Vector3)
 			for _, player in getParticipants() do
 				local root = getRoot(player)
 				if root and (flat(root.Position) - targetPosition).Magnitude <= settings.RADIUS then
-					CombatService.damagePlayer(player, settings.DAMAGE_PER_TICK)
+					CombatService.damagePlayer(player, settings.DAMAGE_PER_TICK * damageScale)
 				end
 			end
 		end
@@ -872,7 +910,9 @@ local function tailSweep(id: number, targetPosition: Vector3)
 		if root and humanoid and (flat(root.Position) - zoneCenter).Magnitude <= settings.RADIUS then
 			-- Quien está en el aire salta por encima de la cola.
 			if humanoid.FloorMaterial ~= Enum.Material.Air then
-				CombatService.hitPlayer(player, settings.DAMAGE, impactTime)
+				CombatService.hitPlayer(player, settings.DAMAGE * damageScale, impactTime)
+			else
+				HydraService.Feat:Fire(player, "Saltus")
 			end
 		end
 	end
@@ -930,7 +970,7 @@ local function toxicCloud(id: number, positions: { Vector3 })
 			for _, player in getParticipants() do
 				local root = getRoot(player)
 				if root and (flat(root.Position) - center):Dot(axis) > 0 then
-					CombatService.damagePlayer(player, settings.DAMAGE_PER_TICK)
+					CombatService.damagePlayer(player, settings.DAMAGE_PER_TICK * damageScale)
 				end
 			end
 		end
@@ -952,7 +992,7 @@ local function dive(id: number, targetPosition: Vector3)
 	for _, player in getParticipants() do
 		local root = getRoot(player)
 		if root and (flat(root.Position) - targetPosition).Magnitude <= settings.RADIUS then
-			CombatService.hitPlayer(player, settings.DAMAGE, impactTime)
+			CombatService.hitPlayer(player, settings.DAMAGE * damageScale, impactTime)
 		end
 	end
 
@@ -1145,7 +1185,7 @@ function mainLoop(id: number)
 			for _, player in getParticipants() do
 				local root = getRoot(player)
 				if root and (flat(root.Position) - center).Magnitude < pondRadius - 1 then
-					CombatService.damagePlayer(player, Config.POND_DAMAGE_PER_TICK)
+					CombatService.damagePlayer(player, Config.POND_DAMAGE_PER_TICK * damageScale)
 				end
 			end
 		end
@@ -1157,7 +1197,7 @@ function mainLoop(id: number)
 				-- Si la fase cambió mientras tanto, este hilo ya no manda.
 				if runId == id then
 					attacking = false
-					nextAttackAt = os.clock() + Config.ATTACK_INTERVAL
+					nextAttackAt = os.clock() + Config.ATTACK_INTERVAL * attackIntervalScale
 				end
 			end)
 		end
@@ -1196,9 +1236,13 @@ function HydraService.Start(_self: typeof(HydraService))
 end
 
 -- Crea la Hidra en el estanque. `participants` devuelve los gladiadores de la partida.
-function HydraService.spawn(participants: () -> { Player })
+function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers?)
 	HydraService.despawn()
 	getParticipants = participants
+	attackIntervalScale = if modifiers then modifiers.attackIntervalScale else 1
+	damageScale = if modifiers then modifiers.damageTakenScale else 1
+	local regrowScale = if modifiers then modifiers.regrowTimeScale else 1
+	table.clear(lastCauterizeAt)
 
 	local center = ArenaService.getCenter()
 	local hydraModel = Instance.new("Model")
@@ -1223,7 +1267,9 @@ function HydraService.spawn(participants: () -> { Player })
 
 	mode = "Heads"
 	brokenChains = 0
-	logic = HydraLogic.new(Config :: any)
+	local logicConfig = table.clone(Config) :: any
+	logicConfig.REGROW_TIME = Config.REGROW_TIME * regrowScale
+	logic = HydraLogic.new(logicConfig)
 	heads = {}
 	for slot = 1, Config.MAX_SLOTS do
 		heads[slot] = buildHead(hydraModel, slot, false)

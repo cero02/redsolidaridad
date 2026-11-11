@@ -26,6 +26,8 @@ local PlayerDataService = {}
 
 -- Se dispara cuando el perfil de un jugador está listo: (player, data).
 PlayerDataService.Loaded = Signal.new() :: Signal.Signal<Player, Schema.ProfileData>
+-- El cliente ya escucha sus mensajes: buen momento para enviarle su estado.
+PlayerDataService.ClientReady = Signal.new() :: Signal.Signal<Player>
 
 local store: any
 local profiles: { [Player]: any } = {}
@@ -101,6 +103,7 @@ function PlayerDataService.Start(_self: typeof(PlayerDataService))
 	NetService.on("ClientReady", function(player: Player)
 		clientReady[player] = true
 		sendProfileIfReady(player)
+		PlayerDataService.ClientReady:Fire(player)
 	end)
 
 	Players.PlayerAdded:Connect(loadProfile)

@@ -33,14 +33,17 @@ T.test("el template no contiene tipos que ProfileStore no puede guardar", functi
 	walk(Schema.template, "template")
 end)
 
-T.test("toPublic solo expone nivel, experiencia y equipamiento", function()
+T.test("toPublic solo expone datos públicos", function()
 	local public = Schema.toPublic(Schema.template)
 	local keys = {}
 	for key in public :: any do
 		table.insert(keys, key)
 	end
 	table.sort(keys)
-	T.expectEqual(table.concat(keys, ","), "level,loadout,xp")
+	T.expectEqual(
+		table.concat(keys, ","),
+		"bestHydraTime,codex,equippedTitle,hydraKills,level,loadout,unlockedTitles,xp"
+	)
 end)
 
 T.test("sin migraciones pendientes no cambia nada", function()
@@ -84,6 +87,23 @@ T.test("la lista de migraciones del juego cubre hasta la versión actual", funct
 	for version = 1, Schema.VERSION - 1 do
 		assert(Migrations.list[version] ~= nil, `falta Migrations.list[{version}]`)
 	end
+end)
+
+T.test("la migración 1→2 concede los títulos de rango merecidos", function()
+	local data: { [string]: any } = { schemaVersion = 1, level = 11 }
+	Migrations.apply(data, 2)
+	T.expectEqual(data.schemaVersion, 2)
+	T.expectEqual(data.unlockedTitles.Tiro, true)
+	T.expectEqual(data.unlockedTitles.Veteranus, true)
+	T.expectEqual(data.unlockedTitles.PrimusPalus, true)
+	T.expectEqual(data.unlockedTitles.Campeon, nil)
+	T.expectEqual(data.equippedTitle, "Tiro")
+end)
+
+T.test("la migración 1→2 respeta un título ya equipado", function()
+	local data: { [string]: any } = { schemaVersion = 1, level = 1, equippedTitle = "Matahidras" }
+	Migrations.apply(data, 2)
+	T.expectEqual(data.equippedTitle, "Matahidras")
 end)
 
 T.finish()

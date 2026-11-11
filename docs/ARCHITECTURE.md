@@ -181,6 +181,24 @@ predicción visual; nunca decide daño), `SpectatorController`, `UIController`.
   `RunService.Stepped`. El jugador local se anima al instante; los demás, con `CombatEvent`.
 - Cuando existan animaciones y modelos de artista, sustituyen a estos dos módulos.
 
+### Pilares de retención (v0.5.0)
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `Progression`, `DecreeCalendar` | `shared/Meta` | Cálculos puros: niveles, rangos, desbloqueos; edicto activo |
+| `Progression`, `Titles`, `Codex`, `Decrees` | `shared/Config` | Datos de diseño |
+| `MatchRewards` | `server/Meta` | Experiencia de una partida con desglose (puro) |
+| `ProgressionService` | `server/Services` | XP, niveles, títulos, placa sobre la cabeza, `leaderstats` |
+| `CodexService` | `server/Services` | Descubrimientos del Códice |
+| `EventService` | `server/Services` | Edicto semanal, Juegos Imperiales, ofrendas, noticias |
+| `LeaderboardService` | `server/Services` | Salón de Leyendas (OrderedDataStore o local en Studio) |
+| `EquipmentService` | `server/Services` | Ahora también los cosméticos desbloqueados |
+| `MetaController` | `client/Controllers` | Interfaz de todo lo anterior |
+
+`HydraService.Feat` y `CombatService.Parried` avisan de hazañas; `EncounterService` reparte
+recompensas al terminar. El perfil pasa a la versión 2 del esquema (migración en
+`Data/Migrations.luau`).
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 
