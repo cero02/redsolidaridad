@@ -31,6 +31,7 @@ La Hidra se hunde 4 segundos y vuelve con **5 cabezas**. Novedades:
 | Media arena en verde | Nube tóxica (6 s) | Cruza a la otra mitad |
 | Círculo azul claro bajo tus pies | Inmersión (35 de daño) | Muévete o esquiva |
 | «¡La Hidra ha apagado un brasero!» | Un brasero sin fuego | Mantén **E** 2 s para reavivarlo |
+| Cabezas naranjas y 3 bolas de fuego | Te persiguen (18 de daño cada una) | Cambia de rumbo en el último momento o esquiva con **Q**. Secreto: una parada perfecta las devuelve |
 
 Cauteriza **3 cuellos** más.
 
@@ -45,6 +46,19 @@ Emerge una **cabeza dorada** que no se puede cortar.
 4. Repite hasta romper las **3 cadenas**: la roca cae y la entierra. **¡VICTORIA!**
 
 Al ganar verás tu **tiempo** y si has batido tu **récord personal**.
+
+## Bolas de fuego (v0.5.1)
+
+Aparecen en la fase II y con la cabeza inmortal.
+
+- [ ] Las cabezas se ponen naranjas y salen 3 bolas de fuego, una tras otra.
+- [ ] Te siguen, pero si corres en línea recta y giras de golpe, pasan de largo.
+- [ ] Esquivar (Q) justo al tocarte: «¡Esquivado!», sin daño.
+- [ ] Si te alcanzan: explosión y 18 de daño.
+- [ ] **Secreto:** bloquear justo antes del impacto (parada perfecta) la devuelve en dorado
+      contra una cabeza: le quita 45 de vida. Contra la cabeza dorada, la **aturde**.
+      Descubrimiento **Ignis Reflexus**.
+- [ ] Tras la tercera andanada sin descubrirlo, el anunciador da una pista.
 
 ## Caídos y reanimación
 

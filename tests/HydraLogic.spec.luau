@@ -15,6 +15,8 @@ local function context(fields: { [string]: any }): HydraLogic.PatternContext
 		phase = 1,
 		freeHeads = 3,
 		cloudReady = false,
+		allowFireball = false,
+		fireballReady = false,
 	}
 	for key, value in fields do
 		base[key] = value
@@ -181,6 +183,12 @@ end)
 T.test("si no hay ningún ataque posible usa el veneno", function()
 	local ctx = context({ canBite = false, nearCount = 0, farCount = 0, lastPattern = "Spit", repeatCount = 2 })
 	T.expectEqual(HydraLogic.choosePattern(ctx, 0.5), "Spit")
+end)
+
+T.test("las bolas de fuego solo salen si están permitidas y fuera de recarga", function()
+	T.expectEqual(HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = false })).Fireball, 0)
+	T.expectEqual(HydraLogic.patternWeights(context({ allowFireball = false, fireballReady = true })).Fireball, 0)
+	assert(HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = true })).Fireball > 0, "sin fuego")
 end)
 
 T.test("el objetivo olvidado recibe más atención y el castigado menos", function()

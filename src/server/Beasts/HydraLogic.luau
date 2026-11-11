@@ -23,7 +23,7 @@ export type Config = {
 
 export type RegrowEvent = { slot: number, newSlot: number? }
 export type DamageResult = "Ignored" | "Damaged" | "Severed"
-export type Pattern = "Bite" | "Spit" | "Tail" | "Chain" | "Cloud" | "Dive"
+export type Pattern = "Bite" | "Spit" | "Tail" | "Chain" | "Cloud" | "Dive" | "Fireball"
 
 export type PatternContext = {
 	-- Hay una cabeza libre y algún jugador a su alcance.
@@ -40,6 +40,9 @@ export type PatternContext = {
 	freeHeads: number,
 	-- La nube tóxica tiene recarga propia.
 	cloudReady: boolean,
+	-- Bolas de fuego: permitidas en esta fase y fuera de recarga.
+	allowFireball: boolean,
+	fireballReady: boolean,
 }
 
 export type TargetInfo = {
@@ -170,7 +173,7 @@ function HydraLogic.new(config: Config): Hydra
 	return hydra
 end
 
-local PATTERN_ORDER: { Pattern } = { "Bite", "Spit", "Tail", "Chain", "Cloud", "Dive" }
+local PATTERN_ORDER: { Pattern } = { "Bite", "Spit", "Tail", "Chain", "Cloud", "Dive", "Fireball" }
 
 -- Pesos de cada ataque según la situación. Reglas deterministas: mismo contexto y misma
 -- tirada (`roll` en [0, 1)) dan siempre el mismo resultado.
@@ -184,6 +187,7 @@ function HydraLogic.patternWeights(context: PatternContext): { [Pattern]: number
 		Chain = 0,
 		Cloud = 0,
 		Dive = 0,
+		Fireball = if context.allowFireball and context.fireballReady then 3 else 0,
 	}
 	if context.phase >= 2 then
 		weights.Chain = if context.canBite and context.freeHeads >= 2 then 4 else 0

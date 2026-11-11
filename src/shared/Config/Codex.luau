@@ -72,6 +72,13 @@ local Codex: { Discovery } = {
 		xp = 100,
 	},
 	{
+		id = "IgnisReflexus",
+		name = "Ignis Reflexus",
+		lesson = "Una parada perfecta devuelve las bolas de fuego a quien las lanzó.",
+		riddle = "El fuego que viene hacia ti también sabe volver.",
+		xp = 75,
+	},
+	{
 		id = "Frater",
 		name = "Frater",
 		lesson = "Un compañero caído se levanta si lo sostienes a tiempo.",

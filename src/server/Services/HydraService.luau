@@ -6,6 +6,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
@@ -17,6 +18,7 @@ local ArenaService = require(script.Parent.ArenaService)
 local CombatService = require(script.Parent.CombatService)
 local Config = require(ServerStorage.ServerOnly.Config.Hydra)
 local HydraLogic = require(ServerScriptService.Server.Beasts.HydraLogic)
+local Homing = require(ServerScriptService.Server.Beasts.Homing)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local HEAD_TAG = "HydraHead"
@@ -116,6 +118,8 @@ local lastPattern: HydraLogic.Pattern? = nil
 local repeatCount = 0
 local severedOnce = false
 local cloudReadyAt = 0
+local fireballReadyAt = 0
+local fireballVolleys = 0
 local nextExtinguishAt = 0
 local immortalStunnedUntil = 0
 local immortalStunnedOnce = false
@@ -385,6 +389,7 @@ local function startImmortalPhase()
 		immortalStunnedUntil = 0
 		immortalStunnedOnce = false
 		immortalBites = 0
+		fireballReadyAt = os.clock() + 6
 		lastPattern = nil
 		repeatCount = 0
 		ArenaService.relightAllBraziers()
@@ -398,6 +403,7 @@ local function startNextHeadPhase()
 		lastPattern = nil
 		repeatCount = 0
 		cloudReadyAt = os.clock() + 6
+		fireballReadyAt = os.clock() + 8
 		nextExtinguishAt = os.clock() + Config.EXTINGUISH_INTERVAL
 		announce("¡LA FURIA DE LA HIDRA! Cinco cabezas emergen del pantano.", 5, nil)
 	end)
@@ -1003,6 +1009,190 @@ local function dive(id: number, targetPosition: Vector3)
 	Debris:AddItem(marker, 0.35)
 end
 
+-- Bolas de fuego -----------------------------------------------------------------
+
+local function toVec(v: Vector3): Homing.Vec
+	return { x = v.X, y = v.Y, z = v.Z }
+end
+
+local function fromVec(v: Homing.Vec): Vector3
+	return Vector3.new(v.x, v.y, v.z)
+end
+
+local function makeFireball(position: Vector3, color: Color3): Part
+	local ball = Instance.new("Part")
+	ball.Name = "Fireball"
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.new(3, 3, 3)
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.CastShadow = false
+	ball.Material = Enum.Material.Neon
+	ball.Color = color
+	ball.Position = position
+	local fire = Instance.new("Fire")
+	fire.Size = 6
+	fire.Heat = 0
+	fire.Color = color
+	fire.Parent = ball
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 14
+	light.Brightness = 3
+	light.Parent = ball
+	ball.Parent = markers
+	return ball
+end
+
+-- Explosión solo visual: sin empuje ni daño a las articulaciones.
+local function burst(position: Vector3)
+	local explosion = Instance.new("Explosion")
+	explosion.Position = position
+	explosion.BlastRadius = 4
+	explosion.BlastPressure = 0
+	explosion.DestroyJointRadiusPercent = 0
+	explosion.Parent = Workspace
+end
+
+-- La bola devuelta con una parada perfecta vuela hacia una cabeza y la castiga.
+local function reflectFireball(id: number, reflector: Player, from: Vector3)
+	local settings = Config.FIREBALL
+	local target: HeadRecord? = nil
+	if mode == "Immortal" then
+		target = immortalHead
+	else
+		local best = math.huge
+		for _, record in heads do
+			if headUsable(record) then
+				local distance = (record.part.Position - from).Magnitude
+				if distance < best then
+					best = distance
+					target = record
+				end
+			end
+		end
+	end
+	local record = target
+	if record == nil then
+		return
+	end
+
+	HydraService.Feat:Fire(reflector, "IgnisReflexus")
+	local ball = makeFireball(from, Color3.fromRGB(255, 230, 120))
+	local position = from
+	local started = os.clock()
+	while isRunning(id) and os.clock() - started < 3 do
+		local deltaTime = RunService.Heartbeat:Wait()
+		local offset = record.part.Position - position
+		if offset.Magnitude <= 4 then
+			break
+		end
+		position += offset.Unit * math.min(offset.Magnitude, settings.REFLECT_SPEED * deltaTime)
+		ball.Position = position
+	end
+	ball:Destroy()
+	if not isRunning(id) or not headUsable(record) then
+		return
+	end
+	burst(record.part.Position)
+	if record.immortal then
+		stunImmortal(reflector)
+	else
+		onHeadHit(record, settings.REFLECT_DAMAGE)
+	end
+end
+
+-- Una bola que persigue a `target`. Choca con el primer gladiador que toque.
+local function launchFireball(id: number, origin: Vector3, target: Player)
+	local settings = Config.FIREBALL
+	local floorY = ArenaService.getCenter().Y
+	local maxTurn = math.rad(settings.TURN_RATE)
+	local ball = makeFireball(origin, Color3.fromRGB(255, 120, 30))
+
+	local position = origin
+	local aim = origin + Vector3.new(0, -1, 0)
+	local root = getRoot(target)
+	if root then
+		aim = Vector3.new(root.Position.X, floorY + settings.HEIGHT, root.Position.Z)
+	end
+	local direction = toVec((aim - origin).Unit)
+	local started = os.clock()
+
+	while isRunning(id) and os.clock() - started < settings.LIFETIME do
+		local deltaTime = RunService.Heartbeat:Wait()
+		local targetRoot = getRoot(target)
+		if targetRoot and CombatService.isAlive(target) then
+			aim = Vector3.new(targetRoot.Position.X, floorY + settings.HEIGHT, targetRoot.Position.Z)
+		end
+		direction = Homing.steer(direction, toVec(aim - position), maxTurn * deltaTime)
+		position += fromVec(direction) * settings.SPEED * deltaTime
+		ball.Position = position
+
+		for _, player in getParticipants() do
+			local playerRoot = getRoot(player)
+			if
+				playerRoot
+				and CombatService.isAlive(player)
+				and (playerRoot.Position - position).Magnitude <= settings.RADIUS
+			then
+				ball:Destroy()
+				burst(position)
+				local hitPosition = position
+				CombatService.hitPlayer(player, settings.DAMAGE * damageScale, os.clock(), function()
+					task.spawn(reflectFireball, id, player, hitPosition)
+				end)
+				return
+			end
+		end
+
+		if position.Y <= floorY + 0.5 then
+			break
+		end
+	end
+	if ball.Parent then
+		burst(position)
+		ball:Destroy()
+	end
+end
+
+local function fireballs(id: number, target: Player, sources: { HeadRecord })
+	local settings = Config.FIREBALL
+	fireballReadyAt = os.clock() + settings.COOLDOWN
+	if #sources == 0 then
+		return
+	end
+	fireballVolleys += 1
+	if fireballVolleys == 1 then
+		announce("¡Bolas de fuego! Te persiguen… pero giran despacio.", 3, nil)
+	elseif fireballVolleys == settings.HINT_AFTER then
+		announce("Dicen que un escudo en el instante justo devuelve el fuego a su dueño…", 4, nil)
+	end
+
+	for _, record in sources do
+		setHeadColor(record, SKIN_TELEGRAPH)
+	end
+	task.wait(settings.TELEGRAPH)
+	for _, record in sources do
+		if headUsable(record) then
+			setHeadColor(record, record.baseColor)
+		end
+	end
+
+	for index = 1, settings.COUNT do
+		if not isRunning(id) then
+			return
+		end
+		local record = sources[((index - 1) % #sources) + 1]
+		if headUsable(record) then
+			local mouth = record.part.CFrame * CFrame.new(0, 0, -record.part.Size.Z / 2 - 1.5)
+			task.spawn(launchFireball, id, mouth.Position, target)
+		end
+		task.wait(settings.GAP)
+	end
+end
+
 local function runAttack(id: number)
 	local hydra = logic
 	if hydra == nil then
@@ -1059,6 +1249,9 @@ local function runAttack(id: number)
 		phase = if mode == "Immortal" then 1 else hydra.phase,
 		freeHeads = #freeHeads,
 		cloudReady = now >= cloudReadyAt,
+		-- Bolas de fuego desde la furia, también con la cabeza inmortal.
+		allowFireball = mode == "Immortal" or hydra.phase >= 2,
+		fireballReady = now >= fireballReadyAt,
 	}, random:NextNumber())
 
 	if pattern == lastPattern then
@@ -1138,6 +1331,16 @@ local function runAttack(id: number)
 		tailSweep(id, targetPosition)
 	elseif pattern == "Dive" then
 		dive(id, targetPosition)
+	elseif pattern == "Fireball" then
+		local sources = freeHeads
+		if #sources == 0 then
+			for _, record in heads do
+				if headUsable(record) then
+					table.insert(sources, record)
+				end
+			end
+		end
+		fireballs(id, target, sources)
 	else
 		spit(id, targetPosition)
 	end
@@ -1267,6 +1470,7 @@ function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers
 
 	mode = "Heads"
 	brokenChains = 0
+	fireballVolleys = 0
 	local logicConfig = table.clone(Config) :: any
 	logicConfig.REGROW_TIME = Config.REGROW_TIME * regrowScale
 	logic = HydraLogic.new(logicConfig)

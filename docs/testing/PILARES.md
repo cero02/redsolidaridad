@@ -6,16 +6,16 @@ y **Jugar**. En Studio los datos son simulados: el progreso se reinicia al parar
 
 ## Al aparecer, en el foro
 - [ ] Arriba a la izquierda: **Nv 1 · Tiro**, barra de XP y «Nv 2: Hasta (lanza)».
-- [ ] Botones **Título: «Tiro» ▸** y **Códice 0/10**.
+- [ ] Botones **Título: «Tiro» ▸** y **Códice 0/11**.
 - [ ] Caja del **Edicto del César** con el decreto de esta semana y «termina en …».
 - [ ] Sobre tu personaje: «Tiro» y «Nv 1 · Tiro».
 - [ ] Arriba a la derecha (tabla de Roblox): columnas **Nivel** y **Victorias**.
 - [ ] Junto a la puerta: lápida clara **EDICTO DEL CÉSAR** y lápida oscura **SALÓN DE LEYENDAS**.
-- [ ] **Códice:** se abre un libro con 10 acertijos «???».
+- [ ] **Códice:** se abre un libro con 11 acertijos «???».
 
 ## Descubrimientos (pilar inteligencia)
 - [ ] Parada perfecta contra el muñeco (clic derecho justo antes de su golpe):
-      aviso morado **¡DESCUBRIMIENTO! PARMA PERFECTA**, +50 XP, Códice 1/10.
+      aviso morado **¡DESCUBRIMIENTO! PARMA PERFECTA**, +50 XP, Códice 1/11.
 - [ ] Abajo a la derecha aparece la noticia «… ha descubierto un secreto de la Hidra».
 - [ ] En la Hidra: cauterizar (Ignis Purgat), saltar el coletazo (Saltus), dejar que
       crezcan 5 cabezas (Hydra Multiplex), reavivar un brasero (Ignis Renatus), aturdir la

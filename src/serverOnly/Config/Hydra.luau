@@ -73,6 +73,27 @@ return table.freeze({
 		RADIUS = 7,
 	}),
 
+	-- Fases 2 y 3: bolas de fuego que persiguen al gladiador. Giran despacio: se esquivan
+	-- cambiando de rumbo o con la esquiva. Una parada perfecta las devuelve a la Hidra.
+	FIREBALL = table.freeze({
+		TELEGRAPH = 1.0,
+		COUNT = 3,
+		GAP = 0.45,
+		SPEED = 26,
+		-- Giro máximo en grados por segundo.
+		TURN_RATE = 80,
+		LIFETIME = 6,
+		RADIUS = 2.6,
+		HEIGHT = 3.5,
+		DAMAGE = 18,
+		COOLDOWN = 12,
+		-- Bola devuelta con una parada perfecta.
+		REFLECT_SPEED = 70,
+		REFLECT_DAMAGE = 45,
+		-- Tras tantas andanadas, el anunciador insinúa el secreto.
+		HINT_AFTER = 3,
+	}),
+
 	-- Fase 2: cada tanto la Hidra apaga un brasero (siempre queda al menos uno).
 	EXTINGUISH_INTERVAL = 20,
 

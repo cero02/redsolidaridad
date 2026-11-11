@@ -58,6 +58,16 @@ con una interacción de 2 s. En cooperativo crea un rol natural.
 
 **Pasa a fase 3** al cortar 4 cabezas más.
 
+### Bolas de fuego (fases 2 y 3)
+
+El gas del pantano arde en las fauces de la Hidra. Las cabezas brillan en naranja (1 s) y
+escupen 3 bolas que **persiguen** al gladiador, girando como mucho 80° por segundo.
+
+- Se evitan cambiando de rumbo a tiempo o esquivando (invulnerabilidad).
+- **Secreto (Códice: Ignis Reflexus):** una parada perfecta devuelve la bola contra la
+  cabeza más cercana (45 de daño) o, en la fase 3, **aturde la cabeza inmortal**: una
+  tercera forma de abrir las cadenas, para quien la descubra.
+
 ### Fase 3 — La cabeza inmortal (25 %–0 %)
 Las cabezas restantes se retiran y emerge la **cabeza dorada inmortal**.
 

@@ -9,7 +9,7 @@ jugador**. La mayoría del público de Roblox es menor de edad.
 | **Progreso** | «Cada partida me acerca a algo» | Nivel, rango, barra de XP siempre visible con el **próximo desbloqueo**; pantalla de resultados con desglose |
 | **Presumir** | «Los demás ven lo que he logrado» | Títulos con historia sobre la cabeza, cosméticos visibles, Salón de Leyendas, tabla de jugadores, noticias del servidor |
 | **FOMO sano** | «Algo especial pasa *ahora*» | Edicto semanal del César y Juegos Imperiales en vivo. **Todo vuelve**: nada se pierde para siempre |
-| **Sentirse inteligente** | «Lo he descubierto yo» | El Códice: 10 secretos que nadie explica; al descubrirlos se revela su nombre latino |
+| **Sentirse inteligente** | «Lo he descubierto yo» | El Códice: 11 secretos que nadie explica; al descubrirlos se revela su nombre latino |
 | **Comunidad** | «Con otros es mejor» | Hermandad (+XP en grupo), Mentor, reanimar, ofrendas comunes que desatan Juegos para todo el servidor |
 
 ## 1. Progreso
@@ -50,7 +50,7 @@ Mecánicas:
 
 ## 4. Sentirse inteligente: el Códice
 
-- 10 secretos (`Codex.luau`). Antes de descubrirlos, el Códice muestra un **acertijo**.
+- 11 secretos (`Codex.luau`). Antes de descubrirlos, el Códice muestra un **acertijo**.
 - Al descubrir uno: aviso «✦ ¡DESCUBRIMIENTO! ✦», nombre latino, lección, XP y entrada
   en el Códice. El servidor anuncia que alguien descubrió *un* secreto (sin revelarlo).
 - El anunciador sigue dando pistas cuando alguien se atasca, pero el premio es para quien
