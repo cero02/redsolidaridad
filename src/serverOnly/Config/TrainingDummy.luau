@@ -12,4 +12,21 @@ return table.freeze({
 	TELEGRAPH_TIME = 1.0,
 	ATTACK_DAMAGE = 15,
 	ATTACK_RANGE = 9,
+
+	-- Bola de fuego de práctica: la lanza a quien esté cerca pero fuera del alcance del
+	-- golpe, para aprender a esquivarla o a devolverla con una parada perfecta.
+	FIREBALL = table.freeze({
+		RANGE = 45,
+		TELEGRAPH = 1.0,
+		SPEED = 22,
+		-- Giro máximo en grados por segundo.
+		TURN_RATE = 80,
+		LIFETIME = 6,
+		RADIUS = 2.6,
+		HEIGHT = 3.5,
+		DAMAGE = 10,
+		REFLECT_SPEED = 60,
+		REFLECT_DAMAGE = 30,
+		REFLECT_STUN = 2,
+	}),
 })

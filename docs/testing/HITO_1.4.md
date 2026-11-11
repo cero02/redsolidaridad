@@ -13,6 +13,13 @@ pruebas, baja `unlockLevel` y los niveles de `UNLOCKS` en la configuración.
 - [ ] Al elegir otra arma, el personaje cambia de arma en la mano al instante.
 - [ ] Dentro de la arena no deja cambiar («En plena arena no se cambia de equipo»).
 
+## Bolas de fuego del muñeco (v0.6.1)
+- [ ] Aléjate un poco del muñeco (hasta ~45 studs): cada 8 s se pone **naranja**, sale
+      «¡Cuidado!» y lanza una **bola de fuego que te persigue**.
+- [ ] Corre y gira de golpe: la bola pasa de largo. O esquiva con **Q** justo al tocarte.
+- [ ] **Parada perfecta** (bloquear justo antes del impacto): la bola vuelve dorada al
+      muñeco, le quita 30 y lo aturde. Descubrimiento **Ignis Reflexus** del Códice.
+
 ## Armas (contra el muñeco)
 - [ ] **Gladius:** como antes; el pesado es golpe de escudo.
 - [ ] **Hasta:** lanza larga sin escudo. Llega más lejos (≈10 studs). El pesado avanza
