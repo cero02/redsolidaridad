@@ -268,6 +268,9 @@ local function setHeadVisible(record: HeadRecord, visible: boolean)
 	-- Con modelo 3D la zona de golpe nunca se ve, pero sigue recibiendo golpes.
 	record.part.Transparency = if visible and not record.customModel then 0 else 1
 	record.part.CanQuery = visible
+	-- El cliente dibuja el cuello mientras la cabeza esté viva (con modelo 3D la zona de
+	-- golpe es invisible, así que no basta con mirar su transparencia).
+	record.part:SetAttribute("Alive", visible)
 	for _, piece in record.decor do
 		piece.Transparency = if visible then record.decorTransparency[piece] or 0 else 1
 	end

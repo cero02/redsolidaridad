@@ -61,7 +61,7 @@ function EncounterController.Start(_self: typeof(EncounterController))
 
 	title = makeLabel(gui, "Title", UDim2.new(0.6, 0, 0, 30), UDim2.new(0.5, 0, 0, 44), Enum.Font.GothamBold)
 	title.TextColor3 = Color3.new(1, 1, 1)
-	announcer = makeLabel(gui, "Announcer", UDim2.new(0.8, 0, 0, 64), UDim2.fromScale(0.5, 0.14), Enum.Font.Antique)
+	announcer = makeLabel(gui, "Announcer", UDim2.new(0.8, 0, 0, 64), UDim2.fromScale(0.5, 0.14), Enum.Font.Garamond)
 
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 

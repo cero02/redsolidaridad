@@ -17,12 +17,13 @@ local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Progression = require(ReplicatedStorage.Shared.Meta.Progression)
 local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
+local Theme = require(script.Parent.Parent.UI.Theme)
 local Titles = require(ReplicatedStorage.Shared.Config.Titles)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
-local GOLD = Color3.fromRGB(255, 210, 110)
-local PARCHMENT = Color3.fromRGB(40, 28, 20)
-local PANEL_TRANSPARENCY = 0.25
+local GOLD = Theme.Colors.Gold
+local PARCHMENT = Theme.Colors.Panel
+local PANEL_TRANSPARENCY = 0.15
 local NEWS_LINES = 5
 local NEWS_TIME = 9
 local DISCOVERY_TIME = 6
@@ -80,20 +81,26 @@ local function corner(parent: Instance, radius: number)
 	create("UICorner", { CornerRadius = UDim.new(0, radius) }, parent)
 end
 
+-- Panel con el estilo común. `Plain = true` para piezas internas (barras) sin borde.
 local function panel(props: { [string]: any }, parent: Instance): Frame
+	local plain = props.Plain == true
+	props.Plain = nil
 	props.BackgroundColor3 = props.BackgroundColor3 or PARCHMENT
 	props.BackgroundTransparency = props.BackgroundTransparency or PANEL_TRANSPARENCY
 	props.BorderSizePixel = 0
 	local frame = create("Frame", props, parent)
-	corner(frame, 8)
+	corner(frame, if plain then 4 else 10)
+	if not plain then
+		Theme.stroke(frame)
+	end
 	return frame
 end
 
 local function label(props: { [string]: any }, parent: Instance): TextLabel
 	props.BackgroundTransparency = 1
 	props.TextColor3 = props.TextColor3 or Color3.new(1, 1, 1)
-	props.Font = props.Font or Enum.Font.GothamBold
-	props.TextStrokeTransparency = props.TextStrokeTransparency or 0.4
+	props.Font = props.Font or Theme.Fonts.Bold
+	props.TextStrokeTransparency = props.TextStrokeTransparency or 0.6
 	if props.TextSize == nil then
 		props.TextScaled = true
 	end
@@ -135,7 +142,7 @@ local function armoryEntry(parent: Instance, order: number, title: string, body:
 		Position = UDim2.fromOffset(6, 4),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = if owned then GOLD else Color3.fromRGB(150, 150, 150),
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Text = (if owned then "" else "🔒 ") .. title,
 	}, button)
 	label({
@@ -433,19 +440,21 @@ local function build()
 		Position = UDim2.fromOffset(8, 4),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = GOLD,
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Text = "Nv 1 · Tiro",
 	}, progress)
 	local bar = panel({
 		Size = UDim2.new(1, -16, 0, 10),
 		Position = UDim2.fromOffset(8, 32),
-		BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-		BackgroundTransparency = 0.2,
+		BackgroundColor3 = Theme.Colors.Ink,
+		BackgroundTransparency = 0.1,
+		Plain = true,
 	}, progress)
 	xpFill = panel({
 		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = Color3.fromRGB(230, 180, 50),
+		BackgroundColor3 = Theme.Colors.Gold,
 		BackgroundTransparency = 0,
+		Plain = true,
 	}, bar)
 	xpLabel = label({
 		Size = UDim2.new(1, -16, 0, 14),
@@ -519,7 +528,7 @@ local function build()
 		Size = UDim2.fromOffset(300, 28),
 		Position = UDim2.fromOffset(12, 210),
 		TextColor3 = GOLD,
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Visible = false,
 		Text = "",
 	}, gui)
@@ -558,7 +567,7 @@ local function build()
 		Size = UDim2.new(1, 0, 0, 38),
 		Position = UDim2.fromOffset(0, 32),
 		TextColor3 = GOLD,
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Text = "",
 	}, discoveryFrame)
 	label({
@@ -590,7 +599,7 @@ local function build()
 		Name = "Heading",
 		Size = UDim2.new(1, 0, 0, 44),
 		Position = UDim2.fromOffset(0, 8),
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Text = "",
 	}, resultsFrame)
 	label({
@@ -660,7 +669,7 @@ local function build()
 		Size = UDim2.new(1, 0, 0, 30),
 		Position = UDim2.fromOffset(0, 6),
 		TextColor3 = GOLD,
-		Font = Enum.Font.Antique,
+		Font = Theme.Fonts.Title,
 		Text = "ARMERÍA DEL LUDUS",
 	}, armoryFrame)
 	for index, name in { "Weapons", "Essences" } do
@@ -699,6 +708,23 @@ function MetaController.Start(_self: typeof(MetaController))
 	NetClient.on("WorldEvents", onWorldEvents)
 
 	task.spawn(tickEvents)
+end
+
+-- Abre la armería o el Códice desde otras pantallas (menú de inicio).
+function MetaController.openArmory()
+	if armoryFrame then
+		codexFrame.Visible = false
+		armoryFrame.Visible = true
+		refreshArmory()
+	end
+end
+
+function MetaController.openCodex()
+	if codexFrame then
+		armoryFrame.Visible = false
+		codexFrame.Visible = true
+		refreshCodex()
+	end
 end
 
 return MetaController

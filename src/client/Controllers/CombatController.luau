@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local CharacterAnimator = require(script.Parent.CharacterAnimator)
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
+local Settings = require(script.Parent.Parent.UI.Settings)
 local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
@@ -89,6 +90,9 @@ end
 
 -- Temblor breve de cámara para dar peso a los golpes.
 local function shake(magnitude: number)
+	if not Settings.get("cameraShake") then
+		return
+	end
 	local character = localPlayer.Character
 	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
 	if humanoid == nil then

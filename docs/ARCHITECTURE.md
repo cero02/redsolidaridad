@@ -210,6 +210,16 @@ recompensas al terminar. El perfil pasa a la versión 2 del esquema (migración 
   definitivas (R) con daño en zona (`GetPartBoundsInRadius`) y la regeneración de la Hidra.
 - `EquipmentService` construye el arma elegida; `CharacterAnimator` anima cada una.
 
+### v0.7 La presentación
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `Theme` | `client/UI` | Paleta "bronce imperial", tipografías y componentes (panel, botón, texto) |
+| `Settings` | `client/UI` | Temblor de cámara y modo ligero (sin sombras ni público) |
+| `MainMenuController` | `client/Controllers` | Pantalla de inicio: cámara cinemática, ficha, edicto, botones |
+| `OnboardingController` | `client/Controllers` | Primeros pasos para jugadores nuevos |
+| `LobbyService` | `server/Services` | El Foro (plaza, columnata, ludus, calzada) e iluminación |
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

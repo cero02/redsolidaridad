@@ -23,6 +23,7 @@ Se construye por hitos verticales: cada uno es jugable y se prueba antes de segu
 | 1.4 Armas, esencias y definitiva 🔨 código listo | Gladius, Hasta y Martillo; esencias Loba, Águila e Hidra; Testudo, Lluvia de pila y Terremoto; armería en el foro. Prueba: [testing/HITO_1.4.md](testing/HITO_1.4.md) | Al menos tres construcciones distintas viables (pendiente de prueba en Studio) |
 | 1.5 Recompensas, progresión y pilares 🔨 código listo | XP, niveles, rangos, desbloqueos y cosméticos; títulos y Salón de Leyendas; Códice de secretos; Edicto semanal y Juegos Imperiales; Hermandad, Mentor y ofrendas. Prueba: [testing/PILARES.md](testing/PILARES.md) | Ganar abre una posibilidad nueva (pendiente de prueba en Studio) |
 | 1.6 Espectadores | Gradas del Gran Coliseo, cámara de espectador, reacciones del público (solo cosméticas). Ver [design/ESPECTADORES.md](design/ESPECTADORES.md) | Ver una partida desde las gradas es divertido |
+| 1.7 La presentación 🔨 código listo | Pantalla de inicio con cámara cinemática, estilo visual común, ajustes (modo ligero), primeros pasos, el Foro de mármol con calzada al coliseo e iluminación de atardecer. Prueba: [testing/PRESENTACION.md](testing/PRESENTACION.md) | La primera impresión invita a quedarse (pendiente de prueba en Studio) |
 | **Lanzamiento v1** | Pulido, rendimiento, anti-exploits, beta cerrada, cuestionario de madurez | Aprobación del equipo |
 
 ## Versión 2 — La gloria

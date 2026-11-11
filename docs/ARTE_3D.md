@@ -15,13 +15,23 @@ La Hidra pierde y regenera cabezas, así que necesita **piezas separadas**:
 
 Los cuellos se siguen dibujando solos.
 
+### Estilo oficial (referencia del equipo)
+Hidra de escamas **negro carbón**, **vientre y garganta color hueso** con escamas grandes,
+**crestas de púas** color hueso en la nuca, **fauces abiertas** con colmillos largos,
+cuatro patas con **garras curvas** y una **cola enroscada cubierta de púas**.
+
+> Si ya tenéis la Hidra completa (con las tres cabezas pegadas), el juego no puede
+> usarla tal cual: una figura de una pieza no puede perder una cabeza ni hacer crecer
+> dos. Hay que generar el cuerpo y la cabeza **por separado**, con el mismo estilo.
+
 ### Opción A: generarlos con la IA de Roblox (gratis)
 1. Studio → **Archivo → Funciones beta** → activa **Assistant Mesh Generation**.
-2. Abre el **Asistente** y escribe, por ejemplo (en inglés suele salir mejor):
-   - `/generate dark charcoal scaled dragon head with bone colored horns and open fanged jaws, no neck`
-   - `/generate golden dragon head with glowing red eyes and open fanged jaws, no neck`
-   - `/generate four legged dragon body without heads or neck, dark charcoal scales, spiked back, curled spiked tail`
-3. Genera varias veces hasta que te guste el resultado.
+2. Abre el **Asistente** y escribe (en inglés suele salir mejor):
+   - **Head:** `/generate menacing dragon head of a hydra, black charcoal scales, bone colored spiky crest and horns, wide open jaws with long fangs, cream scaled throat, no neck, isolated`
+   - **Body:** `/generate four legged hydra dragon body with no heads and no necks, black charcoal scales, cream scaled belly, bone colored spikes along the back, long curled tail covered in spikes, curved claws`
+   - **GoldenHead:** `/generate golden armored dragon head with glowing red eyes, spiky crest, wide open jaws with fangs, no neck, isolated`
+3. Genera varias veces hasta que te guste el resultado. Si el cuerpo sale con cuellos,
+   no pasa nada grave: los cuellos del juego se dibujan encima.
 
 ### Opción B: la Creator Store (Cuadro de herramientas)
 1. Pestaña **Ventana → Cuadro de herramientas** (Toolbox), busca `dragon head`, `hydra`…
