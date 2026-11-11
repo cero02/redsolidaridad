@@ -10,7 +10,7 @@ local Workspace = game:GetService("Workspace")
 local HEAD_TAG = "HydraHead"
 local SEGMENTS = 9
 local WOBBLE = 0.9
-local NECK_COLOR = Color3.fromRGB(40, 85, 55)
+local NECK_COLOR = Color3.fromRGB(58, 58, 64)
 
 local HydraViewController = {}
 
@@ -23,7 +23,7 @@ local function createNeck(): { Part }
 		segment.Name = "HydraNeck"
 		segment.Shape = Enum.PartType.Ball
 		-- Más grueso junto al cuerpo, más fino junto a la cabeza.
-		local size = 4.6 - 1.4 * (index / SEGMENTS)
+		local size = 5 - 1.6 * (index / SEGMENTS)
 		segment.Size = Vector3.new(size, size, size)
 		segment.Anchored = true
 		segment.CanCollide = false

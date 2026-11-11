@@ -23,7 +23,13 @@ local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local HEAD_TAG = "HydraHead"
 
-local SKIN = Color3.fromRGB(45, 95, 60)
+-- Paleta inspirada en la referencia del equipo: escamas grafito, vientre color hueso.
+local SKIN = Color3.fromRGB(58, 58, 64)
+local SKIN_DARK = Color3.fromRGB(34, 34, 38)
+local BONE = Color3.fromRGB(178, 162, 136)
+local TOOTH = Color3.fromRGB(236, 230, 214)
+local MOUTH = Color3.fromRGB(110, 20, 22)
+local GOLD_DARK = Color3.fromRGB(190, 140, 40)
 local SKIN_TELEGRAPH = Color3.fromRGB(255, 90, 40)
 local SKIN_STUNNED = Color3.fromRGB(240, 210, 60)
 local SKIN_HIT = Color3.fromRGB(255, 255, 255)
@@ -61,7 +67,8 @@ type HeadRecord = {
 	direction: Vector3,
 	model: Model,
 	part: Part,
-	eyes: { Part },
+	-- Piezas decorativas soldadas a la cabeza (ojos, fauces, crestas…).
+	decor: { Part },
 	billboard: BillboardGui,
 	label: TextLabel,
 	-- Solo las cabezas mortales tienen muñón.
@@ -249,8 +256,8 @@ end
 local function setHeadVisible(record: HeadRecord, visible: boolean)
 	record.part.Transparency = if visible then 0 else 1
 	record.part.CanQuery = visible
-	for _, eye in record.eyes do
-		eye.Transparency = if visible then 0 else 1
+	for _, piece in record.decor do
+		piece.Transparency = if visible then 0 else 1
 	end
 	record.billboard.Enabled = visible
 end
@@ -323,6 +330,7 @@ local function resetHeadPoses()
 end
 
 local mainLoop: (id: number) -> ()
+local buildBody: (parent: Instance, center: Vector3) -> Part
 
 -- Corta todos los ataques en curso, oculta a la Hidra y, tras una pausa, prepara la
 -- siguiente fase con `setup` y reanuda el combate.
@@ -554,6 +562,134 @@ local function onChainHit(chain: Chain, attacker: Player, damage: number)
 	end
 end
 
+-- Pieza decorativa soldada a `anchor`, colocada con `offset` respecto a `base`.
+local function decorPart(
+	parent: Instance,
+	anchor: BasePart,
+	base: CFrame,
+	name: string,
+	size: Vector3,
+	offset: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	shape: Enum.PartType?
+): Part
+	local piece = Instance.new("Part")
+	piece.Name = name
+	if shape then
+		piece.Shape = shape
+	end
+	piece.Size = size
+	piece.Color = color
+	piece.Material = material
+	piece.CanCollide = false
+	piece.CanQuery = false
+	piece.CanTouch = false
+	piece.CastShadow = false
+	piece.Massless = true
+	piece.CFrame = base * offset
+	piece.Parent = parent
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = anchor
+	weld.Part1 = piece
+	weld.Parent = piece
+	return piece
+end
+
+-- Cabeza de dragón: hocico, fauces abiertas con colmillos, ojos, cejas, cuernos y cresta.
+-- La pieza principal (`anchor`) sigue siendo la zona de golpe; el resto es decoración.
+local function buildHeadDecor(parent: Instance, anchor: BasePart, base: CFrame, s: number, immortal: boolean): { Part }
+	local scales = if immortal then GOLD_DARK else SKIN_DARK
+	local belly = if immortal then GOLD else BONE
+	local skin = if immortal then GOLD else SKIN
+	local slate = if immortal then Enum.Material.Metal else Enum.Material.Slate
+	local pieces: { Part } = {}
+	local function add(
+		name: string,
+		size: Vector3,
+		offset: CFrame,
+		color: Color3,
+		material: Enum.Material,
+		shape: Enum.PartType?
+	)
+		table.insert(pieces, decorPart(parent, anchor, base, name, size * s, offset, color, material, shape))
+	end
+	local function at(x: number, y: number, z: number): CFrame
+		return CFrame.new(x * s, y * s, z * s)
+	end
+
+	-- Hocico y mandíbula abierta (el frente de la cabeza es -Z).
+	add("Snout", Vector3.new(3.2, 1.8, 3.6), at(0, 0.5, -5.1), skin, slate)
+	add("Nostrils", Vector3.new(2.2, 0.5, 0.6), at(0, 1.2, -6.7), scales, slate)
+	add("Jaw", Vector3.new(2.9, 0.9, 5.4), at(0, -2.5, -3.9) * CFrame.Angles(math.rad(-24), 0, 0), belly, slate)
+	add("Mouth", Vector3.new(2.6, 0.3, 4.2), at(0, -1.5, -4.2) * CFrame.Angles(math.rad(-10), 0, 0), MOUTH, Enum.Material.SmoothPlastic)
+	add("Throat", Vector3.new(3.2, 0.5, 5.5), at(0, -2.3, 0.6), belly, slate)
+	for index = 0, 3 do
+		local z = -3.9 - index * 0.85
+		for _, side in { -1, 1 } do
+			add("Fang", Vector3.new(0.28, 0.85, 0.28), at(side * 1.25, -0.75, z), TOOTH, Enum.Material.SmoothPlastic)
+			add(
+				"Fang",
+				Vector3.new(0.26, 0.7, 0.26),
+				at(side * 1.15, -1.75, z + 0.4) * CFrame.Angles(math.rad(-24), 0, 0),
+				TOOTH,
+				Enum.Material.SmoothPlastic
+			)
+		end
+	end
+
+	-- Ojos que brillan bajo cejas afiladas.
+	for _, side in { -1, 1 } do
+		add(
+			"Eye",
+			Vector3.new(0.9, 0.9, 0.9),
+			at(side * 1.75, 1.15, -2.7),
+			if immortal then Color3.fromRGB(255, 60, 60) else EYES,
+			Enum.Material.Neon,
+			Enum.PartType.Ball
+		)
+		add(
+			"Brow",
+			Vector3.new(1.4, 0.45, 1.8),
+			at(side * 1.7, 1.85, -2.6) * CFrame.Angles(0, 0, side * math.rad(-18)),
+			scales,
+			slate
+		)
+		-- Cuernos hacia atrás.
+		add(
+			"Horn",
+			Vector3.new(0.6, 0.6, 3.4),
+			at(side * 1.5, 2.4, 2.4) * CFrame.Angles(math.rad(28), side * math.rad(-12), 0),
+			belly,
+			slate
+		)
+	end
+
+	-- Cresta de púas en la nuca y gola lateral.
+	for index = 0, 3 do
+		local height = 2.6 - index * 0.35
+		add(
+			"Crest",
+			Vector3.new(0.35, height, 1.1),
+			at(0, 2.25 + height / 2 - 0.3, -0.8 + index * 1.3) * CFrame.Angles(math.rad(35), 0, 0),
+			scales,
+			slate
+		)
+	end
+	for _, side in { -1, 1 } do
+		for index = 0, 2 do
+			add(
+				"Frill",
+				Vector3.new(0.3, 1.8 - index * 0.3, 0.9),
+				at(side * 2.4, 0.4 - index * 0.7, 2.2 + index * 0.4) * CFrame.Angles(math.rad(40), 0, side * math.rad(-55)),
+				scales,
+				slate
+			)
+		end
+	end
+	return pieces
+end
+
 local function buildHead(parent: Instance, slot: number, immortal: boolean): HeadRecord
 	local center = ArenaService.getCenter()
 	local pondRadius = ArenaService.getPondRadius()
@@ -583,27 +719,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	part.Parent = headModel
 	headModel.PrimaryPart = part
 
-	local eyes = {}
-	for _, side in { -1, 1 } do
-		local eye = Instance.new("Part")
-		eye.Name = "Eye"
-		eye.Shape = Enum.PartType.Ball
-		eye.Size = Vector3.new(1, 1, 1) * scale
-		eye.Color = if immortal then Color3.fromRGB(255, 60, 60) else EYES
-		eye.Material = Enum.Material.Neon
-		eye.CanCollide = false
-		eye.CanQuery = false
-		eye.CanTouch = false
-		eye.Massless = true
-		eye.CFrame = restCFrame * CFrame.new(side * 1.6 * scale, 1.2 * scale, -2.6 * scale)
-		eye.Parent = headModel
-
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = part
-		weld.Part1 = eye
-		weld.Parent = eye
-		table.insert(eyes, eye)
-	end
+	local decor = buildHeadDecor(headModel, part, restCFrame, scale, immortal)
 
 	local billboard, label = makeBillboard(part, 4 * scale)
 	if immortal then
@@ -619,7 +735,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 		direction = direction,
 		model = headModel,
 		part = part,
-		eyes = eyes,
+		decor = decor,
 		billboard = billboard,
 		label = label,
 		stumpModel = nil,
@@ -1438,6 +1554,112 @@ function HydraService.Start(_self: typeof(HydraService))
 	ArenaService.BrazierTriggered:Connect(lightWeapon)
 end
 
+-- Cuerpo de cuatro patas con garras, púas en el lomo y cola rizada. Mira hacia la entrada
+-- de los gladiadores (+Z). Solo decorativo: no recibe golpes.
+function buildBody(parent: Instance, center: Vector3): Part
+	local function piece(
+		name: string,
+		size: Vector3,
+		cframe: CFrame,
+		color: Color3,
+		shape: Enum.PartType?,
+		collide: boolean?
+	): Part
+		local part = Instance.new("Part")
+		part.Name = name
+		if shape then
+			part.Shape = shape
+		end
+		part.Size = size
+		part.CFrame = cframe
+		part.Color = color
+		part.Material = Enum.Material.Slate
+		part.Anchored = true
+		part.CanCollide = collide ~= false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Parent = parent
+		return part
+	end
+	local function at(x: number, y: number, z: number): CFrame
+		return CFrame.new(center + Vector3.new(x, y, z))
+	end
+
+	-- Tronco: pecho y cadera redondeados unidos por el lomo.
+	local torso = piece("Body", Vector3.new(13, 9, 16), at(0, 6, -3), SKIN)
+	torso.CastShadow = true
+	piece("Chest", Vector3.new(13, 13, 13), at(0, 6.5, 4), SKIN, Enum.PartType.Ball)
+	piece("Hips", Vector3.new(12, 12, 12), at(0, 6, -10), SKIN, Enum.PartType.Ball)
+	piece("Belly", Vector3.new(10, 1.2, 18), at(0, 1.7, -3), BONE)
+
+	-- Patas con garras.
+	for _, leg in { { 6.2, 5 }, { -6.2, 5 }, { 6.2, -11 }, { -6.2, -11 } } do
+		local x, z = leg[1], leg[2]
+		local side = if x > 0 then 1 else -1
+		piece("Thigh", Vector3.new(4, 7, 4.5), at(x, 5, z) * CFrame.Angles(0, 0, side * math.rad(-14)), SKIN)
+		piece("Shin", Vector3.new(3, 5, 3), at(x + side * 1.4, 1.2, z + 0.8), SKIN_DARK)
+		for claw = -1, 1 do
+			piece(
+				"Claw",
+				Vector3.new(0.5, 0.5, 2.2),
+				at(x + side * 1.4 + claw * 0.9, -0.6, z + 2.8) * CFrame.Angles(math.rad(-20), 0, 0),
+				BONE,
+				nil,
+				false
+			)
+		end
+	end
+
+	-- Púas del lomo.
+	for index = 0, 8 do
+		local z = 7 - index * 2.4
+		local height = 3.8 - math.abs(index - 3) * 0.35
+		piece(
+			"Spine",
+			Vector3.new(0.6, height, 1.6),
+			at(0, 11.5 + height / 2 - 0.8, z) * CFrame.Angles(math.rad(30), 0, 0),
+			SKIN_DARK,
+			nil,
+			false
+		)
+	end
+
+	-- Cola que se enrosca hacia arriba, con púas.
+	local tail = {
+		{ 0, 5, -16, 7 },
+		{ 0, 5.5, -20, 6 },
+		{ 1, 6.5, -23.5, 5 },
+		{ 2.5, 8.5, -26, 4.2 },
+		{ 4, 11, -27.2, 3.4 },
+		{ 5, 13.6, -26.6, 2.7 },
+		{ 5.4, 15.8, -25, 2 },
+	}
+	for _, segment in tail do
+		local x, y, z, size = segment[1], segment[2], segment[3], segment[4]
+		piece("Tail", Vector3.new(size, size, size), at(x, y, z), SKIN, Enum.PartType.Ball, false)
+		piece(
+			"TailSpine",
+			Vector3.new(0.45, size * 0.7, size * 0.35),
+			at(x, y + size * 0.55, z) * CFrame.Angles(math.rad(25), 0, 0),
+			SKIN_DARK,
+			nil,
+			false
+		)
+	end
+	for fan = -1, 1 do
+		piece(
+			"TailTip",
+			Vector3.new(0.4, 3, 1),
+			at(5.6, 17.5, -24) * CFrame.Angles(math.rad(-20), 0, fan * math.rad(30)),
+			SKIN_DARK,
+			nil,
+			false
+		)
+	end
+	return torso
+end
+
 -- Crea la Hidra en el estanque. `participants` devuelve los gladiadores de la partida.
 function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers?)
 	HydraService.despawn()
@@ -1451,16 +1673,7 @@ function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers
 	local hydraModel = Instance.new("Model")
 	hydraModel.Name = "Hydra"
 
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Shape = Enum.PartType.Ball
-	body.Size = Vector3.new(20, 20, 20)
-	body.Anchored = true
-	body.CanQuery = false
-	body.Color = SKIN
-	body.Material = Enum.Material.Slate
-	body.Position = center + Vector3.new(0, 1, 0)
-	body.Parent = hydraModel
+	local body = buildBody(hydraModel, center)
 	hydraModel.PrimaryPart = body
 
 	local folder = Instance.new("Folder")
