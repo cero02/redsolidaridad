@@ -499,12 +499,17 @@ local function onStumpHit(record: HeadRecord, attacker: Player)
 	end
 end
 
+-- Daño efectivo contra la Hidra: más gladiadores, más vida (ver Config.GROUP_HEALTH).
+local function scaledDamage(damage: number): number
+	return damage / HydraLogic.groupHealthScale(Config.GROUP_HEALTH, #getParticipants())
+end
+
 local function onHeadHit(record: HeadRecord, damage: number)
 	local hydra = logic
 	if hydra == nil or not active or mode ~= "Heads" then
 		return
 	end
-	local result = hydra:damageHead(record.slot, damage, os.clock())
+	local result = hydra:damageHead(record.slot, scaledDamage(damage), os.clock())
 	if result == "Ignored" then
 		return
 	end
@@ -580,7 +585,7 @@ local function onChainHit(chain: Chain, attacker: Player, damage: number)
 		return
 	end
 
-	chain.health -= damage
+	chain.health -= scaledDamage(damage)
 	chain.post.Color = SKIN_HIT
 	task.delay(0.1, function()
 		if not chain.broken then

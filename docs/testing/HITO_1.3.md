@@ -92,6 +92,17 @@ Aparecen en la fase II y con la cabeza inmortal.
 
 Números en `src/serverOnly/Config/Hydra.luau`.
 
+## Grupo de 1 a 4 (máximo por partida)
+
+En Studio: **Prueba → Clientes y servidores**, elige **5 jugadores** e **Iniciar**.
+
+- [ ] Los cuatro primeros que pulsan **Desafiar a la Hidra** entran en la misma partida.
+- [ ] El quinto **no entra**: ve «La arena está llena (4 gladiadores)…» y se queda en el Foro.
+- [ ] Al terminar el combate, el quinto puede desafiar a la Hidra con normalidad.
+- [ ] Con más gladiadores las cabezas aguantan más golpes: ×1,7 con 2, ×2,3 con 3 y
+      ×2,9 con 4 (`GROUP_HEALTH` en `src/serverOnly/Config/Hydra.luau`). Si alguien entra
+      o sale a mitad de partida, el cambio se nota en los golpes siguientes.
+
 ## Limitaciones conocidas
 
 - Todo sigue siendo de bloques. Las animaciones son provisionales, hechas por código

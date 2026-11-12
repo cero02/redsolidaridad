@@ -12,6 +12,8 @@ return table.freeze({
 	WALL_HEIGHT = 12,
 	-- Distancia del centro a la que aparecen los gladiadores.
 	ENTRY_DISTANCE = 48,
+	-- Máximo de gladiadores en una misma partida (cooperativo de 1 a 4).
+	MAX_PARTICIPANTS = 4,
 
 	-- Puerta del foro (zona de inicio) para entrar al coliseo.
 	LOBBY_GATE = table.freeze({ 16, 0, -8 }),

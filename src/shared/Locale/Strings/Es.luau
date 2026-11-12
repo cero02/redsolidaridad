@@ -120,6 +120,7 @@ return table.freeze({
 	["ann.intro"] = "¡Ciudadanos de Roma! De los pantanos de Lerna llega… ¡LA HIDRA! · {decree}: {desc}",
 	["ann.begin"] = "¡Que comience el combate!",
 	["ann.joined"] = "{name} entra en la arena. ¡La Hermandad crece!",
+	["ann.full"] = "La arena está llena ({max} gladiadores). Lucharás en el próximo combate.",
 	["ann.ending"] = "El combate está terminando. Espera un momento.",
 	["ann.gamesStarted"] = "¡Los Juegos Imperiales han comenzado! Esta victoria vale el doble.",
 	["ann.victory"] = "¡VICTORIA! La Hidra yace bajo la roca. Tiempo {time}",

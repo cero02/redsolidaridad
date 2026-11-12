@@ -6,6 +6,10 @@ return table.freeze({
 	-- Huecos de cuello alrededor del cuerpo (límite de cabezas a la vez).
 	MAX_SLOTS = 5,
 	HEAD_HEALTH = 90,
+	-- Vida de la Hidra según los gladiadores en la arena (docs/design/COMBATE.md).
+	-- Se aplica dividiendo el daño que recibe (cabezas y cadenas), así se ajusta al
+	-- momento si alguien entra o sale a mitad de partida.
+	GROUP_HEALTH = table.freeze({ 1, 1.7, 2.3, 2.9 }),
 	-- Tiempo que tarda un cuello cortado en regenerar dos cabezas.
 	REGROW_TIME = 12,
 	-- Fases con cabezas mortales: cabezas al empezar y cuellos que hay que cauterizar.

@@ -240,4 +240,17 @@ T.test("con un solo candidato siempre lo elige", function()
 	T.expectEqual(HydraLogic.chooseTarget({ { timeSinceAttacked = 0, consecutive = 9 } }, 0.99), 1)
 end)
 
+T.test("la vida de la Hidra escala con el grupo", function()
+	local scales = Config.GROUP_HEALTH
+	T.expectEqual(HydraLogic.groupHealthScale(scales, 1), 1)
+	T.expectEqual(HydraLogic.groupHealthScale(scales, 2), 1.7)
+	T.expectEqual(HydraLogic.groupHealthScale(scales, 4), 2.9)
+	T.expectEqual(HydraLogic.groupHealthScale(scales, 0), 1, "sin jugadores cuenta como uno")
+	T.expectEqual(HydraLogic.groupHealthScale(scales, 9), 2.9, "más allá del máximo, el último")
+	T.expectEqual(HydraLogic.groupHealthScale({}, 3), 1, "tabla vacía: sin escalado")
+	for count = 2, #scales do
+		assert(scales[count] > scales[count - 1], "más gladiadores, más vida")
+	end
+end)
+
 T.finish()

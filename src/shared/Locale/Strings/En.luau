@@ -120,6 +120,7 @@ return table.freeze({
 	["ann.intro"] = "Citizens of Rome! From the marshes of Lerna comes… THE HYDRA! · {decree}: {desc}",
 	["ann.begin"] = "Let the battle begin!",
 	["ann.joined"] = "{name} enters the arena. The Brotherhood grows!",
+	["ann.full"] = "The arena is full ({max} gladiators). You will fight in the next battle.",
 	["ann.ending"] = "The battle is ending. Wait a moment.",
 	["ann.gamesStarted"] = "The Imperial Games have begun! This victory is worth double.",
 	["ann.victory"] = "VICTORY! The Hydra lies beneath the rock. Time {time}",

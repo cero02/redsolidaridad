@@ -245,4 +245,14 @@ function HydraLogic.chooseTarget(candidates: { TargetInfo }, roll: number): numb
 	return #candidates
 end
 
+-- Multiplicador de vida para `count` gladiadores según la tabla de la configuración.
+-- Con menos de uno cuenta como uno; por encima del último valor se usa el último.
+function HydraLogic.groupHealthScale(scales: { number }, count: number): number
+	if #scales == 0 then
+		return 1
+	end
+	local index = math.clamp(math.floor(count), 1, #scales)
+	return scales[index]
+end
+
 return HydraLogic

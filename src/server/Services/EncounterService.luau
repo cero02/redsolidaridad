@@ -7,7 +7,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local ServerStorage = game:GetService("ServerStorage")
 
+local ArenaConfig = require(ServerStorage.ServerOnly.Config.Arena)
 local ArenaService = require(script.Parent.ArenaService)
 local CodexService = require(script.Parent.CodexService)
 local CombatService = require(script.Parent.CombatService)
@@ -492,7 +494,9 @@ function onGateTriggered(player: Player)
 	if state == "Idle" then
 		startEncounter(player)
 	elseif isFighting() then
-		if addParticipant(player) then
+		if #participants >= ArenaConfig.MAX_PARTICIPANTS then
+			announce("ann.full", { max = ArenaConfig.MAX_PARTICIPANTS }, 3, player)
+		elseif addParticipant(player) then
 			announce("ann.joined", { name = player.DisplayName }, 3, nil)
 		end
 	else
