@@ -18,6 +18,7 @@ local Bus = require(script.Parent.Parent.UI.Bus)
 local Codex = require(ReplicatedStorage.Shared.Config.Codex)
 local DecreeCalendar = require(ReplicatedStorage.Shared.Meta.DecreeCalendar)
 local I18n = require(script.Parent.Parent.UI.I18n)
+local Log = require(ReplicatedStorage.Shared.Util.Log)
 local MetaController = require(script.Parent.MetaController)
 local MusicController = require(script.Parent.MusicController)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
@@ -40,6 +41,10 @@ local ORBIT_SPEED = 0.05
 local NEWS_LINES = 4
 -- Interfaces del juego que se ocultan mientras el menú está abierto.
 local GAME_GUIS = { MetaHud = true, CombatHud = true, EncounterHud = true, Onboarding = true }
+-- Espera máxima al módulo de controles de Roblox: nunca debe bloquear el menú.
+local CONTROLS_TIMEOUT = 10
+
+local log = Log.new("MainMenu")
 
 local localPlayer = Players.LocalPlayer
 
@@ -95,16 +100,28 @@ local function setGameGuis(enabled: boolean)
 end
 
 local function setControls(enabled: boolean)
-	-- Módulo de control estándar de Roblox (PlayerScripts.PlayerModule).
-	pcall(function()
-		local playerModule = require(
-			localPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: any
-		) :: any
-		local controls = playerModule:GetControls()
-		if enabled then
-			controls:Enable()
-		else
-			controls:Disable()
+	-- Módulo de control estándar de Roblox (PlayerScripts.PlayerModule). Se busca en otro
+	-- hilo y con tiempo límite: si tarda o no existe, el menú se abre igualmente (antes la
+	-- espera sin límite dejaba la pantalla en negro tras el fundido).
+	task.spawn(function()
+		local ok, err = pcall(function()
+			local playerScripts = localPlayer:WaitForChild("PlayerScripts", CONTROLS_TIMEOUT)
+			local module = if playerScripts
+				then playerScripts:WaitForChild("PlayerModule", CONTROLS_TIMEOUT)
+				else nil
+			if module == nil or not module:IsA("ModuleScript") then
+				return
+			end
+			local playerModule = require(module :: any) :: any
+			local controls = playerModule:GetControls()
+			if enabled then
+				controls:Enable()
+			else
+				controls:Disable()
+			end
+		end)
+		if not ok then
+			log:warn(`No se pudieron cambiar los controles: {err}`)
 		end
 	end)
 end
@@ -158,7 +175,11 @@ local function fadeThen(action: () -> ())
 	local fadeIn = TweenService:Create(fade, info, { BackgroundTransparency = 0 })
 	fadeIn:Play()
 	fadeIn.Completed:Wait()
-	action()
+	-- Pase lo que pase en `action`, la pantalla vuelve: nunca se queda en negro.
+	local ok, err = pcall(action)
+	if not ok then
+		log:error(`Error al cambiar de pantalla: {err}`)
+	end
 	local fadeOut = TweenService:Create(fade, info, { BackgroundTransparency = 1 })
 	fadeOut:Play()
 	fadeOut.Completed:Wait()
