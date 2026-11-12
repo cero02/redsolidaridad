@@ -4,6 +4,15 @@
 `git pull`, `rojo serve`, Studio conectado y **Jugar**. Vale cualquier lugar (incluso la
 plantilla Baseplate): el juego crea su propio mundo.
 
+Si falta `ServerPackages`, ejecuta antes `wally install` (sin ProfileStore no se carga el
+perfil y la ficha del menú queda vacía).
+
+## Comprobación de streaming (ADR 0009)
+- [ ] En Studio, con el lugar en **StreamingEnabled** (lo normal en lugares nuevos), la
+      cámara del menú ve el coliseo **completo** desde el primer segundo.
+- [ ] En el Explorador del cliente (pestaña Cliente al jugar), `Workspace.GranColiseo`
+      contiene las gradas y los espectadores (`Spectator`) sin haberte acercado.
+
 ## Si algo falla: panel rojo
 Solo en Studio, arriba al centro aparece un **panel rojo con los errores** del cliente y
 del servidor. Si sale, **haz una captura y envíala**: con eso se corrige en minutos.

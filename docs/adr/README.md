@@ -13,3 +13,4 @@ Cada decisión técnica relevante se documenta aquí como `NNNN-titulo.md`, con:
 | 0006 | La Versión 1 es PvE contra la Hidra | Aceptado |
 | 0007 | Retención: cinco pilares y FOMO sano | Aceptado |
 | 0008 | Juego internacional: inglés como base y español completo | Aceptado |
+| 0009 | Streaming: coliseo e Hidra como modelos persistentes | Aceptado |

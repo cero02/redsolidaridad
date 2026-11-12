@@ -241,6 +241,10 @@ end
 local function buildArena()
 	local model = Instance.new("Model")
 	model.Name = "GranColiseo"
+	-- Los lugares nuevos usan StreamingEnabled: sin esto el cliente solo recibe las piezas
+	-- cercanas al jugador (que empieza en el Foro) y no ve el coliseo desde el menú ni
+	-- encuentra al público. Persistent lo envía entero y nunca lo descarga.
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	makeDisc(model, "Sand", Config.RADIUS + 2, 4, Config.FLOOR_Y, SAND, Enum.Material.Sand)
 

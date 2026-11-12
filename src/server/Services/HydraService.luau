@@ -844,6 +844,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 
 	local headModel = Instance.new("Model")
 	headModel.Name = if immortal then "ImmortalHead" else `Head{slot}`
+	headModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	local part = Instance.new("Part")
 	part.Name = "Head"
@@ -922,6 +923,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	-- El muñón queda al borde del estanque, al alcance de los gladiadores.
 	local stumpModel = Instance.new("Model")
 	stumpModel.Name = `Stump{slot}`
+	stumpModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 	local stump = Instance.new("Part")
 	stump.Name = "Stump"
 	stump.Anchored = true
@@ -980,6 +982,7 @@ local function buildRockAndChains(parent: Instance)
 
 		local chainModel = Instance.new("Model")
 		chainModel.Name = `Chain{index}`
+		chainModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 		local post = Instance.new("Part")
 		post.Name = "Post"
@@ -1932,6 +1935,8 @@ function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers
 	local center = ArenaService.getCenter()
 	local hydraModel = Instance.new("Model")
 	hydraModel.Name = "Hydra"
+	-- El cliente anima cabezas y cuellos: necesita el modelo completo (ver ArenaService).
+	hydraModel.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	local body = buildBody(hydraModel, center)
 	hydraModel.PrimaryPart = body
