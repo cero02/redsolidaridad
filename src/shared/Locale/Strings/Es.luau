@@ -188,8 +188,6 @@ return table.freeze({
 	["world.brazier.rekindle"] = "Reavivar el fuego",
 	["world.brazier.object"] = "Brasero",
 	["world.revive"] = "Reanimar",
-	["dummy.health"] = "Muñeco {hp}/{max}",
-	["dummy.defeated"] = "Derrotado",
 	["head.immortal"] = "INMORTAL",
 	["head.stunned"] = "ATURDIDA",
 	["stump.fire"] = "¡Fuego! {seconds}",
@@ -281,11 +279,11 @@ return table.freeze({
 
 	-- Primeros pasos ---------------------------------------------------------
 	["onboarding.title"] = "PRIMEROS PASOS",
-	["onboarding.hit"] = "Golpea al muñeco del ludus (clic izquierdo)",
-	["onboarding.dodge"] = "Esquiva con Q",
-	["onboarding.block"] = "Bloquea manteniendo clic derecho",
-	["onboarding.parry"] = "Parada perfecta: bloquea justo antes de su golpe",
-	["onboarding.arena"] = "Cruza la puerta dorada del Gran Coliseo",
+	["onboarding.dodge"] = "Esquiva un ataque con Q",
+	["onboarding.parry"] = "Parada perfecta: bloquea justo antes de que te golpeen",
+	["onboarding.sever"] = "Corta una cabeza cuando quede en el suelo tras morder",
+	["onboarding.cauterize"] = "Enciende tu arma en un brasero y cauteriza un cuello",
+	["onboarding.arena"] = "Desafía a la Hidra (menú o puerta dorada)",
 	["onboarding.done"] = "¡LISTO, GLADIADOR! LA HIDRA TE ESPERA",
 
 	-- Menú de inicio ---------------------------------------------------------
@@ -319,4 +317,7 @@ return table.freeze({
 	["settings.auto"] = "Automático",
 	["lang.en"] = "English",
 	["lang.es"] = "Español",
+
+	-- Solo en Studio ---------------------------------------------------------
+	["dev.errors"] = "⚠ ERRORES (solo en Studio): haz una captura y envíala",
 })

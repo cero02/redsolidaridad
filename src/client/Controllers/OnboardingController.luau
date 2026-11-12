@@ -1,7 +1,7 @@
 --!strict
 -- Primeros pasos: lista de tareas para el jugador nuevo que se completa sola al jugar.
--- Enseña los controles con práctica real (pilar sentirse inteligente) y lleva al jugador
--- hasta la puerta del coliseo en sus primeros minutos (pilar progreso). Solo aparece
+-- Enseña, contra la propia Hidra, lo esencial: esquivar, parar, cortar y cauterizar
+-- (pilar sentirse inteligente) en los primeros minutos (pilar progreso). Solo aparece
 -- para quien aún no ha vencido a la Hidra y está en nivel 1.
 
 local Players = game:GetService("Players")
@@ -17,7 +17,7 @@ local C = Theme.Colors
 local F = Theme.Fonts
 
 -- Cada paso usa la clave onboarding.<id> de Shared/Locale.
-local STEPS = { "hit", "dodge", "block", "parry", "arena" }
+local STEPS = { "arena", "dodge", "parry", "sever", "cauterize" }
 
 local localPlayer = Players.LocalPlayer
 
@@ -127,14 +127,18 @@ function OnboardingController.Start(_self: typeof(OnboardingController))
 		if userId ~= localPlayer.UserId then
 			return
 		end
-		if kind == "Hit" then
-			complete("hit")
-		elseif kind == "Dodge" then
+		if kind == "Dodge" then
 			complete("dodge")
-		elseif kind == "Block" and a == true then
-			complete("block")
 		elseif kind == "Defense" and a == "Parried" then
 			complete("parry")
+		end
+	end)
+	-- Cortar y cauterizar se detectan por la voz del anunciador.
+	NetClient.on("Announce", function(key: string)
+		if key == "ann.firstSevered" or key == "ann.severed" then
+			complete("sever")
+		elseif key == "ann.cauterized" then
+			complete("cauterize")
 		end
 	end)
 	NetClient.on("EncounterState", function(state: string)

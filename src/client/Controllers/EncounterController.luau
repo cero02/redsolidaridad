@@ -4,10 +4,12 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local I18n = require(script.Parent.Parent.UI.I18n)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
+local Settings = require(script.Parent.Parent.UI.Settings)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local C = Theme.Colors
@@ -53,7 +55,31 @@ local function onAnnounce(key: string, params: any, seconds: number)
 	end)
 end
 
+-- Temblor largo mientras la Hidra emerge del estanque.
+local function rumble(seconds: number, magnitude: number)
+	if not Settings.get("cameraShake") then
+		return
+	end
+	task.spawn(function()
+		local character = Players.LocalPlayer.Character
+		local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+		if humanoid == nil then
+			return
+		end
+		local start = os.clock()
+		while os.clock() - start < seconds do
+			local fade = 1 - (os.clock() - start) / seconds
+			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * magnitude * fade
+			RunService.RenderStepped:Wait()
+		end
+		humanoid.CameraOffset = Vector3.zero
+	end)
+end
+
 local function onEncounterState(state: string, progressKey: string?, progressParams: any)
+	if state == "Intro" and current.state ~= "Intro" then
+		rumble(3.5, 0.8)
+	end
 	current.state = state
 	current.progressKey = progressKey or ""
 	current.progressParams = progressParams

@@ -57,7 +57,7 @@ function CodexService.discover(player: Player, id: string): boolean
 end
 
 function CodexService.Start(_self: typeof(CodexService))
-	-- Secretos que se pueden descubrir en cualquier sitio (también con el muñeco).
+	-- Secretos que se pueden descubrir en cualquier combate.
 	CombatService.Parried:Connect(function(player: Player)
 		CodexService.discover(player, "ParmaPerfecta")
 	end)

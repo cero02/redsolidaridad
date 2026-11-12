@@ -139,6 +139,12 @@ local Remotes: { [string]: Definition } = {
 		rate = { capacity = 2, perSecond = 0.5 },
 	},
 
+	-- Solo en Studio: errores del servidor para el panel de diagnóstico.
+	DevLog = {
+		kind = "Event",
+		direction = "ToClient",
+	},
+
 	-- Los textos viajan como claves de idioma (Shared/Locale) y los traduce el cliente.
 	-- Mensaje del anunciador del coliseo: (clave, parámetros, segundos).
 	Announce = {

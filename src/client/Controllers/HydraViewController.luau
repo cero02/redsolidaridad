@@ -1,10 +1,12 @@
 --!strict
--- Dibuja en el cliente los cuellos de la Hidra: una cadena de esferas que une el cuerpo
--- con cada cabeza siguiendo una curva. Escamas negras por detrás y garganta color hueso
--- por delante (estilo de la referencia oficial). Solo visual: las cabezas y sus golpes
--- los controla el servidor.
+-- La Hidra viva en el cliente (solo visual; posiciones de ataque y golpes los decide el
+-- servidor):
+--   · Mientras una cabeza no ataca, gira suavemente para MIRAR a su presa y se balancea.
+--   · Dibuja los cuellos: cadena de esferas del cuerpo a cada cabeza, escamas negras por
+--     detrás y garganta color hueso por delante (estilo de la referencia oficial).
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -14,6 +16,10 @@ local WOBBLE = 0.9
 local SCALES = Color3.fromRGB(46, 46, 52)
 local THROAT = Color3.fromRGB(196, 180, 150)
 local GOLD = Color3.fromRGB(230, 180, 60)
+-- Seguimiento de la mirada.
+local MAX_TURN = math.rad(70)
+local TURN_SPEED = 4
+local BOB = 0.8
 
 type Neck = { scales: { Part }, throat: { Part } }
 
@@ -56,7 +62,45 @@ local function setVisible(neck: Neck, visible: boolean)
 	end
 end
 
-local function update()
+-- Posición del gladiador al que mira la Hidra (o nil).
+local function focusPosition(head: BasePart): Vector3?
+	local hydra = head:FindFirstAncestor("Hydra")
+	local userId = if hydra then hydra:GetAttribute("FocusUserId") else nil
+	if typeof(userId) ~= "number" then
+		return nil
+	end
+	local player = Players:GetPlayerByUserId(userId)
+	local character = if player then player.Character else nil
+	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	return if root and root:IsA("BasePart") then root.Position else nil
+end
+
+-- Gira la cabeza hacia su presa sin pasarse de MAX_TURN respecto a su reposo.
+local function track(head: BasePart, time: number, deltaTime: number)
+	local rest = head:GetAttribute("RestCFrame")
+	if typeof(rest) ~= "CFrame" or head:GetAttribute("Busy") == true then
+		return
+	end
+	local origin = rest.Position + Vector3.new(0, math.sin(time * 1.6 + rest.Position.X) * BOB, 0)
+	local look = rest.LookVector
+	local target = focusPosition(head)
+	if target then
+		local wanted = (target - origin)
+		if wanted.Magnitude > 1 then
+			wanted = wanted.Unit
+			local angle = math.acos(math.clamp(look:Dot(wanted), -1, 1))
+			if angle > MAX_TURN then
+				-- Se queda a MAX_TURN del reposo, en dirección a la presa.
+				wanted = look:Lerp(wanted, MAX_TURN / angle).Unit
+			end
+			look = wanted
+		end
+	end
+	local desired = CFrame.lookAt(origin, origin + look)
+	head.CFrame = head.CFrame:Lerp(desired, math.clamp(deltaTime * TURN_SPEED, 0, 1))
+end
+
+local function update(deltaTime: number)
 	local time = os.clock()
 	for _, head in CollectionService:GetTagged(HEAD_TAG) do
 		if head:IsA("BasePart") and head:IsDescendantOf(Workspace) then
@@ -70,6 +114,7 @@ local function update()
 			local visible = head:GetAttribute("Alive") == true and typeof(base) == "Vector3"
 			setVisible(neck, visible)
 			if visible then
+				track(head, time, deltaTime)
 				local p0 = base :: Vector3
 				local p2 = head.Position
 				-- Punto de control elevado: el cuello se arquea como el de una serpiente.

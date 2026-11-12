@@ -21,8 +21,11 @@ return table.freeze({
 	-- Tras tantas regeneraciones, el anunciador da la pista del fuego.
 	HINT_AFTER_REGROWS = 2,
 
-	FIRST_ATTACK_DELAY = 2.5,
-	ATTACK_INTERVAL = 2.2,
+	-- La Hidra emerge del estanque durante la presentación.
+	RISE = table.freeze({ TIME = 3.5, DEPTH = 32 }),
+
+	FIRST_ATTACK_DELAY = 2,
+	ATTACK_INTERVAL = 1.9,
 
 	BITE = table.freeze({
 		TELEGRAPH = 1.2,
@@ -92,6 +95,8 @@ return table.freeze({
 		REFLECT_DAMAGE = 45,
 		-- Tras tantas andanadas, el anunciador insinúa el secreto.
 		HINT_AFTER = 3,
+		-- Segundos tras empezar el combate hasta la primera andanada.
+		FIRST_DELAY = 5,
 	}),
 
 	-- Fase 2: cada tanto la Hidra apaga un brasero (siempre queda al menos uno).

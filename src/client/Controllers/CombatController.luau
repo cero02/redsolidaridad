@@ -15,6 +15,7 @@ local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
 local I18n = require(script.Parent.Parent.UI.I18n)
 local Settings = require(script.Parent.Parent.UI.Settings)
+local SoundController = require(script.Parent.SoundController)
 local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
@@ -122,6 +123,7 @@ local function requestAttack(kind: FighterState.AttackKind)
 	if plan ~= nil then
 		NetClient.fire("CombatAttack", kind)
 		showHitbox(plan)
+		task.delay(plan.attack.windup * 0.6, SoundController.play, if kind == "Heavy" then "heavy" else "swing")
 		local character = localPlayer.Character
 		if character then
 			CharacterAnimator.playAttack(character, plan.kind, plan.step, weaponId)
@@ -235,6 +237,7 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 	if kind == "Hit" and userId == localPlayer.UserId then
 		CombatHud.showMessage(`-{a}`, Color3.fromRGB(255, 255, 255))
 		shake(HIT_SHAKE)
+		SoundController.play("hit", 0.7 + math.random() * 0.1)
 	elseif kind == "Defense" and userId == localPlayer.UserId then
 		local info = DEFENSE_MESSAGES[a]
 		if info then
@@ -242,6 +245,8 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 		end
 		if a == "Hit" or a == "GuardBroken" then
 			shake(HURT_SHAKE)
+		elseif a == "Parried" then
+			SoundController.play("parry", 1.3)
 		end
 	elseif kind == "Downed" and userId == localPlayer.UserId then
 		CombatHud.showMessage(t("combat.downed"), Color3.fromRGB(255, 70, 70))

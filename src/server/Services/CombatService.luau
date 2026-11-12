@@ -20,7 +20,7 @@ local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
 type Fighter = FighterState.FighterState
 
--- Lo que hace un objetivo (muñeco, bestia…) cuando un jugador lo golpea.
+-- Lo que hace un objetivo (una cabeza, una cadena…) cuando un jugador lo golpea.
 export type TargetHandler = (attacker: Player, damage: number, stun: number) -> ()
 
 -- Datos de combate de cada jugador que no forman parte de las reglas puras.

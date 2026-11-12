@@ -257,6 +257,13 @@ local function makeBillboard(parent: Instance, offsetY: number): (BillboardGui, 
 	return billboard, label
 end
 
+-- Marca si la cabeza está atacando. Mientras no lo esté, cada cliente la gira
+-- suavemente para que mire al gladiador (HydraViewController); al atacar, manda el servidor.
+local function setBusy(record: HeadRecord, busy: boolean)
+	record.busy = busy
+	record.part:SetAttribute("Busy", busy)
+end
+
 local function setHeadColor(record: HeadRecord, color: Color3)
 	record.part.Color = color
 	local highlight = record.highlight
@@ -340,7 +347,7 @@ end
 -- Devuelve todas las cabezas a su postura inicial y oculta los muñones.
 local function resetHeadPoses()
 	for _, record in heads do
-		record.busy = false
+		setBusy(record, false)
 		record.groundedUntil = 0
 		record.part.CFrame = record.restCFrame
 		setHeadColor(record, record.baseColor)
@@ -348,7 +355,7 @@ local function resetHeadPoses()
 	end
 	local golden = immortalHead
 	if golden then
-		golden.busy = false
+		setBusy(golden, false)
 		golden.groundedUntil = 0
 		golden.part.CFrame = golden.restCFrame
 		setHeadColor(golden, golden.baseColor)
@@ -357,6 +364,7 @@ end
 
 local mainLoop: (id: number) -> ()
 local buildBody: (parent: Instance, center: Vector3) -> Part
+local rise: (hydraModel: Model) -> ()
 
 -- Corta todos los ataques en curso, oculta a la Hidra y, tras una pausa, prepara la
 -- siguiente fase con `setup` y reanuda el combate.
@@ -805,6 +813,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	part.Material = if immortal then Enum.Material.Neon else Enum.Material.Slate
 	part.CFrame = restCFrame
 	part:SetAttribute("NeckBase", center + direction * 4 + Vector3.new(0, 4, 0))
+	part:SetAttribute("RestCFrame", restCFrame)
 	part.Parent = headModel
 	headModel.PrimaryPart = part
 
@@ -967,7 +976,7 @@ local function handleRegrow(event: HydraLogic.RegrowEvent)
 	for _, slot in { event.slot, event.newSlot :: number } do
 		local record = heads[slot]
 		if record then
-			record.busy = false
+			setBusy(record, false)
 			record.part.CFrame = record.restCFrame
 			setHeadColor(record, record.baseColor)
 			setStumpState(record, "Hidden")
@@ -1022,7 +1031,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 	local endPosition = landPosition + direction * 4
 	local length = (endPosition - startPosition).Magnitude
 
-	record.busy = true
+	setBusy(record, true)
 	local impactTime = os.clock() + settings.TELEGRAPH
 
 	local middle = (startPosition + endPosition) / 2 + Vector3.new(0, 0.15, 0)
@@ -1038,7 +1047,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 	task.wait(settings.TELEGRAPH - settings.LUNGE_TIME)
 	if not isRunning(id) or not headUsable(record) then
 		marker:Destroy()
-		record.busy = false
+		setBusy(record, false)
 		return
 	end
 
@@ -1052,7 +1061,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 	task.wait(settings.LUNGE_TIME)
 	marker:Destroy()
 	if not isRunning(id) then
-		record.busy = false
+		setBusy(record, false)
 		return
 	end
 
@@ -1089,7 +1098,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 			tween(record.part, record.restCFrame, settings.RETURN_TIME, Enum.EasingStyle.Quad)
 			task.wait(settings.RETURN_TIME)
 		end
-		record.busy = false
+		setBusy(record, false)
 	end)
 end
 
@@ -1480,8 +1489,8 @@ local function runAttack(id: number)
 		phase = if mode == "Immortal" then 1 else hydra.phase,
 		freeHeads = #freeHeads,
 		cloudReady = now >= cloudReadyAt,
-		-- Bolas de fuego desde la furia, también con la cabeza inmortal.
-		allowFireball = mode == "Immortal" or hydra.phase >= 2,
+				-- Bolas de fuego en todas las fases: la Hidra presiona desde el primer momento.
+		allowFireball = true,
 		fireballReady = now >= fireballReadyAt,
 	}, random:NextNumber())
 
@@ -1523,6 +1532,11 @@ local function runAttack(id: number)
 
 	local chosen = candidates[HydraLogic.chooseTarget(infos, random:NextNumber())]
 	local target = players[chosen]
+	local hydraModel = model
+	if hydraModel then
+		-- Todas las cabezas miran a su presa.
+		hydraModel:SetAttribute("FocusUserId", target.UserId)
+	end
 	local targetPosition = positions[chosen]
 
 	-- Memoria para repartir los ataques entre los jugadores.
@@ -1794,6 +1808,34 @@ function buildBody(parent: Instance, center: Vector3): Part
 	return torso
 end
 
+-- La Hidra emerge del estanque: todas sus piezas ancladas suben desde el agua.
+-- La roca, las cadenas y los muñones se quedan en su sitio.
+function rise(hydraModel: Model)
+	local settings = Config.RISE
+	local info = TweenInfo.new(settings.TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	for _, descendant in hydraModel:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant.Anchored then
+			local container = descendant.Parent
+			local fixed = descendant.Name == "Rock"
+				or descendant.Name == "Marker"
+				or (container ~= nil and (string.find(container.Name, "Chain") ~= nil or string.find(container.Name, "Stump") ~= nil))
+			if not fixed then
+				local final = descendant.CFrame
+				descendant.CFrame = final - Vector3.new(0, settings.DEPTH, 0)
+				local riseTween = TweenService:Create(descendant, info, { CFrame = final })
+				-- Las cabezas no siguen al jugador hasta terminar de emerger.
+				if CollectionService:HasTag(descendant, HEAD_TAG) then
+					descendant:SetAttribute("Busy", true)
+					riseTween.Completed:Once(function()
+						descendant:SetAttribute("Busy", false)
+					end)
+				end
+				riseTween:Play()
+			end
+		end
+	end
+end
+
 -- Crea la Hidra en el estanque. `participants` devuelve los gladiadores de la partida.
 function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers?)
 	HydraService.despawn()
@@ -1833,6 +1875,7 @@ function HydraService.spawn(participants: () -> { Player }, modifiers: Modifiers
 
 	hydraModel.Parent = Workspace
 	model = hydraModel
+	rise(hydraModel)
 	fireProgress()
 end
 
@@ -1849,6 +1892,8 @@ function HydraService.begin()
 	severedOnce = false
 	table.clear(attackMemory)
 	table.clear(lastHintAt)
+	-- La primera andanada de fuego llega pronto: acción desde el principio.
+	fireballReadyAt = os.clock() + Config.FIREBALL.FIRST_DELAY
 	task.spawn(mainLoop, runId)
 end
 

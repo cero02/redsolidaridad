@@ -232,6 +232,20 @@ recompensas al terminar. El perfil pasa a la versión 2 del esquema (migración 
 | `LocalizeController` | `client/Controllers` | Traduce carteles y avisos del mundo |
 | `MusicController` | `client/Controllers` | Música por momentos con fundidos (Config/Audio) |
 
+### v0.9 Pulido
+
+- `Lifecycle`/`Loader`: un módulo que falla al cargar, en `Init` o en `Start` se informa y
+  **no tumba a los demás**.
+- `DevLogService` (servidor) + `DevOverlayController` (cliente): solo en Studio, panel rojo
+  con los errores de ambos lados.
+- `LobbyService` retira la plantilla de Studio (Baseplate, SpawnLocation) y crea suelo,
+  colinas, cipreses, estatua y punto de aparición propios.
+- `TrainingDummyService` eliminado.
+- Hidra viva: el servidor marca cada cabeza con `Busy` y `RestCFrame` y la Hidra con
+  `FocusUserId`; `HydraViewController` gira localmente las cabezas libres hacia la presa.
+  `rise()` la hace emerger del estanque.
+- `CrowdController` (público), `SoundController` (efectos, `Config/Audio.SFX`).
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

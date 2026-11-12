@@ -188,8 +188,6 @@ return table.freeze({
 	["world.brazier.rekindle"] = "Rekindle the fire",
 	["world.brazier.object"] = "Brazier",
 	["world.revive"] = "Revive",
-	["dummy.health"] = "Dummy {hp}/{max}",
-	["dummy.defeated"] = "Defeated",
 	["head.immortal"] = "IMMORTAL",
 	["head.stunned"] = "STUNNED",
 	["stump.fire"] = "Fire! {seconds}",
@@ -281,11 +279,11 @@ return table.freeze({
 
 	-- First steps ------------------------------------------------------------
 	["onboarding.title"] = "FIRST STEPS",
-	["onboarding.hit"] = "Strike the training dummy (left click)",
-	["onboarding.dodge"] = "Dodge with Q",
-	["onboarding.block"] = "Block by holding right click",
-	["onboarding.parry"] = "Perfect parry: block right before its strike",
-	["onboarding.arena"] = "Pass through the golden gate of the Grand Colosseum",
+	["onboarding.dodge"] = "Dodge an attack with Q",
+	["onboarding.parry"] = "Perfect parry: block right before a strike hits you",
+	["onboarding.sever"] = "Cut off a head when it lies on the ground after biting",
+	["onboarding.cauterize"] = "Light your weapon at a brazier and cauterize a neck",
+	["onboarding.arena"] = "Challenge the Hydra (main menu or golden gate)",
 	["onboarding.done"] = "READY, GLADIATOR! THE HYDRA AWAITS",
 
 	-- Main menu --------------------------------------------------------------
@@ -319,4 +317,7 @@ return table.freeze({
 	["settings.auto"] = "Auto",
 	["lang.en"] = "English",
 	["lang.es"] = "Español",
+
+	-- Studio only -------------------------------------------------------------
+	["dev.errors"] = "⚠ ERRORS (Studio only) — take a screenshot and send it",
 })

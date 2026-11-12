@@ -32,29 +32,52 @@ T.test("llama a todos los Init antes que a cualquier Start", function()
 	T.expectEqual(table.concat(order, ","), "A.Init,B.Init,A.Start,B.Start", "orden")
 end)
 
-T.test("un Init que cede (yield) detiene el arranque", function()
-	local modules = {
+T.test("un Init que cede (yield) se informa y ese módulo no arranca", function()
+	local started = false
+	local reported: string? = nil
+	local failed = Lifecycle.run({
 		Lento = {
 			Init = function()
 				coroutine.yield()
 			end,
+			Start = function()
+				started = true
+			end,
 		},
-	}
-	T.expectError(function()
-		Lifecycle.run(modules, { spawn = immediate })
-	end, "cedió")
+	}, {
+		spawn = immediate,
+		onInitError = function(_name: string, err: string)
+			reported = err
+		end,
+	})
+	T.expectEqual(started, false)
+	T.expectEqual(failed[1], "Lento")
+	assert(reported and string.find(reported, "cedió", 1, true), "debe explicar que cedió")
 end)
 
-T.test("un error en Init detiene el arranque", function()
-	T.expectError(function()
-		Lifecycle.run({
-			Roto = {
-				Init = function()
-					error("fallo")
-				end,
-			},
-		}, { spawn = immediate })
-	end, "Init de Roto")
+T.test("un error en Init no impide arrancar a los demás", function()
+	local otherStarted = false
+	local reported: string? = nil
+	local failed = Lifecycle.run({
+		Roto = {
+			Init = function()
+				error("fallo")
+			end,
+		},
+		Sano = {
+			Start = function()
+				otherStarted = true
+			end,
+		},
+	}, {
+		spawn = immediate,
+		onInitError = function(name: string)
+			reported = name
+		end,
+	})
+	T.expectEqual(reported, "Roto")
+	T.expectEqual(otherStarted, true)
+	T.expectEqual(#failed, 1)
 end)
 
 T.test("un error en Start no impide arrancar los demás", function()

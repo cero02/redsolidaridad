@@ -17,4 +17,16 @@ return table.freeze({
 		Victory = 0.7,
 	}),
 	FADE_TIME = 1.6,
+
+	-- Efectos de sonido. Sonidos que trae Roblox de serie (rbxasset://) o recursos subidos
+	-- ("rbxassetid://123…"). Cadena vacía = sin sonido.
+	-- POR VERIFICAR: rutas de los sonidos de serie (las de la espada clásica de Roblox).
+	SFX = table.freeze({
+		swing = "rbxasset://sounds/swordslash.wav",
+		heavy = "rbxasset://sounds/swordlunge.wav",
+		hit = "rbxasset://sounds/swordslash.wav",
+		parry = "rbxasset://sounds/unsheath.wav",
+		equip = "rbxasset://sounds/unsheath.wav",
+	}),
+	SFX_VOLUME = 0.6,
 })
