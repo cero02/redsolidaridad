@@ -42,10 +42,13 @@ T.test("girando paso a paso acaba alcanzando la dirección deseada", function()
 	near(Homing.angleBetween(direction, RIGHT), 0, "alineado")
 end)
 
-T.test("con giro lento, un objetivo que cambia de lado a tiempo no es alcanzado de golpe", function()
-	-- 80°/s durante un fotograma de 1/60 s: apenas 1,3° de giro.
-	local result = Homing.steer(FORWARD, RIGHT, math.rad(80) / 60)
-	assert(Homing.angleBetween(result, RIGHT) > math.rad(85), "giró demasiado rápido")
-end)
+T.test(
+	"con giro lento, un objetivo que cambia de lado a tiempo no es alcanzado de golpe",
+	function()
+		-- 80°/s durante un fotograma de 1/60 s: apenas 1,3° de giro.
+		local result = Homing.steer(FORWARD, RIGHT, math.rad(80) / 60)
+		assert(Homing.angleBetween(result, RIGHT) > math.rad(85), "giró demasiado rápido")
+	end
+)
 
 T.finish()

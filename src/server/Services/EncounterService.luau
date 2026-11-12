@@ -212,7 +212,9 @@ local function reward(player: Player, won: boolean, elapsed: number)
 		xpToNext = Progression.xpToNext(progressionConfig, data.level),
 		unlocks = unlocks,
 		nextLevel = nextLevel,
-		nextUnlock = if nextUnlocks and nextUnlocks[1] then Progression.unlockRef(nextUnlocks[1]) else nil,
+		nextUnlock = if nextUnlocks and nextUnlocks[1]
+			then Progression.unlockRef(nextUnlocks[1])
+			else nil,
 		decreeId = decree.id,
 	})
 end
@@ -285,7 +287,10 @@ local function endEncounter(won: boolean)
 			reward(player, true, elapsed)
 		end
 		-- Comunidad: todo el servidor se entera y suma una ofrenda.
-		EventService.news("news.victory", { names = table.concat(names, ", "), time = formatTime(elapsed) })
+		EventService.news(
+			"news.victory",
+			{ names = table.concat(names, ", "), time = formatTime(elapsed) }
+		)
 		EventService.addOffering(names[1] or "?")
 	end
 
@@ -354,7 +359,12 @@ local function addRevivePrompt(player: Player)
 			return
 		end
 		revive(player, REVIVE_HEALTH)
-		announce("ann.revived", { rescuer = rescuer.DisplayName, name = player.DisplayName }, 3, nil)
+		announce(
+			"ann.revived",
+			{ rescuer = rescuer.DisplayName, name = player.DisplayName },
+			3,
+			nil
+		)
 		local stats = matchStats[rescuer]
 		if stats then
 			stats.revives += 1

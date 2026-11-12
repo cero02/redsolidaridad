@@ -26,7 +26,14 @@ local GAP_WIDTH = math.rad(20)
 
 local LobbyService = {}
 
-local function part(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material): Part
+local function part(
+	parent: Instance,
+	name: string,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material
+): Part
 	local p = Instance.new("Part")
 	p.Name = name
 	p.Anchored = true
@@ -40,7 +47,15 @@ local function part(parent: Instance, name: string, size: Vector3, cframe: CFram
 	return p
 end
 
-local function cylinder(parent: Instance, name: string, radius: number, height: number, position: Vector3, color: Color3, material: Enum.Material): Part
+local function cylinder(
+	parent: Instance,
+	name: string,
+	radius: number,
+	height: number,
+	position: Vector3,
+	color: Color3,
+	material: Enum.Material
+): Part
 	local p = part(
 		parent,
 		name,
@@ -64,10 +79,33 @@ local function inGap(angle: number): boolean
 end
 
 local function buildColumn(parent: Instance, base: Vector3, withBanner: boolean)
-	cylinder(parent, "ColumnBase", 1.9, 1, base + Vector3.new(0, 0.5, 0), MARBLE_DARK, Enum.Material.Marble)
-	local shaft = cylinder(parent, "Column", 1.4, COLUMN_HEIGHT, base + Vector3.new(0, 1 + COLUMN_HEIGHT / 2, 0), MARBLE, Enum.Material.Marble)
+	cylinder(
+		parent,
+		"ColumnBase",
+		1.9,
+		1,
+		base + Vector3.new(0, 0.5, 0),
+		MARBLE_DARK,
+		Enum.Material.Marble
+	)
+	local shaft = cylinder(
+		parent,
+		"Column",
+		1.4,
+		COLUMN_HEIGHT,
+		base + Vector3.new(0, 1 + COLUMN_HEIGHT / 2, 0),
+		MARBLE,
+		Enum.Material.Marble
+	)
 	shaft.CastShadow = true
-	part(parent, "Capital", Vector3.new(4, 1.2, 4), CFrame.new(base + Vector3.new(0, COLUMN_HEIGHT + 1.6, 0)), MARBLE_DARK, Enum.Material.Marble)
+	part(
+		parent,
+		"Capital",
+		Vector3.new(4, 1.2, 4),
+		CFrame.new(base + Vector3.new(0, COLUMN_HEIGHT + 1.6, 0)),
+		MARBLE_DARK,
+		Enum.Material.Marble
+	)
 	if withBanner then
 		-- Estandarte rojo con franja dorada, mirando al centro de la plaza.
 		local facing = CFrame.lookAt(base, Vector3.new(PLAZA_CENTER.X, base.Y, PLAZA_CENTER.Z))
@@ -80,9 +118,23 @@ local function buildColumn(parent: Instance, base: Vector3, withBanner: boolean)
 			Enum.Material.Fabric
 		)
 		banner.CanCollide = false
-		part(parent, "BannerTrim", Vector3.new(3.1, 0.5, 0.25), banner.CFrame * CFrame.new(0, -4.3, 0), GOLD, Enum.Material.Metal).CanCollide =
+		part(
+			parent,
+			"BannerTrim",
+			Vector3.new(3.1, 0.5, 0.25),
+			banner.CFrame * CFrame.new(0, -4.3, 0),
+			GOLD,
+			Enum.Material.Metal
+		).CanCollide =
 			false
-		part(parent, "BannerEagle", Vector3.new(1.4, 1.4, 0.25), banner.CFrame * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, math.rad(45)), GOLD, Enum.Material.Metal).CanCollide =
+		part(
+			parent,
+			"BannerEagle",
+			Vector3.new(1.4, 1.4, 0.25),
+			banner.CFrame * CFrame.new(0, 1.5, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			GOLD,
+			Enum.Material.Metal
+		).CanCollide =
 			false
 	end
 end
@@ -94,7 +146,14 @@ local function buildStatue(parent: Instance, base: Vector3)
 	local model = Instance.new("Model")
 	model.Name = "ChampionStatue"
 	local facing = CFrame.lookAt(base, Vector3.new(base.X, base.Y, base.Z + 10))
-	local function piece(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material, shape: Enum.PartType?)
+	local function piece(
+		name: string,
+		size: Vector3,
+		offset: CFrame,
+		color: Color3,
+		material: Enum.Material,
+		shape: Enum.PartType?
+	)
 		local p = part(model, name, size, facing * offset, color, material)
 		if shape then
 			p.Shape = shape
@@ -102,34 +161,121 @@ local function buildStatue(parent: Instance, base: Vector3)
 		return p
 	end
 	piece("Pedestal", Vector3.new(7, 5, 7), CFrame.new(0, 2.5, 0), MARBLE, Enum.Material.Marble)
-	piece("PedestalTrim", Vector3.new(7.6, 0.8, 7.6), CFrame.new(0, 5.2, 0), MARBLE_DARK, Enum.Material.Marble)
-	piece("LegLeft", Vector3.new(1.3, 5, 1.3), CFrame.new(-0.9, 8, 0.4) * CFrame.Angles(math.rad(-8), 0, 0), BRONZE, Enum.Material.Metal)
-	piece("LegRight", Vector3.new(1.3, 5, 1.3), CFrame.new(0.9, 8, -0.6) * CFrame.Angles(math.rad(10), 0, 0), BRONZE, Enum.Material.Metal)
+	piece(
+		"PedestalTrim",
+		Vector3.new(7.6, 0.8, 7.6),
+		CFrame.new(0, 5.2, 0),
+		MARBLE_DARK,
+		Enum.Material.Marble
+	)
+	piece(
+		"LegLeft",
+		Vector3.new(1.3, 5, 1.3),
+		CFrame.new(-0.9, 8, 0.4) * CFrame.Angles(math.rad(-8), 0, 0),
+		BRONZE,
+		Enum.Material.Metal
+	)
+	piece(
+		"LegRight",
+		Vector3.new(1.3, 5, 1.3),
+		CFrame.new(0.9, 8, -0.6) * CFrame.Angles(math.rad(10), 0, 0),
+		BRONZE,
+		Enum.Material.Metal
+	)
 	piece("Torso", Vector3.new(3.2, 4, 1.8), CFrame.new(0, 12.4, 0), BRONZE, Enum.Material.Metal)
-	piece("Head", Vector3.new(1.8, 1.8, 1.8), CFrame.new(0, 15.3, 0), BRONZE, Enum.Material.Metal, Enum.PartType.Ball)
-	piece("Helmet", Vector3.new(0.4, 1.6, 2.2), CFrame.new(0, 16.4, 0), IMPERIAL_RED, Enum.Material.Fabric)
+	piece(
+		"Head",
+		Vector3.new(1.8, 1.8, 1.8),
+		CFrame.new(0, 15.3, 0),
+		BRONZE,
+		Enum.Material.Metal,
+		Enum.PartType.Ball
+	)
+	piece(
+		"Helmet",
+		Vector3.new(0.4, 1.6, 2.2),
+		CFrame.new(0, 16.4, 0),
+		IMPERIAL_RED,
+		Enum.Material.Fabric
+	)
 	-- Brazo derecho en alto con el gladius.
-	piece("ArmRight", Vector3.new(1.1, 4, 1.1), CFrame.new(2.2, 15, 0) * CFrame.Angles(0, 0, math.rad(-20)), BRONZE, Enum.Material.Metal)
-	piece("Sword", Vector3.new(0.3, 4.5, 0.6), CFrame.new(3.1, 19, 0) * CFrame.Angles(0, 0, math.rad(-20)), GOLD, Enum.Material.Metal)
+	piece(
+		"ArmRight",
+		Vector3.new(1.1, 4, 1.1),
+		CFrame.new(2.2, 15, 0) * CFrame.Angles(0, 0, math.rad(-20)),
+		BRONZE,
+		Enum.Material.Metal
+	)
+	piece(
+		"Sword",
+		Vector3.new(0.3, 4.5, 0.6),
+		CFrame.new(3.1, 19, 0) * CFrame.Angles(0, 0, math.rad(-20)),
+		GOLD,
+		Enum.Material.Metal
+	)
 	-- Brazo izquierdo con el escudo.
-	piece("ArmLeft", Vector3.new(1.1, 3.6, 1.1), CFrame.new(-2.1, 11.8, 0.4), BRONZE, Enum.Material.Metal)
-	piece("Shield", Vector3.new(0.5, 4.2, 3.4), CFrame.new(-2.9, 11.6, 0.6), IMPERIAL_RED, Enum.Material.Wood)
-	piece("ShieldBoss", Vector3.new(1, 1, 1), CFrame.new(-3.2, 11.6, 0.6), GOLD, Enum.Material.Metal, Enum.PartType.Ball)
+	piece(
+		"ArmLeft",
+		Vector3.new(1.1, 3.6, 1.1),
+		CFrame.new(-2.1, 11.8, 0.4),
+		BRONZE,
+		Enum.Material.Metal
+	)
+	piece(
+		"Shield",
+		Vector3.new(0.5, 4.2, 3.4),
+		CFrame.new(-2.9, 11.6, 0.6),
+		IMPERIAL_RED,
+		Enum.Material.Wood
+	)
+	piece(
+		"ShieldBoss",
+		Vector3.new(1, 1, 1),
+		CFrame.new(-3.2, 11.6, 0.6),
+		GOLD,
+		Enum.Material.Metal,
+		Enum.PartType.Ball
+	)
 	model.Parent = parent
 end
 
 local function buildPlaza(parent: Instance)
 	-- Suelo de mármol con un anillo de piedra y el ludus de arena para entrenar.
-	cylinder(parent, "PlazaFloor", PLAZA_RADIUS + 4, 0.4, PLAZA_CENTER + Vector3.new(0, 0.2, 0), MARBLE, Enum.Material.Marble)
-	cylinder(parent, "PlazaRing", PLAZA_RADIUS - 6, 0.42, PLAZA_CENTER + Vector3.new(0, 0.21, 0), MARBLE_DARK, Enum.Material.Marble)
-	cylinder(parent, "PlazaInner", PLAZA_RADIUS - 8, 0.44, PLAZA_CENTER + Vector3.new(0, 0.22, 0), MARBLE, Enum.Material.Marble)
+	cylinder(
+		parent,
+		"PlazaFloor",
+		PLAZA_RADIUS + 4,
+		0.4,
+		PLAZA_CENTER + Vector3.new(0, 0.2, 0),
+		MARBLE,
+		Enum.Material.Marble
+	)
+	cylinder(
+		parent,
+		"PlazaRing",
+		PLAZA_RADIUS - 6,
+		0.42,
+		PLAZA_CENTER + Vector3.new(0, 0.21, 0),
+		MARBLE_DARK,
+		Enum.Material.Marble
+	)
+	cylinder(
+		parent,
+		"PlazaInner",
+		PLAZA_RADIUS - 8,
+		0.44,
+		PLAZA_CENTER + Vector3.new(0, 0.22, 0),
+		MARBLE,
+		Enum.Material.Marble
+	)
 	cylinder(parent, "StatueRing", 12, 0.46, Vector3.new(0, 0.23, -20), SAND, Enum.Material.Sand)
 	buildStatue(parent, Vector3.new(0, 0.45, -20))
 
 	for index = 0, COLUMN_COUNT - 1 do
 		local angle = index / COLUMN_COUNT * 2 * math.pi
 		if not inGap(angle) then
-			local base = PLAZA_CENTER + Vector3.new(math.cos(angle), 0, math.sin(angle)) * PLAZA_RADIUS
+			local base = PLAZA_CENTER
+				+ Vector3.new(math.cos(angle), 0, math.sin(angle)) * PLAZA_RADIUS
 			buildColumn(parent, base + Vector3.new(0, 0.4, 0), index % 3 == 0)
 		end
 	end
@@ -139,11 +285,32 @@ local function buildPlaza(parent: Instance)
 	-- El muro exterior del coliseo está a unos 88 studs de su centro (z = −200).
 	local roadEnd = -110
 	local roadLength = roadStart - roadEnd
-	part(parent, "Road", Vector3.new(12, 0.4, roadLength), CFrame.new(0, 0.2, (roadStart + roadEnd) / 2), STONE, Enum.Material.Cobblestone)
+	part(
+		parent,
+		"Road",
+		Vector3.new(12, 0.4, roadLength),
+		CFrame.new(0, 0.2, (roadStart + roadEnd) / 2),
+		STONE,
+		Enum.Material.Cobblestone
+	)
 	for z = roadStart - 8, roadEnd + 4, -16 do
 		for _, side in { -1, 1 } do
-			local post = part(parent, "TorchPost", Vector3.new(0.8, 6, 0.8), CFrame.new(side * 8, 3, z), Color3.fromRGB(80, 60, 40), Enum.Material.Wood)
-			local bowl = part(parent, "TorchBowl", Vector3.new(1.6, 0.6, 1.6), post.CFrame * CFrame.new(0, 3.3, 0), Color3.fromRGB(60, 45, 35), Enum.Material.Metal)
+			local post = part(
+				parent,
+				"TorchPost",
+				Vector3.new(0.8, 6, 0.8),
+				CFrame.new(side * 8, 3, z),
+				Color3.fromRGB(80, 60, 40),
+				Enum.Material.Wood
+			)
+			local bowl = part(
+				parent,
+				"TorchBowl",
+				Vector3.new(1.6, 0.6, 1.6),
+				post.CFrame * CFrame.new(0, 3.3, 0),
+				Color3.fromRGB(60, 45, 35),
+				Enum.Material.Metal
+			)
 			local fire = Instance.new("Fire")
 			fire.Size = 4
 			fire.Heat = 6
@@ -225,12 +392,17 @@ local function buildLand(parent: Instance)
 		local distance = random:NextNumber(520, 700)
 		local width = random:NextNumber(180, 320)
 		local height = random:NextNumber(40, 95)
-		local position = Vector3.new(math.cos(angle) * distance, height / 2 - 6, -100 + math.sin(angle) * distance)
+		local position = Vector3.new(
+			math.cos(angle) * distance,
+			height / 2 - 6,
+			-100 + math.sin(angle) * distance
+		)
 		local hill = part(
 			parent,
 			"Hill",
 			Vector3.new(width, height, width * 0.6),
-			CFrame.lookAt(position, Vector3.new(0, position.Y, -100)) * CFrame.Angles(math.rad(-12), 0, 0),
+			CFrame.lookAt(position, Vector3.new(0, position.Y, -100))
+				* CFrame.Angles(math.rad(-12), 0, 0),
 			Color3.fromRGB(110, 118, 72):Lerp(Color3.fromRGB(150, 130, 92), random:NextNumber()),
 			Enum.Material.Grass
 		)

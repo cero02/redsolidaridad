@@ -83,8 +83,16 @@ function Theme.label(props: { [string]: any }, parent: Instance?): TextLabel
 end
 
 -- Botón con estilo: "primary" (rojo imperial), "secondary" (bronce) o "ghost".
-function Theme.button(text: string, style: string, props: { [string]: any }, parent: Instance?): TextButton
-	local base = if style == "primary" then C.Red elseif style == "secondary" then C.PanelLight else C.Panel
+function Theme.button(
+	text: string,
+	style: string,
+	props: { [string]: any },
+	parent: Instance?
+): TextButton
+	local base = if style == "primary"
+		then C.Red
+		elseif style == "secondary" then C.PanelLight
+		else C.Panel
 	props.Text = text
 	props.BackgroundColor3 = base
 	props.BackgroundTransparency = if style == "ghost" then 0.4 else 0.05
@@ -113,7 +121,9 @@ function Theme.button(text: string, style: string, props: { [string]: any }, par
 		TweenService:Create(button, info, { BackgroundColor3 = base }):Play()
 	end)
 	button.MouseButton1Down:Connect(function()
-		TweenService:Create(button, info, { BackgroundColor3 = base:Lerp(Color3.new(0, 0, 0), 0.25) }):Play()
+		TweenService
+			:Create(button, info, { BackgroundColor3 = base:Lerp(Color3.new(0, 0, 0), 0.25) })
+			:Play()
 	end)
 	button.MouseButton1Up:Connect(function()
 		TweenService:Create(button, info, { BackgroundColor3 = hover }):Play()

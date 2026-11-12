@@ -77,7 +77,9 @@ local function update(deltaTime: number)
 		-- En calma: un leve vaivén. Emocionado: saltos.
 		local jump = math.max(0, wave) * excitement * 1.6
 		local sway = wave * 0.12
-		spectator.part.CFrame = spectator.base * CFrame.new(0, jump, 0) * CFrame.Angles(0, 0, sway * (1 - excitement * 0.5))
+		spectator.part.CFrame = spectator.base
+			* CFrame.new(0, jump, 0)
+			* CFrame.Angles(0, 0, sway * (1 - excitement * 0.5))
 	end
 end
 

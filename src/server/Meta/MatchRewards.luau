@@ -68,13 +68,23 @@ function MatchRewards.compute(xp: XpConfig, summary: Summary): Reward
 	local multiplier = summary.decreeMultiplier * summary.eventMultiplier * (1 + brotherhood)
 	local total = math.floor(base * multiplier + 0.5)
 	if brotherhood > 0 then
-		table.insert(lines, { key = "reward.brotherhood", params = { percent = math.floor(brotherhood * 100 + 0.5) }, amount = 0 })
+		table.insert(lines, {
+			key = "reward.brotherhood",
+			params = { percent = math.floor(brotherhood * 100 + 0.5) },
+			amount = 0,
+		})
 	end
 	if summary.decreeMultiplier ~= 1 then
-		table.insert(lines, { key = "reward.decree", params = { mult = summary.decreeMultiplier }, amount = 0 })
+		table.insert(
+			lines,
+			{ key = "reward.decree", params = { mult = summary.decreeMultiplier }, amount = 0 }
+		)
 	end
 	if summary.eventMultiplier ~= 1 then
-		table.insert(lines, { key = "reward.games", params = { mult = summary.eventMultiplier }, amount = 0 })
+		table.insert(
+			lines,
+			{ key = "reward.games", params = { mult = summary.eventMultiplier }, amount = 0 }
+		)
 	end
 	if summary.mentor then
 		table.insert(lines, { key = "reward.mentor", amount = xp.MENTOR })

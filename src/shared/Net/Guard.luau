@@ -4,7 +4,11 @@
 
 type Validator = (value: unknown) -> (boolean, string?)
 type Limiter = { consume: (self: any, key: any) -> boolean }
-type ArgsChecker = (validators: { Validator }, count: number, args: { unknown }) -> (boolean, string?)
+type ArgsChecker = (
+	validators: { Validator },
+	count: number,
+	args: { unknown }
+) -> (boolean, string?)
 
 local Guard = {}
 

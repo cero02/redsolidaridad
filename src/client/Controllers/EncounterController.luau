@@ -69,7 +69,9 @@ local function rumble(seconds: number, magnitude: number)
 		local start = os.clock()
 		while os.clock() - start < seconds do
 			local fade = 1 - (os.clock() - start) / seconds
-			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * magnitude * fade
+			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0)
+				* magnitude
+				* fade
 			RunService.RenderStepped:Wait()
 		end
 		humanoid.CameraOffset = Vector3.zero

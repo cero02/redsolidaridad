@@ -59,8 +59,12 @@ end
 -- fallaron en Init (y por tanto no arrancaron).
 function Lifecycle.run(modules: { [string]: Module }, options: Options?): { string }
 	local spawn: Spawner = if options and options.spawn then options.spawn else task.spawn
-	local onInitError = if options and options.onInitError then options.onInitError else defaultReport("Init")
-	local onStartError = if options and options.onStartError then options.onStartError else defaultReport("Start")
+	local onInitError = if options and options.onInitError
+		then options.onInitError
+		else defaultReport("Init")
+	local onStartError = if options and options.onStartError
+		then options.onStartError
+		else defaultReport("Start")
 
 	local names = sortedNames(modules)
 	local failed: { string } = {}

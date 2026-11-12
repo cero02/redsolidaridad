@@ -65,7 +65,10 @@ T.test("format sustituye parámetros y traduce referencias anidadas", function()
 end)
 
 T.test("format respeta números y deja intactos los marcadores sin valor", function()
-	T.expectEqual(Translate.format(tables, "en", "hud.xp", { xp = 150, needed = 200 }), "150/200 XP")
+	T.expectEqual(
+		Translate.format(tables, "en", "hud.xp", { xp = 150, needed = 200 }),
+		"150/200 XP"
+	)
 	T.expectEqual(Translate.format(tables, "en", "hud.xp", { xp = 1 }), "1/{needed} XP")
 end)
 

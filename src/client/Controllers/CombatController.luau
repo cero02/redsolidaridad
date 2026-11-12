@@ -13,12 +13,12 @@ local Workspace = game:GetService("Workspace")
 local CharacterAnimator = require(script.Parent.CharacterAnimator)
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
-local I18n = require(script.Parent.Parent.UI.I18n)
-local Settings = require(script.Parent.Parent.UI.Settings)
-local SoundController = require(script.Parent.SoundController)
 local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
+local I18n = require(script.Parent.Parent.UI.I18n)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
+local Settings = require(script.Parent.Parent.UI.Settings)
+local SoundController = require(script.Parent.SoundController)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
 -- Muestra la zona de golpe como una caja de color (solo para depurar).
@@ -84,7 +84,9 @@ local function showHitbox(plan: FighterState.AttackPlan)
 		part.CanTouch = false
 		part.Material = Enum.Material.Neon
 		part.Transparency = 0.7
-		part.Color = if plan.kind == "Heavy" then Color3.fromRGB(255, 140, 40) else Color3.fromRGB(255, 255, 255)
+		part.Color = if plan.kind == "Heavy"
+			then Color3.fromRGB(255, 140, 40)
+			else Color3.fromRGB(255, 255, 255)
 		part.Size = Vector3.new(attack.width, attack.height, attack.reach)
 		part.CFrame = root.CFrame * CFrame.new(0, 0, -attack.reach / 2)
 		part.Parent = Workspace
@@ -105,7 +107,9 @@ local function shake(magnitude: number)
 	task.spawn(function()
 		local start = os.clock()
 		while os.clock() - start < SHAKE_TIME do
-			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * 2 * magnitude
+			humanoid.CameraOffset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0)
+				* 2
+				* magnitude
 			RunService.RenderStepped:Wait()
 		end
 		humanoid.CameraOffset = Vector3.zero
@@ -123,7 +127,11 @@ local function requestAttack(kind: FighterState.AttackKind)
 	if plan ~= nil then
 		NetClient.fire("CombatAttack", kind)
 		showHitbox(plan)
-		task.delay(plan.attack.windup * 0.6, SoundController.play, if kind == "Heavy" then "heavy" else "swing")
+		task.delay(
+			plan.attack.windup * 0.6,
+			SoundController.play,
+			if kind == "Heavy" then "heavy" else "swing"
+		)
 		local character = localPlayer.Character
 		if character then
 			CharacterAnimator.playAttack(character, plan.kind, plan.step, weaponId)
@@ -259,7 +267,10 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 	elseif kind == "Ultimate" and userId == localPlayer.UserId then
 		local weapon = Weapons[weaponId]
 		CombatHud.showMessage(
-			t("combat.ultimateUsed", { name = string.upper(t(`ultimate.{weapon.ultimate.id}.name`)) }),
+			t(
+				"combat.ultimateUsed",
+				{ name = string.upper(t(`ultimate.{weapon.ultimate.id}.name`)) }
+			),
 			Color3.fromRGB(255, 215, 80)
 		)
 		shake(HURT_SHAKE)
@@ -351,9 +362,27 @@ function CombatController.Start(_self: typeof(CombatController))
 		Enum.KeyCode.F,
 		Enum.KeyCode.ButtonL1
 	)
-	ContextActionService:BindAction(ACTION_DODGE, onDodge, true, Enum.KeyCode.Q, Enum.KeyCode.ButtonB)
-	ContextActionService:BindAction(ACTION_ESSENCE, onEssence, true, Enum.KeyCode.Z, Enum.KeyCode.ButtonX)
-	ContextActionService:BindAction(ACTION_ULTIMATE, onUltimate, true, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
+	ContextActionService:BindAction(
+		ACTION_DODGE,
+		onDodge,
+		true,
+		Enum.KeyCode.Q,
+		Enum.KeyCode.ButtonB
+	)
+	ContextActionService:BindAction(
+		ACTION_ESSENCE,
+		onEssence,
+		true,
+		Enum.KeyCode.Z,
+		Enum.KeyCode.ButtonX
+	)
+	ContextActionService:BindAction(
+		ACTION_ULTIMATE,
+		onUltimate,
+		true,
+		Enum.KeyCode.R,
+		Enum.KeyCode.ButtonY
+	)
 	-- Títulos de los botones táctiles (móvil), en el idioma del jugador.
 	local function relabelActions()
 		ContextActionService:SetTitle(ACTION_ATTACK, t("action.attack"))
@@ -369,7 +398,12 @@ function CombatController.Start(_self: typeof(CombatController))
 		local state = fighter
 		if state ~= nil then
 			local snapshot = state:snapshot(os.clock())
-			CombatHud.update(snapshot.health, snapshot.stamina, snapshot.ultimate, snapshot.maxStamina)
+			CombatHud.update(
+				snapshot.health,
+				snapshot.stamina,
+				snapshot.ultimate,
+				snapshot.maxStamina
+			)
 			local essence = Essences[essenceId]
 			local weapon = Weapons[weaponId]
 			local remaining = essenceReadyAt - os.clock()
@@ -380,11 +414,17 @@ function CombatController.Start(_self: typeof(CombatController))
 							name = { key = `essence.{essenceId}.name` },
 							seconds = math.ceil(remaining),
 						})
-						else t("combat.essenceReady", { name = { key = `essence.{essenceId}.name` } }))
+						else t(
+							"combat.essenceReady",
+							{ name = { key = `essence.{essenceId}.name` } }
+						))
 					else "",
 				if weapon
 					then (if snapshot.ultimate >= Combat.ULTIMATE_MAX
-						then t("combat.ultimateReady", { name = { key = `ultimate.{weapon.ultimate.id}.name` } })
+						then t(
+							"combat.ultimateReady",
+							{ name = { key = `ultimate.{weapon.ultimate.id}.name` } }
+						)
 						else t("combat.ultimateCharge", {
 							name = { key = `ultimate.{weapon.ultimate.id}.name` },
 							percent = math.floor(snapshot.ultimate),
@@ -392,7 +432,6 @@ function CombatController.Start(_self: typeof(CombatController))
 					else "",
 				snapshot.ultimate >= Combat.ULTIMATE_MAX
 			)
-
 		end
 	end)
 end

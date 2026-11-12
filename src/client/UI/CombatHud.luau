@@ -74,7 +74,8 @@ function CombatHud.create()
 		}, fill)
 		fills[bar.name] = fill
 		if bar.name == "Ultimate" then
-			local glow = Theme.create("UIStroke", { Color = C.Gold, Thickness = 2, Transparency = 1 }, back)
+			local glow =
+				Theme.create("UIStroke", { Color = C.Gold, Thickness = 2, Transparency = 1 }, back)
 			ultimateGlow = glow
 		end
 	end
@@ -124,7 +125,11 @@ function CombatHud.update(health: number, stamina: number, ultimate: number, max
 end
 
 -- Texto de la esencia y de la definitiva bajo las barras.
-function CombatHud.updateAbilities(essenceText: string, ultimateText: string, ultimateReady: boolean)
+function CombatHud.updateAbilities(
+	essenceText: string,
+	ultimateText: string,
+	ultimateReady: boolean
+)
 	local essence, ultimate, glow = essenceLabel, ultimateLabel, ultimateGlow
 	if essence then
 		essence.Text = essenceText
@@ -135,7 +140,9 @@ function CombatHud.updateAbilities(essenceText: string, ultimateText: string, ul
 	end
 	if glow then
 		-- La barra de gloria late cuando la definitiva está lista.
-		glow.Transparency = if ultimateReady then 0.2 + 0.5 * (0.5 + 0.5 * math.sin(os.clock() * 6)) else 1
+		glow.Transparency = if ultimateReady
+			then 0.2 + 0.5 * (0.5 + 0.5 * math.sin(os.clock() * 6))
+			else 1
 	end
 end
 
@@ -150,7 +157,11 @@ function CombatHud.showMessage(text: string, color: Color3?)
 	labelRef.TextColor3 = color or C.Text
 	labelRef.TextTransparency = 0
 	labelRef.Size = UDim2.fromOffset(500, 46)
-	TweenService:Create(labelRef, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Size = UDim2.fromOffset(560, 52) }):Play()
+	TweenService:Create(
+		labelRef,
+		TweenInfo.new(0.15, Enum.EasingStyle.Back),
+		{ Size = UDim2.fromOffset(560, 52) }
+	):Play()
 	task.delay(MESSAGE_TIME, function()
 		if messageToken == token then
 			TweenService:Create(labelRef, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()

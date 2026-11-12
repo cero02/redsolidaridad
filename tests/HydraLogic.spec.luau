@@ -141,20 +141,28 @@ T.test("en la fase 2 se desbloquean cadena, nube e inmersión", function()
 end)
 
 T.test("la cadena de mordiscos necesita dos cabezas libres y la nube su recarga", function()
-	local weights = HydraLogic.patternWeights(context({ phase = 2, freeHeads = 1, cloudReady = false }))
+	local weights =
+		HydraLogic.patternWeights(context({ phase = 2, freeHeads = 1, cloudReady = false }))
 	T.expectEqual(weights.Chain, 0)
 	T.expectEqual(weights.Cloud, 0)
 end)
 
 T.test("sin cabeza disponible nunca elige mordisco", function()
-	local ctx = context({ canBite = false, nearCount = 1, farCount = 1, lastPattern = nil, repeatCount = 0 })
+	local ctx = context({
+		canBite = false,
+		nearCount = 1,
+		farCount = 1,
+		lastPattern = nil,
+		repeatCount = 0,
+	})
 	for i = 0, 99 do
 		assert(HydraLogic.choosePattern(ctx, i / 100) ~= "Bite", "eligió mordisco")
 	end
 end)
 
 T.test("sin jugadores cerca nunca elige coletazo", function()
-	local ctx = context({ canBite = true, nearCount = 0, farCount = 0, lastPattern = nil, repeatCount = 0 })
+	local ctx =
+		context({ canBite = true, nearCount = 0, farCount = 0, lastPattern = nil, repeatCount = 0 })
 	for i = 0, 99 do
 		assert(HydraLogic.choosePattern(ctx, i / 100) ~= "Tail", "eligió coletazo")
 	end
@@ -169,26 +177,49 @@ T.test("los jugadores lejanos aumentan el veneno y los cercanos el coletazo", fu
 end)
 
 T.test("nunca repite el mismo ataque tres veces seguidas", function()
-	local ctx = context({ canBite = true, nearCount = 1, farCount = 0, lastPattern = "Bite", repeatCount = 2 })
+	local ctx = context({
+		canBite = true,
+		nearCount = 1,
+		farCount = 0,
+		lastPattern = "Bite",
+		repeatCount = 2,
+	})
 	for i = 0, 99 do
 		assert(HydraLogic.choosePattern(ctx, i / 100) ~= "Bite", "repitió mordisco")
 	end
 end)
 
 T.test("la elección es determinista para la misma tirada", function()
-	local ctx = context({ canBite = true, nearCount = 2, farCount = 1, lastPattern = nil, repeatCount = 0 })
+	local ctx =
+		context({ canBite = true, nearCount = 2, farCount = 1, lastPattern = nil, repeatCount = 0 })
 	T.expectEqual(HydraLogic.choosePattern(ctx, 0.42), HydraLogic.choosePattern(ctx, 0.42))
 end)
 
 T.test("si no hay ningún ataque posible usa el veneno", function()
-	local ctx = context({ canBite = false, nearCount = 0, farCount = 0, lastPattern = "Spit", repeatCount = 2 })
+	local ctx = context({
+		canBite = false,
+		nearCount = 0,
+		farCount = 0,
+		lastPattern = "Spit",
+		repeatCount = 2,
+	})
 	T.expectEqual(HydraLogic.choosePattern(ctx, 0.5), "Spit")
 end)
 
 T.test("las bolas de fuego solo salen si están permitidas y fuera de recarga", function()
-	T.expectEqual(HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = false })).Fireball, 0)
-	T.expectEqual(HydraLogic.patternWeights(context({ allowFireball = false, fireballReady = true })).Fireball, 0)
-	assert(HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = true })).Fireball > 0, "sin fuego")
+	T.expectEqual(
+		HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = false })).Fireball,
+		0
+	)
+	T.expectEqual(
+		HydraLogic.patternWeights(context({ allowFireball = false, fireballReady = true })).Fireball,
+		0
+	)
+	assert(
+		HydraLogic.patternWeights(context({ allowFireball = true, fireballReady = true })).Fireball
+			> 0,
+		"sin fuego"
+	)
 end)
 
 T.test("el objetivo olvidado recibe más atención y el castigado menos", function()

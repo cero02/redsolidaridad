@@ -111,9 +111,20 @@ end)
 T.test("una victoria completa suma todas las partes", function()
 	local reward = MatchRewards.compute(
 		XP,
-		summary({ won = true, phasesCleared = 3, perfectParries = 4, revives = 1, firstWinOfDay = true })
+		summary({
+			won = true,
+			phasesCleared = 3,
+			perfectParries = 4,
+			revives = 1,
+			firstWinOfDay = true,
+		})
 	)
-	local expected = XP.COMPLETE + XP.VICTORY + 3 * XP.PER_PHASE + 4 * XP.PER_PARRY + XP.PER_REVIVE + XP.FIRST_WIN_OF_DAY
+	local expected = XP.COMPLETE
+		+ XP.VICTORY
+		+ 3 * XP.PER_PHASE
+		+ 4 * XP.PER_PARRY
+		+ XP.PER_REVIVE
+		+ XP.FIRST_WIN_OF_DAY
 	T.expectEqual(reward.total, expected)
 end)
 
@@ -193,7 +204,10 @@ end)
 
 T.test("unlockRef da la clave de texto de cada tipo de desbloqueo", function()
 	T.expectEqual(Progression.unlockRef({ kind = "Weapon", id = "Hasta" }).key, "weapon.Hasta.name")
-	T.expectEqual(Progression.unlockRef({ kind = "Cosmetic", id = "RedCape" }).key, "cosmetic.RedCape")
+	T.expectEqual(
+		Progression.unlockRef({ kind = "Cosmetic", id = "RedCape" }).key,
+		"cosmetic.RedCape"
+	)
 	local title = Progression.unlockRef({ kind = "Title", id = "Campeon" })
 	T.expectEqual(title.key, "unlock.title")
 	T.expectEqual((title.params :: any).title.key, "title.Campeon.name")

@@ -41,7 +41,11 @@ local braziers: { Brazier } = {}
 local function applyBrazier(brazier: Brazier)
 	brazier.fire.Enabled = brazier.lit
 	brazier.light.Enabled = brazier.lit
-	ServerText.setWorld(brazier.prompt, "ActionText", if brazier.lit then "world.brazier.light" else "world.brazier.rekindle")
+	ServerText.setWorld(
+		brazier.prompt,
+		"ActionText",
+		if brazier.lit then "world.brazier.light" else "world.brazier.rekindle"
+	)
 	brazier.prompt.HoldDuration = if brazier.lit then 0.4 else 2
 end
 
@@ -104,17 +108,32 @@ local function makeRing(
 	for index = 0, segments - 1 do
 		local angle = index / segments * 2 * math.pi
 		local position = center
-			+ Vector3.new(math.cos(angle) * radius, height / 2 - Config.FLOOR_Y, math.sin(angle) * radius)
+			+ Vector3.new(
+				math.cos(angle) * radius,
+				height / 2 - Config.FLOOR_Y,
+				math.sin(angle) * radius
+			)
 		local lookAt = Vector3.new(center.X, position.Y, center.Z)
-		local segment =
-			makePart(parent, name, Vector3.new(length, height, depth), CFrame.lookAt(position, lookAt), color, material)
+		local segment = makePart(
+			parent,
+			name,
+			Vector3.new(length, height, depth),
+			CFrame.lookAt(position, lookAt),
+			color,
+			material
+		)
 		-- Sin sombras: el coliseo es grande y así rinde mejor en equipos modestos.
 		segment.CastShadow = false
 	end
 end
 
 -- `action` y `object` son claves de idioma (Shared/Locale).
-local function addPrompt(parent: Instance, action: string, object: string, hold: number): ProximityPrompt
+local function addPrompt(
+	parent: Instance,
+	action: string,
+	object: string,
+	hold: number
+): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
 	ServerText.setWorld(prompt, "ActionText", action)
 	ServerText.setWorld(prompt, "ObjectText", object)
@@ -147,7 +166,8 @@ end
 local function buildBraziers(parent: Instance)
 	for index = 0, 3 do
 		local angle = math.rad(45 + index * 90)
-		local base = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * Config.BRAZIER_RADIUS
+		local base = center
+			+ Vector3.new(math.cos(angle), 0, math.sin(angle)) * Config.BRAZIER_RADIUS
 
 		makePart(
 			parent,
@@ -224,12 +244,28 @@ local function buildArena()
 
 	makeDisc(model, "Sand", Config.RADIUS + 2, 4, Config.FLOOR_Y, SAND, Enum.Material.Sand)
 
-	local pond = makeDisc(model, "Pond", Config.POND_RADIUS, 0.6, Config.FLOOR_Y + 0.3, WATER, Enum.Material.Glass)
+	local pond = makeDisc(
+		model,
+		"Pond",
+		Config.POND_RADIUS,
+		0.6,
+		Config.FLOOR_Y + 0.3,
+		WATER,
+		Enum.Material.Glass
+	)
 	pond.CanCollide = false
 	pond.CanQuery = false
 	pond.Transparency = 0.25
 
-	makeRing(model, "Wall", Config.RADIUS + 1.5, Config.WALL_HEIGHT, 3, STONE, Enum.Material.Sandstone)
+	makeRing(
+		model,
+		"Wall",
+		Config.RADIUS + 1.5,
+		Config.WALL_HEIGHT,
+		3,
+		STONE,
+		Enum.Material.Sandstone
+	)
 
 	-- Gradas: tres escalones cada vez más altos y alejados.
 	local tiers = {}

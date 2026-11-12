@@ -16,7 +16,8 @@ local function isProblem(message: string, messageType: Enum.MessageType): boolea
 	if messageType == Enum.MessageType.MessageError then
 		return true
 	end
-	return messageType == Enum.MessageType.MessageWarning and string.find(message, "ERROR", 1, true) ~= nil
+	return messageType == Enum.MessageType.MessageWarning
+		and string.find(message, "ERROR", 1, true) ~= nil
 end
 
 function DevLogService.Start(_self: typeof(DevLogService))

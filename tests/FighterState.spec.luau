@@ -190,7 +190,10 @@ end)
 
 T.test("applySnapshot sustituye la predicción por el estado del servidor", function()
 	local f = newFighter()
-	f:applySnapshot({ health = 40, stamina = 10, maxStamina = 100, ultimate = 55, blocking = true }, 5)
+	f:applySnapshot(
+		{ health = 40, stamina = 10, maxStamina = 100, ultimate = 55, blocking = true },
+		5
+	)
 	local s = f:snapshot(5)
 	T.expectEqual(s.health, 40)
 	T.expectEqual(s.stamina, 10)
@@ -236,7 +239,11 @@ T.test("la pasiva de aguante amplía el máximo", function()
 	T.expectEqual(f.maxStamina, Combat.MAX_STAMINA * 1.1)
 	T.expectEqual(f.stamina, Combat.MAX_STAMINA * 1.1)
 	f:tryDodge(0)
-	T.expectEqual(f:snapshot(100).stamina, Combat.MAX_STAMINA * 1.1, "se recupera hasta el nuevo máximo")
+	T.expectEqual(
+		f:snapshot(100).stamina,
+		Combat.MAX_STAMINA * 1.1,
+		"se recupera hasta el nuevo máximo"
+	)
 end)
 
 T.test("Testudo: inmune a golpes y a daño de entorno mientras dura", function()

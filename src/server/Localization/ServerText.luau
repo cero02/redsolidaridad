@@ -20,7 +20,10 @@ ServerText.LANGUAGE_ATTRIBUTE = "Language"
 
 function ServerText.languageOf(player: Player): string
 	local preference = player:GetAttribute(ServerText.LANGUAGE_ATTRIBUTE)
-	return Locale.resolve(if typeof(preference) == "string" then preference else nil, player.LocaleId)
+	return Locale.resolve(
+		if typeof(preference) == "string" then preference else nil,
+		player.LocaleId
+	)
 end
 
 function ServerText.t(player: Player, key: string, params: { [string]: any }?): string
@@ -28,13 +31,21 @@ function ServerText.t(player: Player, key: string, params: { [string]: any }?): 
 end
 
 -- Fija un texto traducible en una propiedad (`Text`, `ActionText`, `ObjectText`…).
-function ServerText.setWorld(instance: Instance, property: string, key: string, params: { [string]: any }?)
+function ServerText.setWorld(
+	instance: Instance,
+	property: string,
+	key: string,
+	params: { [string]: any }?
+)
 	instance:SetAttribute(`L_{property}`, key)
-	instance:SetAttribute(`L_{property}_Params`, if params then HttpService:JSONEncode(params) else nil)
+	instance:SetAttribute(
+		`L_{property}_Params`,
+		if params then HttpService:JSONEncode(params) else nil
+	)
 	if not CollectionService:HasTag(instance, TAG) then
 		CollectionService:AddTag(instance, TAG)
 	end
-	;(instance :: any)[property] = Locale.t("en", key, params)
+	(instance :: any)[property] = Locale.t("en", key, params)
 end
 
 return ServerText

@@ -175,7 +175,13 @@ local function lerp(a: number, b: number, t: number): number
 end
 
 -- Ángulo del brazo a lo largo del ataque: preparar, golpear y recuperar.
-local function attackCurve(attack: Attack, elapsed: number, from: number, peak: number, strike: number): number
+local function attackCurve(
+	attack: Attack,
+	elapsed: number,
+	from: number,
+	peak: number,
+	strike: number
+): number
 	if elapsed < attack.windup then
 		return lerp(from, peak, elapsed / attack.windup)
 	end
@@ -267,7 +273,12 @@ local function updateSlash(entry: Entry, attack: Attack, elapsed: number)
 	slash.Transparency = 0.15 + 0.8 * alpha
 end
 
-function CharacterAnimator.playAttack(character: Model, kind: string, step: number, weaponId: string?)
+function CharacterAnimator.playAttack(
+	character: Model,
+	kind: string,
+	step: number,
+	weaponId: string?
+)
 	local weapon = Weapons[weaponId or "Gladius"] or Weapons.Gladius
 	local attack = if kind == "Heavy" then weapon.heavy else weapon.light[step]
 	if attack == nil then
@@ -325,11 +336,13 @@ local function updateEntry(entry: Entry, deltaTime: number, now: number)
 			if entry.weaponId == "Hasta" then
 				-- La lanza se echa atrás y se proyecta hacia delante.
 				rightRaise = attackCurve(attack, elapsed, 0, math.rad(35), math.rad(95))
-				trailOn = elapsed >= attack.windup * 0.5 and elapsed <= attack.windup + attack.active + 0.08
+				trailOn = elapsed >= attack.windup * 0.5
+					and elapsed <= attack.windup + attack.active + 0.08
 			elseif entry.weaponId == "Martillo" then
 				-- El martillo sube por encima de la cabeza y cae con todo su peso.
 				rightRaise = attackCurve(attack, elapsed, 0, math.rad(190), math.rad(-10))
-				trailOn = elapsed >= attack.windup * 0.6 and elapsed <= attack.windup + attack.active + 0.1
+				trailOn = elapsed >= attack.windup * 0.6
+					and elapsed <= attack.windup + attack.active + 0.1
 			elseif entry.heavy then
 				-- Golpe de escudo: el brazo izquierdo retrocede y empuja hacia delante.
 				leftRaise = attackCurve(attack, elapsed, 0, BASH_BACK, BASH_FORWARD)
@@ -341,13 +354,18 @@ local function updateEntry(entry: Entry, deltaTime: number, now: number)
 				elseif entry.step == 3 then
 					rightSpread = math.rad(-20)
 				end
-				trailOn = elapsed >= attack.windup * 0.5 and elapsed <= attack.windup + attack.active + 0.08
+				trailOn = elapsed >= attack.windup * 0.5
+					and elapsed <= attack.windup + attack.active + 0.08
 			end
 		end
 	end
 
-	local rightRotation = if rightRaise ~= nil then armRotation(entry.isR15, 1, rightRaise, rightSpread) else nil
-	local leftRotation = if leftRaise ~= nil then armRotation(entry.isR15, -1, leftRaise, 0) else nil
+	local rightRotation = if rightRaise ~= nil
+		then armRotation(entry.isR15, 1, rightRaise, rightSpread)
+		else nil
+	local leftRotation = if leftRaise ~= nil
+		then armRotation(entry.isR15, -1, leftRaise, 0)
+		else nil
 	entry.rightMoved = moveJoint(entry.right, rightRotation, entry.rightMoved)
 	entry.leftMoved = moveJoint(entry.left, leftRotation, entry.leftMoved)
 

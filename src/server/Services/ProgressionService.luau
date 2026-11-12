@@ -133,7 +133,10 @@ function ProgressionService.grantTitle(player: Player, titleId: string): boolean
 	data.unlockedTitles[titleId] = true
 	-- Un título recién ganado se luce: se equipa solo.
 	data.equippedTitle = titleId
-	EventService.news("news.title", { name = player.DisplayName, title = Locale.ref(`title.{titleId}.name`) })
+	EventService.news(
+		"news.title",
+		{ name = player.DisplayName, title = Locale.ref(`title.{titleId}.name`) }
+	)
 	ProgressionService.refresh(player)
 	return true
 end
@@ -165,7 +168,10 @@ function ProgressionService.grantXp(player: Player, amount: number): Progression
 
 	local rank = Progression.rankFor(config, data.level)
 	if rank.id ~= previousRank.id then
-		EventService.news("news.rankUp", { name = player.DisplayName, rank = Locale.ref(`rank.{rank.id}`) })
+		EventService.news(
+			"news.rankUp",
+			{ name = player.DisplayName, rank = Locale.ref(`rank.{rank.id}`) }
+		)
 	elseif result.levelsGained > 0 then
 		EventService.news("news.levelUp", { name = player.DisplayName, level = data.level })
 	end

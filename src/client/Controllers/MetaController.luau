@@ -114,7 +114,8 @@ local function refreshProgress()
 	if current == nil then
 		return
 	end
-	levelLabel.Text = t("hud.level", { level = current.level, rank = Progression.rankRef(config, current.level) })
+	levelLabel.Text =
+		t("hud.level", { level = current.level, rank = Progression.rankRef(config, current.level) })
 	local needed = Progression.xpToNext(config, current.level)
 	if needed > 0 then
 		xpFill.Size = UDim2.fromScale(math.clamp(current.xp / needed, 0, 1), 1)
@@ -219,14 +220,21 @@ local function armoryEntry(
 		Text = "",
 	}, parent)
 	Theme.corner(button, 8)
-	Theme.stroke(button, if selected then C.Gold else C.GoldDark, if selected then 2 else 1, if selected then 0 else 0.6)
+	Theme.stroke(
+		button,
+		if selected then C.Gold else C.GoldDark,
+		if selected then 2 else 1,
+		if selected then 0 else 0.6
+	)
 	Theme.label({
 		Size = UDim2.new(1, -16, 0, 24),
 		Position = UDim2.fromOffset(8, 6),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = if owned then C.Gold else C.Muted,
 		Font = F.Title,
-		Text = (if owned then "" else "🔒 ") .. title .. (if selected then `  ·  {t("armory.equipped")}` else ""),
+		Text = (if owned then "" else "🔒 ") .. title .. (if selected
+			then `  ·  {t("armory.equipped")}`
+			else ""),
 	}, button)
 	Theme.label({
 		Size = UDim2.new(1, -16, 1, -36),
@@ -267,19 +275,40 @@ local function refreshArmory()
 				name = { key = `ultimate.{ultimate}.name` },
 				desc = { key = `ultimate.{ultimate}.desc` },
 			})}`
-			else `{t("armory.unlockLevel", { level = weapon.unlockLevel })}\n{t(`weapon.{id}.desc`)}`
-		armoryEntry(armoryColumns.Weapons, order, t(`weapon.{id}.name`), body, owned, loadout.weapon == id, function()
-			NetClient.fire("SetLoadout", id, loadout.essence)
-		end)
+			else `{t("armory.unlockLevel", { level = weapon.unlockLevel })}\n{t(
+				`weapon.{id}.desc`
+			)}`
+		armoryEntry(
+			armoryColumns.Weapons,
+			order,
+			t(`weapon.{id}.name`),
+			body,
+			owned,
+			loadout.weapon == id,
+			function()
+				NetClient.fire("SetLoadout", id, loadout.essence)
+			end
+		)
 	end
 	for order, id in ESSENCE_ORDER do
 		local owned = table.find(current.unlockedEssences, id) ~= nil
 		local body = if owned
-			then `{t(`essence.{id}.power`)}\n{t("armory.passive", { passive = { key = `essence.{id}.passive` } })}`
+			then `{t(`essence.{id}.power`)}\n{t(
+				"armory.passive",
+				{ passive = { key = `essence.{id}.passive` } }
+			)}`
 			else `{t(`essence.{id}.how`)}\n{t(`essence.{id}.power`)}`
-		armoryEntry(armoryColumns.Essences, order, t(`essence.{id}.name`), body, owned, loadout.essence == id, function()
-			NetClient.fire("SetLoadout", loadout.weapon, id)
-		end)
+		armoryEntry(
+			armoryColumns.Essences,
+			order,
+			t(`essence.{id}.name`),
+			body,
+			owned,
+			loadout.essence == id,
+			function()
+				NetClient.fire("SetLoadout", loadout.weapon, id)
+			end
+		)
 	end
 end
 
@@ -319,7 +348,11 @@ local function pushNews(key: string, params: { [string]: any }?)
 	end
 	task.delay(NEWS_TIME, function()
 		if line.Parent then
-			local tween = TweenService:Create(line, TweenInfo.new(1), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			local tween = TweenService:Create(
+				line,
+				TweenInfo.new(1),
+				{ TextTransparency = 1, TextStrokeTransparency = 1 }
+			)
 			tween:Play()
 			tween.Completed:Wait()
 			line:Destroy()
@@ -376,7 +409,10 @@ local function renderResults()
 		local record = if results.record
 			then `<font color="#FFD26E"><b>{t("results.newRecord")}</b></font>`
 			else t("results.yourRecord", { time = formatTime(results.best) })
-		table.insert(lines, `<b>{t("results.time", { time = formatTime(results.time) })}</b>  ·  {record}`)
+		table.insert(
+			lines,
+			`<b>{t("results.time", { time = formatTime(results.time) })}</b>  ·  {record}`
+		)
 	else
 		table.insert(lines, `<i>{t("results.defeatLine")}</i>`)
 	end
@@ -392,13 +428,22 @@ local function renderResults()
 	table.insert(lines, `<b>{t("results.total", { xp = results.total })}</b>`)
 	table.insert(lines, "")
 	if results.level > results.levelBefore then
-		table.insert(lines, `<font color="#FFD26E"><b>{t("results.levelUp", { level = results.level })}</b></font>`)
+		table.insert(
+			lines,
+			`<font color="#FFD26E"><b>{t("results.levelUp", { level = results.level })}</b></font>`
+		)
 	end
 	for _, unlock in results.unlocks do
-		table.insert(lines, `<font color="#C8A0FF">{t("results.unlocked", { unlock = unlock })}</font>`)
+		table.insert(
+			lines,
+			`<font color="#C8A0FF">{t("results.unlocked", { unlock = unlock })}</font>`
+		)
 	end
 	if results.nextLevel and results.nextUnlock then
-		table.insert(lines, t("results.next", { level = results.nextLevel, unlock = results.nextUnlock }))
+		table.insert(
+			lines,
+			t("results.next", { level = results.nextLevel, unlock = results.nextUnlock })
+		)
 	end
 	body.Text = table.concat(lines, "\n")
 end
@@ -441,7 +486,8 @@ local function build()
 	gui = Theme.create("ScreenGui", { Name = "MetaHud", ResetOnSpawn = false })
 
 	-- Ficha de progreso (arriba a la izquierda).
-	local chip = Theme.panel({ Size = UDim2.fromOffset(300, 60), Position = UDim2.fromOffset(12, 8) }, gui)
+	local chip =
+		Theme.panel({ Size = UDim2.fromOffset(300, 60), Position = UDim2.fromOffset(12, 8) }, gui)
 	levelLabel = Theme.label({
 		Size = UDim2.new(1, -20, 0, 24),
 		Position = UDim2.fromOffset(10, 4),
@@ -457,7 +503,11 @@ local function build()
 		BorderSizePixel = 0,
 	}, chip)
 	Theme.corner(bar, 4)
-	xpFill = Theme.create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Gold, BorderSizePixel = 0 }, bar)
+	xpFill = Theme.create(
+		"Frame",
+		{ Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Gold, BorderSizePixel = 0 },
+		bar
+	)
 	Theme.corner(xpFill, 4)
 	xpLabel = Theme.label({
 		Size = UDim2.new(1, -20, 0, 14),
@@ -478,11 +528,14 @@ local function build()
 		Padding = UDim.new(0, 6),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}, dock)
-	menuButton = Theme.button("", "secondary", { LayoutOrder = 1, Size = UDim2.fromOffset(84, 30) }, dock)
+	menuButton =
+		Theme.button("", "secondary", { LayoutOrder = 1, Size = UDim2.fromOffset(84, 30) }, dock)
 	static(menuButton, "hud.menu")
-	armoryButton = Theme.button("", "secondary", { LayoutOrder = 2, Size = UDim2.fromOffset(98, 30) }, dock)
+	armoryButton =
+		Theme.button("", "secondary", { LayoutOrder = 2, Size = UDim2.fromOffset(98, 30) }, dock)
 	static(armoryButton, "hud.armory")
-	codexButton = Theme.button("", "secondary", { LayoutOrder = 3, Size = UDim2.fromOffset(104, 30) }, dock)
+	codexButton =
+		Theme.button("", "secondary", { LayoutOrder = 3, Size = UDim2.fromOffset(104, 30) }, dock)
 	menuButton.Activated:Connect(function()
 		Bus.OpenMenu:Fire()
 	end)
@@ -542,7 +595,12 @@ local function build()
 		discoveryStroke.Transparency = 0
 	end
 	static(
-		Theme.label({ Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 10), Font = F.Bold, TextColor3 = C.Purple }, discoveryFrame),
+		Theme.label({
+			Size = UDim2.new(1, 0, 0, 22),
+			Position = UDim2.fromOffset(0, 10),
+			Font = F.Bold,
+			TextColor3 = C.Purple,
+		}, discoveryFrame),
 		"discovery.header"
 	)
 	Theme.label({
@@ -579,7 +637,10 @@ local function build()
 		Font = F.Title,
 		Text = "",
 	}, resultsFrame)
-	Theme.divider({ Size = UDim2.new(0.8, 0, 0, 2), Position = UDim2.new(0.1, 0, 0, 62) }, resultsFrame)
+	Theme.divider(
+		{ Size = UDim2.new(0.8, 0, 0, 2), Position = UDim2.new(0.1, 0, 0, 62) },
+		resultsFrame
+	)
 	Theme.label({
 		Name = "Body",
 		Size = UDim2.new(1, -40, 1, -140),
@@ -612,7 +673,13 @@ local function build()
 	-- Códice.
 	codexFrame = modal(UDim2.fromOffset(480, 440), gui)
 	static(
-		Theme.label({ Size = UDim2.new(1, -60, 0, 30), Position = UDim2.fromOffset(16, 12), Font = F.Title, TextColor3 = C.Gold, TextXAlignment = Enum.TextXAlignment.Left }, codexFrame),
+		Theme.label({
+			Size = UDim2.new(1, -60, 0, 30),
+			Position = UDim2.fromOffset(16, 12),
+			Font = F.Title,
+			TextColor3 = C.Gold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, codexFrame),
 		"codexui.title"
 	)
 	codexProgress = Theme.label({
@@ -632,7 +699,11 @@ local function build()
 		ScrollBarThickness = 5,
 		ScrollBarImageColor3 = C.GoldDark,
 	}, codexFrame)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, codexList)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) },
+		codexList
+	)
 	closeButton(codexFrame, function()
 		codexFrame.Visible = false
 	end)
@@ -640,7 +711,13 @@ local function build()
 	-- Armería.
 	armoryFrame = modal(UDim2.fromOffset(600, 400), gui)
 	static(
-		Theme.label({ Size = UDim2.new(1, -60, 0, 30), Position = UDim2.fromOffset(16, 12), Font = F.Title, TextColor3 = C.Gold, TextXAlignment = Enum.TextXAlignment.Left }, armoryFrame),
+		Theme.label({
+			Size = UDim2.new(1, -60, 0, 30),
+			Position = UDim2.fromOffset(16, 12),
+			Font = F.Title,
+			TextColor3 = C.Gold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, armoryFrame),
 		"armory.title"
 	)
 	for index, name in { "Weapons", "Essences" } do
@@ -660,7 +737,11 @@ local function build()
 			Position = UDim2.new((index - 1) * 0.5, 12, 0, 68),
 			BackgroundTransparency = 1,
 		}, armoryFrame)
-		Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, column)
+		Theme.create(
+			"UIListLayout",
+			{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) },
+			column
+		)
 		armoryColumns[name] = column
 	end
 	closeButton(armoryFrame, function()

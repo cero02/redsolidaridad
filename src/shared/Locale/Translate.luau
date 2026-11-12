@@ -20,20 +20,23 @@ end
 -- Traduce `key` al idioma pedido. Si falta, usa el idioma por defecto; si tampoco existe,
 -- devuelve la propia clave (para que se note en las pruebas).
 function Translate.format(tables: Tables, language: string, key: string, params: Params?): string
-	local text = (tables[language] and tables[language][key]) or (tables[Translate.DEFAULT] and tables[Translate.DEFAULT][key])
+	local text = (tables[language] and tables[language][key])
+		or (tables[Translate.DEFAULT] and tables[Translate.DEFAULT][key])
 	if text == nil then
 		return key
 	end
 	if params == nil then
 		return text
 	end
-	return (string.gsub(text, "{(%w+)}", function(name: string): string?
-		local value = params[name]
-		if value == nil then
-			return nil
-		end
-		return resolveParam(tables, language, value)
-	end))
+	return (
+		string.gsub(text, "{(%w+)}", function(name: string): string?
+			local value = params[name]
+			if value == nil then
+				return nil
+			end
+			return resolveParam(tables, language, value)
+		end)
+	)
 end
 
 -- Idioma a usar: la preferencia explícita del jugador o, si es "auto", su idioma de Roblox.

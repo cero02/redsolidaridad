@@ -62,7 +62,13 @@ local function scheduleSave()
 	local token = saveToken
 	task.delay(SAVE_DELAY, function()
 		if token == saveToken then
-			NetClient.fire("SaveSettings", values.language, values.music, values.cameraShake, values.lightMode)
+			NetClient.fire(
+				"SaveSettings",
+				values.language,
+				values.music,
+				values.cameraShake,
+				values.lightMode
+			)
 		end
 	end)
 end

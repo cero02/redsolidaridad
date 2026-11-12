@@ -150,10 +150,13 @@ end
 
 -- Onda en el suelo que se expande y se desvanece.
 local function ring(position: Vector3, radius: number, color: Color3)
-	local ground = CFrame.new(position.X, position.Y - 2.6, position.Z) * CFrame.Angles(0, 0, math.rad(90))
+	local ground = CFrame.new(position.X, position.Y - 2.6, position.Z)
+		* CFrame.Angles(0, 0, math.rad(90))
 	local part = effectPart(Vector3.new(0.3, 2, 2), ground, color, Enum.PartType.Cylinder)
 	local info = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(part, info, { Size = Vector3.new(0.3, radius * 2, radius * 2), Transparency = 1 }):Play()
+	TweenService
+		:Create(part, info, { Size = Vector3.new(0.3, radius * 2, radius * 2), Transparency = 1 })
+		:Play()
 	Debris:AddItem(part, 0.4)
 end
 
@@ -178,7 +181,14 @@ end
 -- Daño en zona ----------------------------------------------------------------------
 
 -- Golpea a todos los objetivos dentro de una esfera. Devuelve cuántos alcanzó.
-local function hitArea(player: Player, fighter: Fighter, center: Vector3, radius: number, damage: number, stun: number): number
+local function hitArea(
+	player: Player,
+	fighter: Fighter,
+	center: Vector3,
+	radius: number,
+	damage: number,
+	stun: number
+): number
 	local character = player.Character
 	if character == nil then
 		return 0
@@ -196,7 +206,13 @@ local function hitArea(player: Player, fighter: Fighter, center: Vector3, radius
 			count += 1
 			targets[model](player, damage, stun)
 			fighter:addDamageDealt(damage)
-			NetService.fireAll("CombatEvent", "Hit", player.UserId, math.floor(damage + 0.5), "Area")
+			NetService.fireAll(
+				"CombatEvent",
+				"Hit",
+				player.UserId,
+				math.floor(damage + 0.5),
+				"Area"
+			)
 		end
 	end
 	return count
@@ -245,7 +261,11 @@ local function resolveAttack(player: Player, fighter: Fighter, plan: FighterStat
 	end
 	-- El golpe pesado del Martillo hace temblar el suelo (visual).
 	if plan.kind == "Heavy" and info and info.weaponId == "Martillo" then
-		ring((root.CFrame * CFrame.new(0, 0, -attack.reach / 2)).Position, attack.width / 2, Color3.fromRGB(230, 200, 150))
+		ring(
+			(root.CFrame * CFrame.new(0, 0, -attack.reach / 2)).Position,
+			attack.width / 2,
+			Color3.fromRGB(230, 200, 150)
+		)
 	end
 	sendState(player, fighter)
 end
@@ -288,7 +308,9 @@ local function ultimatePila(player: Player, fighter: Fighter)
 			return
 		end
 		-- Una jabalina cae del cielo en un punto de la zona.
-		local offset = Vector3.new(random:NextNumber(-1, 1), 0, random:NextNumber(-1, 1)) * PILA_RADIUS * 0.7
+		local offset = Vector3.new(random:NextNumber(-1, 1), 0, random:NextNumber(-1, 1))
+			* PILA_RADIUS
+			* 0.7
 		local landing = center + offset
 		local javelin = effectPart(
 			Vector3.new(0.4, 0.4, 7),
@@ -297,7 +319,13 @@ local function ultimatePila(player: Player, fighter: Fighter)
 			nil
 		)
 		local info = TweenInfo.new(PILA_GAP, Enum.EasingStyle.Linear)
-		TweenService:Create(javelin, info, { CFrame = CFrame.lookAt(landing + Vector3.new(0, 1, 0), landing - Vector3.new(0, 30, 0)) })
+		TweenService
+			:Create(javelin, info, {
+				CFrame = CFrame.lookAt(
+					landing + Vector3.new(0, 1, 0),
+					landing - Vector3.new(0, 30, 0)
+				),
+			})
 			:Play()
 		Debris:AddItem(javelin, PILA_GAP + 0.6)
 		task.wait(PILA_GAP)
@@ -343,14 +371,23 @@ local function useEssence(player: Player, fighter: Fighter, info: Info)
 			if root and fighters[player] == fighter and not fighter:isDead() then
 				local radius = essence.slamRadius or 8
 				ring(root.Position, radius, WIND)
-				hitArea(player, fighter, root.Position, radius, essence.slamDamage or 25, AGUILA_STUN)
+				hitArea(
+					player,
+					fighter,
+					root.Position,
+					radius,
+					essence.slamDamage or 25,
+					AGUILA_STUN
+				)
 				sendState(player, fighter)
 			end
 		end)
 	elseif essence.id == "Hidra" then
 		fighter:setDamageBonus(essence.damageBonus or 0.3, now + essence.duration)
 		local character = player.Character
-		local hand = if character then character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm") else nil
+		local hand = if character
+			then character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm")
+			else nil
 		if hand and hand:IsA("BasePart") then
 			local light = Instance.new("PointLight")
 			light.Color = POISON
@@ -376,7 +413,9 @@ local function newFighter(player: Player): (Fighter, Info)
 		weaponId = weaponId,
 		essenceId = essenceId,
 		-- La recarga de la esencia se conserva al reiniciar el luchador.
-		essenceReadyAt = if previous and previous.essenceId == essenceId then previous.essenceReadyAt else 0,
+		essenceReadyAt = if previous and previous.essenceId == essenceId
+			then previous.essenceReadyAt
+			else 0,
 		lastDamagedAt = 0,
 		speedUntil = 0,
 	}
@@ -460,7 +499,14 @@ function CombatService.Start(_self: typeof(CombatService))
 			return
 		end
 		syncHumanoid(player, fighter)
-		NetService.fireAll("CombatEvent", "Attack", player.UserId, plan.kind, plan.step, info.weaponId)
+		NetService.fireAll(
+			"CombatEvent",
+			"Attack",
+			player.UserId,
+			plan.kind,
+			plan.step,
+			info.weaponId
+		)
 		task.delay(plan.attack.windup, resolveAttack, player, fighter, plan)
 	end)
 
@@ -559,7 +605,12 @@ end
 -- Un enemigo golpea a un jugador en `impactTime` (reloj del servidor, os.clock()).
 -- Se resuelve tras el margen de latencia para aceptar defensas hechas a tiempo.
 -- `onParried` se llama si el jugador hizo una parada perfecta.
-function CombatService.hitPlayer(player: Player, damage: number, impactTime: number, onParried: (() -> ())?)
+function CombatService.hitPlayer(
+	player: Player,
+	damage: number,
+	impactTime: number,
+	onParried: (() -> ())?
+)
 	local fighter = fighters[player]
 	if fighter == nil then
 		return
@@ -576,7 +627,14 @@ function CombatService.hitPlayer(player: Player, damage: number, impactTime: num
 			info.lastDamagedAt = os.clock()
 		end
 		syncHumanoid(player, fighter)
-		NetService.fire("CombatEvent", player, "Defense", player.UserId, outcome.result, outcome.damageTaken)
+		NetService.fire(
+			"CombatEvent",
+			player,
+			"Defense",
+			player.UserId,
+			outcome.result,
+			outcome.damageTaken
+		)
 		sendState(player, fighter)
 		if outcome.result == "Parried" then
 			CombatService.Parried:Fire(player)

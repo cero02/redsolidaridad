@@ -12,8 +12,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local DecreeCalendar = require(ReplicatedStorage.Shared.Meta.DecreeCalendar)
-local Locale = require(ReplicatedStorage.Shared.Locale.Locale)
 local Decrees = require(ReplicatedStorage.Shared.Config.Decrees)
+local Locale = require(ReplicatedStorage.Shared.Locale.Locale)
 local NetService = require(script.Parent.NetService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local ServerText = require(game:GetService("ServerScriptService").Server.Localization.ServerText)
@@ -69,7 +69,10 @@ local function refreshBoard()
 	local current, remaining = decree()
 	local games = gamesRemaining()
 	local gamesLine = if games > 0
-		then Locale.ref("board.gamesActive", { mult = GAMES_MULTIPLIER, minutes = math.ceil(games / 60) })
+		then Locale.ref(
+			"board.gamesActive",
+			{ mult = GAMES_MULTIPLIER, minutes = math.ceil(games / 60) }
+		)
 		else Locale.ref("board.offerings", { count = offerings, goal = OFFERING_GOAL })
 	ServerText.setWorld(label, "Text", "board.edict", {
 		decree = Locale.ref(`decree.{current.id}.name`),
@@ -168,7 +171,10 @@ function EventService.addOffering(byName: string)
 		offerings = 0
 		EventService.startGames(Locale.ref("news.reasonOfferings", { name = byName }))
 	else
-		EventService.news("news.offerings", { count = offerings, goal = OFFERING_GOAL, left = OFFERING_GOAL - offerings })
+		EventService.news(
+			"news.offerings",
+			{ count = offerings, goal = OFFERING_GOAL, left = OFFERING_GOAL - offerings }
+		)
 		broadcast(nil)
 	end
 end

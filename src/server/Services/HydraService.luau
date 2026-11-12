@@ -6,8 +6,8 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
@@ -17,9 +17,9 @@ local ArenaConfig = require(ServerStorage.ServerOnly.Config.Arena)
 local ArenaService = require(script.Parent.ArenaService)
 local CombatService = require(script.Parent.CombatService)
 local Config = require(ServerStorage.ServerOnly.Config.Hydra)
+local Homing = require(ServerScriptService.Server.Beasts.Homing)
 local HydraLogic = require(ServerScriptService.Server.Beasts.HydraLogic)
 local ServerText = require(ServerScriptService.Server.Localization.ServerText)
-local Homing = require(ServerScriptService.Server.Beasts.Homing)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local HEAD_TAG = "HydraHead"
@@ -97,7 +97,8 @@ local HydraService = {}
 -- La Hidra ha sido vencida.
 HydraService.Defeated = Signal.new() :: Signal.Signal<()>
 -- (clave de idioma, parámetros, segundos, jugador o nil para todos los participantes).
-HydraService.Announcement = Signal.new() :: Signal.Signal<string, { [string]: any }?, number, Player?>
+HydraService.Announcement =
+	Signal.new() :: Signal.Signal<string, { [string]: any }?, number, Player?>
 -- Progreso para la interfaz: (clave de idioma, parámetros).
 HydraService.Progress = Signal.new() :: Signal.Signal<string, { [string]: any }?>
 -- Hazaña que puede revelar un secreto del Códice: (jugador o nil para todo el grupo, id).
@@ -233,7 +234,8 @@ local function makeMarker(size: Vector3, cframe: CFrame, color: Color3, cylinder
 end
 
 local function makeCircleMarker(position: Vector3, radius: number, color: Color3): Part
-	local cframe = CFrame.new(position + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	local cframe = CFrame.new(position + Vector3.new(0, 0.15, 0))
+		* CFrame.Angles(0, 0, math.rad(90))
 	return makeMarker(Vector3.new(0.2, radius * 2, radius * 2), cframe, color, true)
 end
 
@@ -270,7 +272,8 @@ local function setHeadColor(record: HeadRecord, color: Color3)
 	if highlight then
 		-- La cabeza dorada siempre brilla; las demás solo durante avisos y golpes.
 		highlight.FillColor = color
-		highlight.Enabled = record.part.Transparency < 1 and (record.immortal or color ~= record.baseColor)
+		highlight.Enabled = record.part.Transparency < 1
+			and (record.immortal or color ~= record.baseColor)
 	end
 end
 
@@ -483,7 +486,12 @@ local function onStumpHit(record: HeadRecord, attacker: Player)
 		HydraService.PhaseCleared:Fire(hydra.phase)
 	end
 	if not hydra:isPhaseCleared() then
-		announce("ann.cauterized", { count = hydra.cauterizedCount, required = hydra.requiredCount }, 3, nil)
+		announce(
+			"ann.cauterized",
+			{ count = hydra.cauterizedCount, required = hydra.requiredCount },
+			3,
+			nil
+		)
 	elseif hydra:advancePhase() then
 		startNextHeadPhase()
 	else
@@ -632,7 +640,9 @@ local function attachCustomModel(
 		clone:ScaleTo(clone:GetScale() * targetSize / largest)
 	end
 	local rotation = source:GetAttribute("Rotacion")
-	local turn = if typeof(rotation) == "number" then CFrame.Angles(0, math.rad(rotation), 0) else CFrame.identity
+	local turn = if typeof(rotation) == "number"
+		then CFrame.Angles(0, math.rad(rotation), 0)
+		else CFrame.identity
 	clone:PivotTo(cframe * turn)
 
 	local parts: { BasePart } = {}
@@ -695,7 +705,13 @@ end
 
 -- Cabeza de dragón: hocico, fauces abiertas con colmillos, ojos, cejas, cuernos y cresta.
 -- La pieza principal (`anchor`) sigue siendo la zona de golpe; el resto es decoración.
-local function buildHeadDecor(parent: Instance, anchor: BasePart, base: CFrame, s: number, immortal: boolean): { Part }
+local function buildHeadDecor(
+	parent: Instance,
+	anchor: BasePart,
+	base: CFrame,
+	s: number,
+	immortal: boolean
+): { Part }
 	local scales = if immortal then GOLD_DARK else SKIN_DARK
 	local belly = if immortal then GOLD else BONE
 	local skin = if immortal then GOLD else SKIN
@@ -709,7 +725,10 @@ local function buildHeadDecor(parent: Instance, anchor: BasePart, base: CFrame, 
 		material: Enum.Material,
 		shape: Enum.PartType?
 	)
-		table.insert(pieces, decorPart(parent, anchor, base, name, size * s, offset, color, material, shape))
+		table.insert(
+			pieces,
+			decorPart(parent, anchor, base, name, size * s, offset, color, material, shape)
+		)
 	end
 	local function at(x: number, y: number, z: number): CFrame
 		return CFrame.new(x * s, y * s, z * s)
@@ -718,13 +737,31 @@ local function buildHeadDecor(parent: Instance, anchor: BasePart, base: CFrame, 
 	-- Hocico y mandíbula abierta (el frente de la cabeza es -Z).
 	add("Snout", Vector3.new(3.2, 1.8, 3.6), at(0, 0.5, -5.1), skin, slate)
 	add("Nostrils", Vector3.new(2.2, 0.5, 0.6), at(0, 1.2, -6.7), scales, slate)
-	add("Jaw", Vector3.new(2.9, 0.9, 5.4), at(0, -2.5, -3.9) * CFrame.Angles(math.rad(-24), 0, 0), belly, slate)
-	add("Mouth", Vector3.new(2.6, 0.3, 4.2), at(0, -1.5, -4.2) * CFrame.Angles(math.rad(-10), 0, 0), MOUTH, Enum.Material.SmoothPlastic)
+	add(
+		"Jaw",
+		Vector3.new(2.9, 0.9, 5.4),
+		at(0, -2.5, -3.9) * CFrame.Angles(math.rad(-24), 0, 0),
+		belly,
+		slate
+	)
+	add(
+		"Mouth",
+		Vector3.new(2.6, 0.3, 4.2),
+		at(0, -1.5, -4.2) * CFrame.Angles(math.rad(-10), 0, 0),
+		MOUTH,
+		Enum.Material.SmoothPlastic
+	)
 	add("Throat", Vector3.new(3.2, 0.5, 5.5), at(0, -2.3, 0.6), belly, slate)
 	for index = 0, 3 do
 		local z = -3.9 - index * 0.85
 		for _, side in { -1, 1 } do
-			add("Fang", Vector3.new(0.28, 0.85, 0.28), at(side * 1.25, -0.75, z), TOOTH, Enum.Material.SmoothPlastic)
+			add(
+				"Fang",
+				Vector3.new(0.28, 0.85, 0.28),
+				at(side * 1.25, -0.75, z),
+				TOOTH,
+				Enum.Material.SmoothPlastic
+			)
 			add(
 				"Fang",
 				Vector3.new(0.26, 0.7, 0.26),
@@ -778,7 +815,8 @@ local function buildHeadDecor(parent: Instance, anchor: BasePart, base: CFrame, 
 			add(
 				"Frill",
 				Vector3.new(0.3, 1.8 - index * 0.3, 0.9),
-				at(side * 2.4, 0.4 - index * 0.7, 2.2 + index * 0.4) * CFrame.Angles(math.rad(40), 0, side * math.rad(-55)),
+				at(side * 2.4, 0.4 - index * 0.7, 2.2 + index * 0.4)
+					* CFrame.Angles(math.rad(40), 0, side * math.rad(-55)),
 				scales,
 				slate
 			)
@@ -791,7 +829,9 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	local center = ArenaService.getCenter()
 	local pondRadius = ArenaService.getPondRadius()
 	-- Los cuellos se reparten en abanico hacia la entrada de los gladiadores (+Z).
-	local angle = if immortal then math.rad(90) else math.rad(90 + (slot - (Config.MAX_SLOTS + 1) / 2) * 38)
+	local angle = if immortal
+		then math.rad(90)
+		else math.rad(90 + (slot - (Config.MAX_SLOTS + 1) / 2) * 38)
 	local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	local scale = if immortal then 1.5 else 1
 	local baseColor = if immortal then GOLD else SKIN
@@ -799,7 +839,8 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	local restPosition = center
 		+ direction * REST_DISTANCE
 		+ Vector3.new(0, REST_HEIGHT + (if immortal then 4 else 0), 0)
-	local restCFrame = CFrame.lookAt(restPosition, restPosition + direction + Vector3.new(0, -0.35, 0))
+	local restCFrame =
+		CFrame.lookAt(restPosition, restPosition + direction + Vector3.new(0, -0.35, 0))
 
 	local headModel = Instance.new("Model")
 	headModel.Name = if immortal then "ImmortalHead" else `Head{slot}`
@@ -823,7 +864,8 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	local decorTransparency: { [BasePart]: number } = {}
 	local highlight: Highlight? = nil
 	if customHead then
-		decor = attachCustomModel(customHead, headModel, part, restCFrame, part.Size.Magnitude * 1.15)
+		decor =
+			attachCustomModel(customHead, headModel, part, restCFrame, part.Size.Magnitude * 1.15)
 		for _, piece in decor do
 			decorTransparency[piece] = piece.Transparency
 		end
@@ -868,9 +910,12 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	}
 
 	if immortal then
-		CombatService.registerTarget(headModel, function(attacker: Player, _damage: number, stun: number)
-			onImmortalHit(attacker, stun)
-		end)
+		CombatService.registerTarget(
+			headModel,
+			function(attacker: Player, _damage: number, stun: number)
+				onImmortalHit(attacker, stun)
+			end
+		)
 		return record
 	end
 
@@ -893,12 +938,18 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 	record.stumpBillboard = stumpBillboard
 	record.stumpLabel = stumpLabel
 
-	CombatService.registerTarget(headModel, function(_attacker: Player, damage: number, _stun: number)
-		onHeadHit(record, damage)
-	end)
-	CombatService.registerTarget(stumpModel, function(attacker: Player, _damage: number, _stun: number)
-		onStumpHit(record, attacker)
-	end)
+	CombatService.registerTarget(
+		headModel,
+		function(_attacker: Player, damage: number, _stun: number)
+			onHeadHit(record, damage)
+		end
+	)
+	CombatService.registerTarget(
+		stumpModel,
+		function(attacker: Player, _damage: number, _stun: number)
+			onStumpHit(record, attacker)
+		end
+	)
 	return record
 end
 
@@ -924,7 +975,8 @@ local function buildRockAndChains(parent: Instance)
 	chains = {}
 	for index = 1, settings.CHAIN_COUNT do
 		local angle = math.rad(30 + (index - 1) * (360 / settings.CHAIN_COUNT))
-		local base = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * settings.CHAIN_RADIUS
+		local base = center
+			+ Vector3.new(math.cos(angle), 0, math.sin(angle)) * settings.CHAIN_RADIUS
 
 		local chainModel = Instance.new("Model")
 		chainModel.Name = `Chain{index}`
@@ -962,9 +1014,12 @@ local function buildRockAndChains(parent: Instance)
 			broken = false,
 		}
 		table.insert(chains, chain)
-		CombatService.registerTarget(chainModel, function(attacker: Player, damage: number, _stun: number)
-			onChainHit(chain, attacker, damage)
-		end)
+		CombatService.registerTarget(
+			chainModel,
+			function(attacker: Player, damage: number, _stun: number)
+				onChainHit(chain, attacker, damage)
+			end
+		)
 	end
 end
 
@@ -1069,7 +1124,11 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 	record.groundedUntil = os.clock() + settings.RECOVERY
 	for _, player in getParticipants() do
 		local root = getRoot(player)
-		if root and distanceToSegment(flat(root.Position), startPosition, endPosition) <= settings.WIDTH / 2 + 1 then
+		if
+			root
+			and distanceToSegment(flat(root.Position), startPosition, endPosition)
+				<= settings.WIDTH / 2 + 1
+		then
 			CombatService.hitPlayer(player, settings.DAMAGE * damageScale, impactTime, function()
 				-- Parada perfecta: la cabeza queda aturdida más tiempo.
 				if not isRunning(id) or not headUsable(record) then
@@ -1153,7 +1212,11 @@ local function tailSweep(id: number, targetPosition: Vector3)
 		local root = getRoot(player)
 		local character = player.Character
 		local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
-		if root and humanoid and (flat(root.Position) - zoneCenter).Magnitude <= settings.RADIUS then
+		if
+			root
+			and humanoid
+			and (flat(root.Position) - zoneCenter).Magnitude <= settings.RADIUS
+		then
 			-- Quien está en el aire salta por encima de la cola.
 			if humanoid.FloorMaterial ~= Enum.Material.Air then
 				CombatService.hitPlayer(player, settings.DAMAGE * damageScale, impactTime)
@@ -1244,7 +1307,8 @@ local function dive(id: number, targetPosition: Vector3)
 
 	-- Columna de agua (solo visual).
 	marker.Size = Vector3.new(14, settings.RADIUS * 2, settings.RADIUS * 2)
-	marker.CFrame = CFrame.new(targetPosition + Vector3.new(0, 7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	marker.CFrame = CFrame.new(targetPosition + Vector3.new(0, 7, 0))
+		* CFrame.Angles(0, 0, math.rad(90))
 	marker.Transparency = 0.45
 	Debris:AddItem(marker, 0.35)
 end
@@ -1364,7 +1428,8 @@ local function launchFireball(id: number, origin: Vector3, target: Player)
 		local deltaTime = RunService.Heartbeat:Wait()
 		local targetRoot = getRoot(target)
 		if targetRoot and CombatService.isAlive(target) then
-			aim = Vector3.new(targetRoot.Position.X, floorY + settings.HEIGHT, targetRoot.Position.Z)
+			aim =
+				Vector3.new(targetRoot.Position.X, floorY + settings.HEIGHT, targetRoot.Position.Z)
 		end
 		direction = Homing.steer(direction, toVec(aim - position), maxTurn * deltaTime)
 		position += fromVec(direction) * settings.SPEED * deltaTime
@@ -1380,9 +1445,14 @@ local function launchFireball(id: number, origin: Vector3, target: Player)
 				ball:Destroy()
 				burst(position)
 				local hitPosition = position
-				CombatService.hitPlayer(player, settings.DAMAGE * damageScale, os.clock(), function()
-					task.spawn(reflectFireball, id, player, hitPosition)
-				end)
+				CombatService.hitPlayer(
+					player,
+					settings.DAMAGE * damageScale,
+					os.clock(),
+					function()
+						task.spawn(reflectFireball, id, player, hitPosition)
+					end
+				)
 				return
 			end
 		end
@@ -1440,7 +1510,9 @@ local function runAttack(id: number)
 	end
 	local center = ArenaService.getCenter()
 	local now = os.clock()
-	local biteSettings: BiteSettings = if mode == "Immortal" then Config.IMMORTAL :: any else Config.BITE :: any
+	local biteSettings: BiteSettings = if mode == "Immortal"
+		then Config.IMMORTAL :: any
+		else Config.BITE :: any
 
 	-- Situación de los gladiadores en pie.
 	local players = {}
@@ -1489,7 +1561,7 @@ local function runAttack(id: number)
 		phase = if mode == "Immortal" then 1 else hydra.phase,
 		freeHeads = #freeHeads,
 		cloudReady = now >= cloudReadyAt,
-				-- Bolas de fuego en todas las fases: la Hidra presiona desde el primer momento.
+		-- Bolas de fuego en todas las fases: la Hidra presiona desde el primer momento.
 		allowFireball = true,
 		fireballReady = now >= fireballReadyAt,
 	}, random:NextNumber())
@@ -1696,7 +1768,8 @@ function buildBody(parent: Instance, center: Vector3): Part
 		anchor.CanQuery = false
 		anchor.Transparency = 1
 		anchor.Size = Vector3.new(1, 1, 1)
-		anchor.CFrame = CFrame.lookAt(center + Vector3.new(0, 7, -4), center + Vector3.new(0, 7, 10))
+		anchor.CFrame =
+			CFrame.lookAt(center + Vector3.new(0, 7, -4), center + Vector3.new(0, 7, 10))
 		anchor.Parent = parent
 		local parts = attachCustomModel(customBody, parent, nil, anchor.CFrame, 30)
 		-- El cuerpo sí bloquea el paso para que no se atraviese.
@@ -1745,7 +1818,12 @@ function buildBody(parent: Instance, center: Vector3): Part
 	for _, leg in { { 6.2, 5 }, { -6.2, 5 }, { 6.2, -11 }, { -6.2, -11 } } do
 		local x, z = leg[1], leg[2]
 		local side = if x > 0 then 1 else -1
-		piece("Thigh", Vector3.new(4, 7, 4.5), at(x, 5, z) * CFrame.Angles(0, 0, side * math.rad(-14)), SKIN)
+		piece(
+			"Thigh",
+			Vector3.new(4, 7, 4.5),
+			at(x, 5, z) * CFrame.Angles(0, 0, side * math.rad(-14)),
+			SKIN
+		)
 		piece("Shin", Vector3.new(3, 5, 3), at(x + side * 1.4, 1.2, z + 0.8), SKIN_DARK)
 		for claw = -1, 1 do
 			piece(
@@ -1818,7 +1896,13 @@ function rise(hydraModel: Model)
 			local container = descendant.Parent
 			local fixed = descendant.Name == "Rock"
 				or descendant.Name == "Marker"
-				or (container ~= nil and (string.find(container.Name, "Chain") ~= nil or string.find(container.Name, "Stump") ~= nil))
+				or (
+					container ~= nil
+					and (
+						string.find(container.Name, "Chain") ~= nil
+						or string.find(container.Name, "Stump") ~= nil
+					)
+				)
 			if not fixed then
 				local final = descendant.CFrame
 				descendant.CFrame = final - Vector3.new(0, settings.DEPTH, 0)

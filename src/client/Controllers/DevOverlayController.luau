@@ -60,7 +60,8 @@ local function add(text: string)
 end
 
 local function build()
-	local gui = Theme.create("ScreenGui", { Name = "DevOverlay", ResetOnSpawn = false, DisplayOrder = 100 })
+	local gui =
+		Theme.create("ScreenGui", { Name = "DevOverlay", ResetOnSpawn = false, DisplayOrder = 100 })
 	local frame = Theme.create("Frame", {
 		Size = UDim2.fromOffset(560, 230),
 		AnchorPoint = Vector2.new(0.5, 0),
@@ -97,7 +98,11 @@ local function build()
 		Position = UDim2.fromOffset(10, 30),
 		BackgroundTransparency = 1,
 	}, frame)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2) }, container)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2) },
+		container
+	)
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 	panel = frame
 	list = container
@@ -115,7 +120,10 @@ function DevOverlayController.Start(_self: typeof(DevOverlayController))
 	end
 	LogService.MessageOut:Connect(function(message: string, messageType: Enum.MessageType)
 		local problem = messageType == Enum.MessageType.MessageError
-			or (messageType == Enum.MessageType.MessageWarning and string.find(message, "ERROR", 1, true) ~= nil)
+			or (
+				messageType == Enum.MessageType.MessageWarning
+				and string.find(message, "ERROR", 1, true) ~= nil
+			)
 		if problem then
 			add(`[client] {message}`)
 		end

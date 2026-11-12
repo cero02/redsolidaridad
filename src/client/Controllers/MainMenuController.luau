@@ -97,7 +97,9 @@ end
 local function setControls(enabled: boolean)
 	-- Módulo de control estándar de Roblox (PlayerScripts.PlayerModule).
 	pcall(function()
-		local playerModule = require(localPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: any) :: any
+		local playerModule = require(
+			localPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: any
+		) :: any
 		local controls = playerModule:GetControls()
 		if enabled then
 			controls:Enable()
@@ -120,14 +122,22 @@ local function startCamera()
 	local camera = Workspace.CurrentCamera
 	camera.CameraType = Enum.CameraType.Scriptable
 	local center = arenaCenter()
-	RunService:BindToRenderStep(CAMERA_STEP, Enum.RenderPriority.Camera.Value + 1, function(deltaTime: number)
-		orbitAngle += deltaTime * ORBIT_SPEED
-		-- Ligera subida y bajada para dar vida al plano.
-		local height = ORBIT_HEIGHT + math.sin(orbitAngle * 2.3) * 6
-		local position = center
-			+ Vector3.new(math.cos(orbitAngle) * ORBIT_RADIUS, height, math.sin(orbitAngle) * ORBIT_RADIUS)
-		camera.CFrame = CFrame.lookAt(position, center + Vector3.new(0, 8, 0))
-	end)
+	RunService:BindToRenderStep(
+		CAMERA_STEP,
+		Enum.RenderPriority.Camera.Value + 1,
+		function(deltaTime: number)
+			orbitAngle += deltaTime * ORBIT_SPEED
+			-- Ligera subida y bajada para dar vida al plano.
+			local height = ORBIT_HEIGHT + math.sin(orbitAngle * 2.3) * 6
+			local position = center
+				+ Vector3.new(
+					math.cos(orbitAngle) * ORBIT_RADIUS,
+					height,
+					math.sin(orbitAngle) * ORBIT_RADIUS
+				)
+			camera.CFrame = CFrame.lookAt(position, center + Vector3.new(0, 8, 0))
+		end
+	)
 end
 
 local function stopCamera()
@@ -164,11 +174,19 @@ local function animateIn()
 		Position = UDim2.fromScale(0, 0),
 		TextTransparency = 0,
 	}):Play()
-	TweenService:Create(subtitle, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { TextTransparency = 0 }):Play()
+	TweenService
+		:Create(subtitle, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { TextTransparency = 0 })
+		:Play()
 	local gradient = logo:FindFirstChildOfClass("UIGradient")
 	if gradient then
 		gradient.Offset = Vector2.new(-1, 0)
-		TweenService:Create(gradient, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { Offset = Vector2.new(1, 0) }):Play()
+		TweenService
+			:Create(
+				gradient,
+				TweenInfo.new(1.6, Enum.EasingStyle.Sine),
+				{ Offset = Vector2.new(1, 0) }
+			)
+			:Play()
 	end
 	local order = 0
 	for _, child in buttonsFrame:GetChildren() do
@@ -244,7 +262,9 @@ local function refreshCard()
 	local titleId = current.equippedTitle or ""
 	local title = Titles[titleId]
 	cardTitle.Text = if title
-		then `«{t(`title.{titleId}.name`)}»  {if #(current.unlockedTitles or {}) > 1 then "▸" else ""}`
+		then `«{t(`title.{titleId}.name`)}»  {if #(current.unlockedTitles or {}) > 1
+			then "▸"
+			else ""}`
 		else ""
 	if title then
 		cardTitle.TextColor3 = Color3.fromRGB(title.color[1], title.color[2], title.color[3])
@@ -361,7 +381,13 @@ local function refreshSettings()
 	end
 end
 
-local function settingRow(parent: Instance, order: number, key: string, name: string, onClick: () -> ())
+local function settingRow(
+	parent: Instance,
+	order: number,
+	key: string,
+	name: string,
+	onClick: () -> ()
+)
 	local row = Theme.create("Frame", {
 		LayoutOrder = order,
 		Size = UDim2.new(1, 0, 0, 40),
@@ -421,7 +447,8 @@ local function build()
 	}, gui)
 	Theme.create("UISizeConstraint", { MaxSize = Vector2.new(580, 760) }, left)
 
-	local logoHolder = Theme.create("Frame", { Size = UDim2.fromScale(1, 0.17), BackgroundTransparency = 1 }, left)
+	local logoHolder =
+		Theme.create("Frame", { Size = UDim2.fromScale(1, 0.17), BackgroundTransparency = 1 }, left)
 	logo = Theme.label({
 		Size = UDim2.fromScale(1, 1),
 		Font = F.Title,
@@ -466,16 +493,45 @@ local function build()
 		Position = UDim2.fromScale(0, 0.39),
 		BackgroundTransparency = 1,
 	}, left)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0.028, 0) }, buttonsFrame)
-	local challenge = Theme.button("", "primary", { LayoutOrder = 1, Size = UDim2.fromScale(1, 0.2) }, buttonsFrame)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0.028, 0) },
+		buttonsFrame
+	)
+	local challenge = Theme.button(
+		"",
+		"primary",
+		{ LayoutOrder = 1, Size = UDim2.fromScale(1, 0.2) },
+		buttonsFrame
+	)
 	static(challenge, "menu.challenge")
-	local train = Theme.button("", "secondary", { LayoutOrder = 2, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	local train = Theme.button(
+		"",
+		"secondary",
+		{ LayoutOrder = 2, Size = UDim2.fromScale(1, 0.14) },
+		buttonsFrame
+	)
 	static(train, "menu.train")
-	local armory = Theme.button("", "secondary", { LayoutOrder = 3, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	local armory = Theme.button(
+		"",
+		"secondary",
+		{ LayoutOrder = 3, Size = UDim2.fromScale(1, 0.14) },
+		buttonsFrame
+	)
 	static(armory, "menu.armory")
-	local codex = Theme.button("", "secondary", { LayoutOrder = 4, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	local codex = Theme.button(
+		"",
+		"secondary",
+		{ LayoutOrder = 4, Size = UDim2.fromScale(1, 0.14) },
+		buttonsFrame
+	)
 	static(codex, "menu.codex")
-	local settings = Theme.button("", "ghost", { LayoutOrder = 5, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	local settings = Theme.button(
+		"",
+		"ghost",
+		{ LayoutOrder = 5, Size = UDim2.fromScale(1, 0.14) },
+		buttonsFrame
+	)
 	static(settings, "menu.settings")
 
 	challenge.Activated:Connect(function()
@@ -504,8 +560,16 @@ local function build()
 		Position = UDim2.fromScale(0.96, 0.08),
 		BackgroundTransparency = 1,
 	}, gui)
-	Theme.create("UISizeConstraint", { MinSize = Vector2.new(320, 0), MaxSize = Vector2.new(440, 760) }, right)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) }, right)
+	Theme.create(
+		"UISizeConstraint",
+		{ MinSize = Vector2.new(320, 0), MaxSize = Vector2.new(440, 760) },
+		right
+	)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) },
+		right
+	)
 
 	local card = Theme.panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 200) }, right)
 	Theme.create("UIPadding", {
@@ -514,7 +578,11 @@ local function build()
 		PaddingLeft = UDim.new(0, 16),
 		PaddingRight = UDim.new(0, 16),
 	}, card)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) }, card)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) },
+		card
+	)
 	static(
 		Theme.label({
 			LayoutOrder = 1,
@@ -558,7 +626,11 @@ local function build()
 		BorderSizePixel = 0,
 	}, card)
 	Theme.corner(bar, 5)
-	cardXpFill = Theme.create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Gold, BorderSizePixel = 0 }, bar)
+	cardXpFill = Theme.create(
+		"Frame",
+		{ Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Gold, BorderSizePixel = 0 },
+		bar
+	)
 	Theme.corner(cardXpFill, 5)
 	cardXpText = Theme.label({
 		LayoutOrder = 6,
@@ -583,7 +655,11 @@ local function build()
 		PaddingLeft = UDim.new(0, 16),
 		PaddingRight = UDim.new(0, 16),
 	}, edict)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, edict)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) },
+		edict
+	)
 	static(
 		Theme.label({
 			LayoutOrder = 1,
@@ -641,7 +717,11 @@ local function build()
 		Position = UDim2.fromOffset(0, 22),
 		BackgroundTransparency = 1,
 	}, newsPanel)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, newsList)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) },
+		newsList
+	)
 
 	-- Ajustes.
 	settingsPanel = Theme.panel({
@@ -657,9 +737,16 @@ local function build()
 		PaddingLeft = UDim.new(0, 18),
 		PaddingRight = UDim.new(0, 18),
 	}, settingsPanel)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, settingsPanel)
+	Theme.create(
+		"UIListLayout",
+		{ SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) },
+		settingsPanel
+	)
 	static(
-		Theme.label({ LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 26), Font = F.Title, TextColor3 = C.Gold }, settingsPanel),
+		Theme.label(
+			{ LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 26), Font = F.Title, TextColor3 = C.Gold },
+			settingsPanel
+		),
 		"settings.title"
 	)
 	settingRow(settingsPanel, 1, "settings.language", "language", function()
@@ -674,7 +761,8 @@ local function build()
 	settingRow(settingsPanel, 4, "settings.light", "lightMode", function()
 		Settings.toggle("lightMode")
 	end)
-	local closeSettings = Theme.button("", "ghost", { LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 30) }, settingsPanel)
+	local closeSettings =
+		Theme.button("", "ghost", { LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 30) }, settingsPanel)
 	static(closeSettings, "ui.close")
 	closeSettings.Activated:Connect(function()
 		settingsPanel.Visible = false

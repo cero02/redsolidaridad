@@ -24,7 +24,10 @@ end
 
 function TestUtil.expectEqual(actual: any, expected: any, message: string?)
 	if actual ~= expected then
-		error(`{message or "valor"}: se esperaba {tostring(expected)}, llegó {tostring(actual)}`, 2)
+		error(
+			`{message or "valor"}: se esperaba {tostring(expected)}, llegó {tostring(actual)}`,
+			2
+		)
 	end
 end
 

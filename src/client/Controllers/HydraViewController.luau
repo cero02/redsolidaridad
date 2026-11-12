@@ -49,7 +49,10 @@ local function createNeck(golden: boolean): Neck
 		-- Más grueso junto al cuerpo, más fino junto a la cabeza.
 		local size = 5.2 - 1.8 * (index / SEGMENTS)
 		table.insert(neck.scales, ball(size, if golden then GOLD else SCALES))
-		table.insert(neck.throat, ball(size * 0.82, if golden then GOLD:Lerp(THROAT, 0.5) else THROAT))
+		table.insert(
+			neck.throat,
+			ball(size * 0.82, if golden then GOLD:Lerp(THROAT, 0.5) else THROAT)
+		)
 	end
 	return neck
 end

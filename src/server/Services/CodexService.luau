@@ -47,7 +47,10 @@ function CodexService.discover(player: Player, id: string): boolean
 	local count = countDiscovered(data.codex)
 
 	NetService.fire("Discovery", player, id, count, #Codex)
-	EventService.news("news.discovery", { name = player.DisplayName, count = count, total = #Codex })
+	EventService.news(
+		"news.discovery",
+		{ name = player.DisplayName, count = count, total = #Codex }
+	)
 	ProgressionService.grantXp(player, discovery.xp)
 
 	if count >= #Codex then

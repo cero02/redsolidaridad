@@ -106,8 +106,14 @@ export type FighterState = {
 
 local FighterState = {}
 
-function FighterState.new(weapon: Weapon, config: CombatConfig, now: number, options: Options?): FighterState
-	local maxStamina = config.MAX_STAMINA * (1 + (if options and options.staminaBonus then options.staminaBonus else 0))
+function FighterState.new(
+	weapon: Weapon,
+	config: CombatConfig,
+	now: number,
+	options: Options?
+): FighterState
+	local maxStamina = config.MAX_STAMINA
+		* (1 + (if options and options.staminaBonus then options.staminaBonus else 0))
 	local state = {
 		health = config.MAX_HEALTH,
 		stamina = maxStamina,
@@ -135,9 +141,13 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number, opt
 
 	-- Recupera aguante de forma perezosa hasta `t`.
 	local function regen(t: number)
-		local regenFrom = math.max(staminaUpdatedAt, lastStaminaSpendAt + config.STAMINA_REGEN_DELAY)
+		local regenFrom =
+			math.max(staminaUpdatedAt, lastStaminaSpendAt + config.STAMINA_REGEN_DELAY)
 		if t > regenFrom then
-			state.stamina = math.min(maxStamina, state.stamina + (t - regenFrom) * config.STAMINA_REGEN_PER_SECOND)
+			state.stamina = math.min(
+				maxStamina,
+				state.stamina + (t - regenFrom) * config.STAMINA_REGEN_PER_SECOND
+			)
 		end
 		staminaUpdatedAt = math.max(staminaUpdatedAt, t)
 	end
@@ -161,7 +171,11 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number, opt
 		return t < stunnedUntil
 	end
 
-	function state.tryAttack(self: FighterState, kind: AttackKind, t: number): (AttackPlan?, string?)
+	function state.tryAttack(
+		self: FighterState,
+		kind: AttackKind,
+		t: number
+	): (AttackPlan?, string?)
 		if self:isDead() then
 			return nil, "muerto"
 		end
@@ -234,7 +248,12 @@ function FighterState.new(weapon: Weapon, config: CombatConfig, now: number, opt
 
 	-- Resuelve un golpe enemigo que impacta en `impactTime`. Se llama en `now`, que debe
 	-- ser al menos impactTime + DEFENSE_LATENCY_GRACE para que el margen funcione.
-	function state.receiveHit(self: FighterState, damage: number, impactTime: number, t: number): HitOutcome
+	function state.receiveHit(
+		self: FighterState,
+		damage: number,
+		impactTime: number,
+		t: number
+	): HitOutcome
 		if self:isDead() then
 			return { result = "Hit", damageTaken = 0, closeDodge = false }
 		end

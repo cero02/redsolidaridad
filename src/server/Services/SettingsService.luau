@@ -18,7 +18,13 @@ end
 function SettingsService.Start(_self: typeof(SettingsService))
 	NetService.on(
 		"SaveSettings",
-		function(player: Player, language: string, music: number, cameraShake: boolean, lightMode: boolean)
+		function(
+			player: Player,
+			language: string,
+			music: number,
+			cameraShake: boolean,
+			lightMode: boolean
+		)
 			local data = PlayerDataService.get(player)
 			if data == nil then
 				return

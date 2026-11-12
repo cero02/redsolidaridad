@@ -33,7 +33,8 @@ end
 
 -- Suma experiencia y resuelve las subidas de nivel con sus desbloqueos.
 function Progression.addXp(config: Config, level: number, xp: number, amount: number): LevelResult
-	local result: LevelResult = { level = level, xp = xp + math.max(0, math.floor(amount)), levelsGained = 0, unlocks = {} }
+	local result: LevelResult =
+		{ level = level, xp = xp + math.max(0, math.floor(amount)), levelsGained = 0, unlocks = {} }
 	while result.level < config.MAX_LEVEL do
 		local needed = Progression.xpToNext(config, result.level)
 		if result.xp < needed then

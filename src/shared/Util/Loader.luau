@@ -37,7 +37,10 @@ function Loader.start(folder: Instance, label: string)
 	for _ in modules do
 		count += 1
 	end
-	log:info(`{count - #failed} módulos iniciados` .. (if #failed > 0 then ` ({#failed} con errores)` else ""))
+	log:info(
+		`{count - #failed} módulos iniciados`
+			.. (if #failed > 0 then ` ({#failed} con errores)` else "")
+	)
 end
 
 return Loader

@@ -24,7 +24,10 @@ function Locale.resolve(preference: string?, localeId: string?): string
 end
 
 -- Referencia a un texto traducible para enviarla por red: el cliente la traduce.
-function Locale.ref(key: string, params: Translate.Params?): { key: string, params: Translate.Params? }
+function Locale.ref(
+	key: string,
+	params: Translate.Params?
+): { key: string, params: Translate.Params? }
 	return { key = key, params = params }
 end
 

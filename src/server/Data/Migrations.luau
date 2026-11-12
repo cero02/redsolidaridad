@@ -15,7 +15,9 @@ Migrations.list = {
 		local titles = data.unlockedTitles or {}
 		titles.Tiro = true
 		local level = if typeof(data.level) == "number" then data.level else 1
-		for _, rank in { { 5, "Veteranus" }, { 10, "PrimusPalus" }, { 15, "Campeon" }, { 20, "Rudiarius" } } do
+		for _, rank in
+			{ { 5, "Veteranus" }, { 10, "PrimusPalus" }, { 15, "Campeon" }, { 20, "Rudiarius" } }
+		do
 			if level >= rank[1] then
 				titles[rank[2]] = true
 			end
