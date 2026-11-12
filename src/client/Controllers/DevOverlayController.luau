@@ -87,7 +87,7 @@ local function build()
 		Font = Enum.Font.GothamBold,
 		TextColor3 = Color3.new(1, 1, 1),
 		TextScaled = true,
-		Text = "✕",
+		Text = I18n.t("dev.close"),
 	}, frame)
 	close.Activated:Connect(function()
 		table.clear(lines)

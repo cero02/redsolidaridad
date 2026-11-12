@@ -320,4 +320,5 @@ return table.freeze({
 
 	-- Studio only -------------------------------------------------------------
 	["dev.errors"] = "⚠ ERRORS (Studio only) — take a screenshot and send it",
+	["dev.close"] = "X",
 })
