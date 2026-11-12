@@ -14,12 +14,14 @@ local CombatService = require(script.Parent.CombatService)
 local EventService = require(script.Parent.EventService)
 local HydraService = require(script.Parent.HydraService)
 local LeaderboardService = require(script.Parent.LeaderboardService)
+local Locale = require(ReplicatedStorage.Shared.Locale.Locale)
 local MatchRewards = require(ServerScriptService.Server.Meta.MatchRewards)
 local NetService = require(script.Parent.NetService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local Progression = require(ReplicatedStorage.Shared.Meta.Progression)
 local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local ProgressionService = require(script.Parent.ProgressionService)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 
 local INTRO_TIME = 6
 -- Atributo que bloquea la armería mientras se lucha (lo lee LoadoutService).
@@ -51,13 +53,16 @@ local participants: { Player } = {}
 local deathConnections: { [Player]: RBXScriptConnection } = {}
 local revivePrompts: { [Player]: ProximityPrompt } = {}
 local matchStats: { [Player]: MatchStats } = {}
-local progressText = ""
+local progressKey = ""
+local progressParams: { [string]: any }? = nil
 local fightStartedAt = 0
 local phasesCleared = 0
 local gamesDuringMatch = false
 local secondChanceUsed = false
 -- Cambia en cada partida: los hilos de una partida anterior se descartan.
 local encounterId = 0
+-- Jugadores que pidieron otra partida mientras terminaba la anterior.
+local rejoinQueue: { [Player]: boolean } = {}
 
 local progressionConfig = ProgressionConfig :: any
 
@@ -78,23 +83,24 @@ local function formatTime(seconds: number): string
 	return string.format("%d:%02d", whole // 60, whole % 60)
 end
 
-local function announce(text: string, seconds: number, player: Player?)
+-- El anunciador: envía una clave de idioma; cada cliente la muestra en su idioma.
+local function announce(key: string, params: { [string]: any }?, seconds: number, player: Player?)
 	if player ~= nil then
-		NetService.fire("Announce", player, text, seconds)
+		NetService.fire("Announce", player, key, params, seconds)
 		return
 	end
 	for _, participant in participants do
-		NetService.fire("Announce", participant, text, seconds)
+		NetService.fire("Announce", participant, key, params, seconds)
 	end
 end
 
 local function sendState(player: Player?)
 	if player ~= nil then
-		NetService.fire("EncounterState", player, state, progressText)
+		NetService.fire("EncounterState", player, state, progressKey, progressParams)
 		return
 	end
 	for _, participant in participants do
-		NetService.fire("EncounterState", participant, state, progressText)
+		NetService.fire("EncounterState", participant, state, progressKey, progressParams)
 	end
 end
 
@@ -154,13 +160,22 @@ local function reward(player: Player, won: boolean, elapsed: number)
 
 	local levelBefore = data.level
 	local levelResult = ProgressionService.grantXp(player, rewardResult.total)
-	local unlocks = if levelResult then table.clone(levelResult.unlocks) else {}
+	-- Lo desbloqueado viaja como referencias de idioma.
+	local unlocks: { any } = {}
+	if levelResult then
+		for _, unlock in levelResult.unlocks do
+			table.insert(unlocks, Progression.unlockRef(unlock))
+		end
+	end
 
 	-- La primera victoria arranca su esencia a la Hidra: una posibilidad nueva.
 	if won and not data.unlockedEssences.Hidra then
 		data.unlockedEssences.Hidra = true
-		table.insert(unlocks, { kind = "Essence", id = "Hidra", name = "Esencia de la Hidra (equípala en la armería)" })
-		EventService.news(`¡{player.DisplayName} ha arrancado la Esencia de la Hidra!`)
+		table.insert(
+			unlocks,
+			Locale.ref("unlock.equipHydra", { essence = Locale.ref("essence.Hidra.name") }) :: any
+		)
+		EventService.news("news.essence", { name = player.DisplayName })
 		ProgressionService.refresh(player)
 	end
 
@@ -197,8 +212,8 @@ local function reward(player: Player, won: boolean, elapsed: number)
 		xpToNext = Progression.xpToNext(progressionConfig, data.level),
 		unlocks = unlocks,
 		nextLevel = nextLevel,
-		nextUnlocks = nextUnlocks,
-		decree = decree.name,
+		nextUnlock = if nextUnlocks and nextUnlocks[1] then Progression.unlockRef(nextUnlocks[1]) else nil,
+		decreeId = decree.id,
 	})
 end
 
@@ -225,7 +240,7 @@ local function removeParticipant(player: Player)
 		deathConnections[player] = nil
 	end
 	if player.Parent == Players then
-		NetService.fire("EncounterState", player, "Idle", "")
+		NetService.fire("EncounterState", player, "Idle", "", nil)
 	end
 end
 
@@ -251,6 +266,8 @@ local function sendToLobby(player: Player)
 	end
 end
 
+local onGateTriggered: (player: Player) -> ()
+
 local function endEncounter(won: boolean)
 	if not isFighting() then
 		return
@@ -264,12 +281,12 @@ local function endEncounter(won: boolean)
 		local names = {}
 		for _, player in participants do
 			table.insert(names, player.DisplayName)
-			announce(`¡VICTORIA! La Hidra yace bajo la roca. Tiempo {formatTime(elapsed)}`, VICTORY_TIME, player)
+			announce("ann.victory", { time = formatTime(elapsed) }, VICTORY_TIME, player)
 			reward(player, true, elapsed)
 		end
 		-- Comunidad: todo el servidor se entera y suma una ofrenda.
-		EventService.news(`¡{table.concat(names, " y ")} han vencido a la Hidra en {formatTime(elapsed)}!`)
-		EventService.addOffering(names[1] or "un gladiador")
+		EventService.news("news.victory", { names = table.concat(names, ", "), time = formatTime(elapsed) })
+		EventService.addOffering(names[1] or "?")
 	end
 
 	task.delay(if won then VICTORY_TIME else DEFEAT_TIME, function()
@@ -280,6 +297,14 @@ local function endEncounter(won: boolean)
 			sendToLobby(player)
 		end
 		reset()
+		-- Quienes pulsaron "¡Otra vez!" empiezan (o se unen a) un combate nuevo.
+		local queued = rejoinQueue
+		rejoinQueue = {}
+		for player in queued do
+			if player.Parent == Players and CombatService.isAlive(player) then
+				onGateTriggered(player)
+			end
+		end
 	end)
 end
 
@@ -288,7 +313,7 @@ local function onParticipantLost(player: Player, died: boolean)
 		return
 	end
 	if died and isFighting() then
-		NetService.fire("Announce", player, "Has caído. La arena reclama otro nombre…", 5)
+		announce("ann.youFell", nil, 5, player)
 		reward(player, false, 0)
 	end
 	removeParticipant(player)
@@ -296,7 +321,7 @@ local function onParticipantLost(player: Player, died: boolean)
 	if #participants == 0 and isFighting() then
 		endEncounter(false)
 	elseif died then
-		announce(`{player.DisplayName} ha muerto en la arena.`, 3, nil)
+		announce("ann.died", { name = player.DisplayName }, 3, nil)
 	end
 end
 
@@ -313,7 +338,7 @@ local function addRevivePrompt(player: Player)
 		return
 	end
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Reanimar"
+	ServerText.setWorld(prompt, "ActionText", "world.revive")
 	prompt.ObjectText = player.DisplayName
 	prompt.HoldDuration = REVIVE_HOLD_TIME
 	prompt.MaxActivationDistance = 9
@@ -329,7 +354,7 @@ local function addRevivePrompt(player: Player)
 			return
 		end
 		revive(player, REVIVE_HEALTH)
-		announce(`¡{rescuer.DisplayName} ha levantado a {player.DisplayName}!`, 3, nil)
+		announce("ann.revived", { rescuer = rescuer.DisplayName, name = player.DisplayName }, 3, nil)
 		local stats = matchStats[rescuer]
 		if stats then
 			stats.revives += 1
@@ -365,7 +390,7 @@ local function onZeroHealth(player: Player): boolean
 	end
 
 	if othersStanding then
-		announce(`¡{player.DisplayName} ha caído! Reanimadlo antes de {DOWNED_TIME} s.`, 4, nil)
+		announce("ann.downed", { name = player.DisplayName, seconds = DOWNED_TIME }, 4, nil)
 		-- El aviso se crea un instante después, cuando el jugador ya consta como caído.
 		task.defer(addRevivePrompt, player)
 		task.delay(DOWNED_TIME, function()
@@ -379,7 +404,7 @@ local function onZeroHealth(player: Player): boolean
 
 	if #participants == 1 and not secondChanceUsed then
 		secondChanceUsed = true
-		NetService.fire("Announce", player, "El público ruge tu nombre… ¡LEVÁNTATE, GLADIADOR!", SECOND_CHANCE_DELAY)
+		announce("ann.secondChance", nil, SECOND_CHANCE_DELAY, player)
 		task.delay(SECOND_CHANCE_DELAY, function()
 			if encounterId == id and CombatService.isDowned(player) then
 				revive(player, SECOND_CHANCE_HEALTH)
@@ -434,24 +459,23 @@ local function startEncounter(player: Player)
 		return
 	end
 
-	announce(
-		`¡Ciudadanos de Roma! De los pantanos de Lerna llega… ¡LA HIDRA! · {decree.name}: {decree.description}`,
-		INTRO_TIME,
-		nil
-	)
-	EventService.news(`{player.DisplayName} desafía a la Hidra. ¡Aún puedes unirte por la puerta del coliseo!`)
+	announce("ann.intro", {
+		decree = Locale.ref(`decree.{decree.id}.name`),
+		desc = Locale.ref(`decree.{decree.id}.desc`),
+	}, INTRO_TIME, nil)
+	EventService.news("news.challenge", { name = player.DisplayName })
 	task.delay(INTRO_TIME, function()
 		if encounterId ~= id or state ~= "Intro" then
 			return
 		end
 		fightStartedAt = os.clock()
 		setState("Fighting")
-		announce("¡Que comience el combate!", 2.5, nil)
+		announce("ann.begin", nil, 2.5, nil)
 		HydraService.begin()
 	end)
 end
 
-local function onGateTriggered(player: Player)
+function onGateTriggered(player: Player)
 	if table.find(participants, player) ~= nil then
 		return
 	end
@@ -459,15 +483,24 @@ local function onGateTriggered(player: Player)
 		startEncounter(player)
 	elseif isFighting() then
 		if addParticipant(player) then
-			announce(`{player.DisplayName} entra en la arena. ¡La Hermandad crece!`, 3, nil)
+			announce("ann.joined", { name = player.DisplayName }, 3, nil)
 		end
 	else
-		NetService.fire("Announce", player, "El combate está terminando. Espera un momento.", 3)
+		announce("ann.ending", nil, 3, player)
 	end
 end
 
 function EncounterService.Start(_self: typeof(EncounterService))
 	ArenaService.GateTriggered:Connect(onGateTriggered)
+	-- "Desafiar a la Hidra" desde el menú y "¡Otra vez!" tras una partida.
+	NetService.on("QuickJoin", function(player: Player)
+		if state == "Ending" and table.find(participants, player) ~= nil then
+			-- Aún celebrando la victoria: entrará en cuanto vuelva al foro.
+			rejoinQueue[player] = true
+		elseif player:GetAttribute(IN_ARENA) ~= true and CombatService.isAlive(player) then
+			onGateTriggered(player)
+		end
+	end)
 	CombatService.setZeroHealthHandler(onZeroHealth)
 
 	CombatService.Parried:Connect(function(player: Player)
@@ -480,13 +513,14 @@ function EncounterService.Start(_self: typeof(EncounterService))
 	EventService.GamesStarted:Connect(function()
 		if isFighting() then
 			gamesDuringMatch = true
-			announce("¡Los Juegos Imperiales han comenzado! Esta victoria vale el doble.", 4, nil)
+			announce("ann.gamesStarted", nil, 4, nil)
 		end
 	end)
 
 	HydraService.Announcement:Connect(announce)
-	HydraService.Progress:Connect(function(text: string)
-		progressText = text
+	HydraService.Progress:Connect(function(key: string, params: { [string]: any }?)
+		progressKey = key
+		progressParams = params
 		sendState(nil)
 	end)
 	HydraService.PhaseCleared:Connect(function(phase: number)

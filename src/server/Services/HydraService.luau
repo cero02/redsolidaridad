@@ -18,6 +18,7 @@ local ArenaService = require(script.Parent.ArenaService)
 local CombatService = require(script.Parent.CombatService)
 local Config = require(ServerStorage.ServerOnly.Config.Hydra)
 local HydraLogic = require(ServerScriptService.Server.Beasts.HydraLogic)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 local Homing = require(ServerScriptService.Server.Beasts.Homing)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
@@ -95,10 +96,10 @@ local HydraService = {}
 
 -- La Hidra ha sido vencida.
 HydraService.Defeated = Signal.new() :: Signal.Signal<()>
--- (texto, segundos, jugador o nil para todos los participantes).
-HydraService.Announcement = Signal.new() :: Signal.Signal<string, number, Player?>
--- Texto de progreso para la interfaz.
-HydraService.Progress = Signal.new() :: Signal.Signal<string>
+-- (clave de idioma, parámetros, segundos, jugador o nil para todos los participantes).
+HydraService.Announcement = Signal.new() :: Signal.Signal<string, { [string]: any }?, number, Player?>
+-- Progreso para la interfaz: (clave de idioma, parámetros).
+HydraService.Progress = Signal.new() :: Signal.Signal<string, { [string]: any }?>
 -- Hazaña que puede revelar un secreto del Códice: (jugador o nil para todo el grupo, id).
 HydraService.Feat = Signal.new() :: Signal.Signal<Player?, string>
 -- Se ha superado una fase (1, 2 o 3).
@@ -164,17 +165,17 @@ local function getRoot(player: Player): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
-local function announce(text: string, seconds: number, player: Player?)
-	HydraService.Announcement:Fire(text, seconds, player)
+local function announce(key: string, params: { [string]: any }?, seconds: number, player: Player?)
+	HydraService.Announcement:Fire(key, params, seconds, player)
 end
 
 -- Pista personal, como mucho una cada pocos segundos para no saturar.
-local function hint(player: Player, text: string)
+local function hint(player: Player, key: string)
 	local now = os.clock()
 	local last = lastHintAt[player]
 	if last == nil or now - last >= HINT_COOLDOWN then
 		lastHintAt[player] = now
-		announce(text, 3, player)
+		announce(key, nil, 3, player)
 	end
 end
 
@@ -184,12 +185,14 @@ local function fireProgress()
 		return
 	end
 	if mode == "Immortal" then
-		HydraService.Progress:Fire(`La cabeza inmortal · Cadenas rotas {brokenChains}/{#chains}`)
+		HydraService.Progress:Fire("progress.immortal", { count = brokenChains, total = #chains })
 	else
 		local numeral = ROMAN[hydra.phase] or tostring(hydra.phase)
-		HydraService.Progress:Fire(
-			`Fase {numeral} · Cuellos cauterizados {hydra.cauterizedCount}/{hydra.requiredCount}`
-		)
+		HydraService.Progress:Fire("progress.heads", {
+			phase = numeral,
+			count = hydra.cauterizedCount,
+			required = hydra.requiredCount,
+		})
 	end
 end
 
@@ -292,13 +295,17 @@ local function setStumpState(record: HeadRecord, state: "Hidden" | "Bleeding" | 
 	stump.Material = if state == "Burnt" then Enum.Material.Slate else Enum.Material.Neon
 	billboard.Enabled = state ~= "Hidden"
 	if state == "Burnt" then
-		label.Text = "Cauterizado"
+		ServerText.setWorld(label, "Text", "stump.cauterized")
+	else
+		-- Un muñón nuevo vuelve a contar desde el principio.
+		label:SetAttribute("Seconds", nil)
 	end
 end
 
 local function refreshHeadLabel(record: HeadRecord)
 	local hydra = logic
 	if hydra and not record.immortal then
+		record.label:SetAttribute("L_Text", nil)
 		record.label.Text = `{math.ceil(hydra.heads[record.slot].health)}`
 	end
 end
@@ -410,7 +417,7 @@ local function finish()
 end
 
 local function startImmortalPhase()
-	announce("Las cabezas se retiran… algo dorado asciende desde el fondo.", Config.PHASE_TRANSITION_TIME, nil)
+	announce("ann.immortalRising", nil, Config.PHASE_TRANSITION_TIME, nil)
 	restartAfter(Config.PHASE_TRANSITION_TIME, function()
 		mode = "Immortal"
 		immortalStunnedUntil = 0
@@ -420,19 +427,19 @@ local function startImmortalPhase()
 		lastPattern = nil
 		repeatCount = 0
 		ArenaService.relightAllBraziers()
-		announce("¡LA CABEZA INMORTAL! Ningún acero puede cortarla…", 5, nil)
+		announce("ann.immortal", nil, 5, nil)
 	end)
 end
 
 local function startNextHeadPhase()
-	announce("La Hidra se hunde… ¡y el agua empieza a hervir!", Config.PHASE_TRANSITION_TIME, nil)
+	announce("ann.sinks", nil, Config.PHASE_TRANSITION_TIME, nil)
 	restartAfter(Config.PHASE_TRANSITION_TIME, function()
 		lastPattern = nil
 		repeatCount = 0
 		cloudReadyAt = os.clock() + 6
 		fireballReadyAt = os.clock() + 8
 		nextExtinguishAt = os.clock() + Config.EXTINGUISH_INTERVAL
-		announce("¡LA FURIA DE LA HIDRA! Cinco cabezas emergen del pantano.", 5, nil)
+		announce("ann.fury", nil, 5, nil)
 	end)
 end
 
@@ -447,7 +454,7 @@ local function onStumpHit(record: HeadRecord, attacker: Player)
 		return
 	end
 	if not isWeaponLit(attacker) then
-		hint(attacker, "El cuello vuelve a crecer… ¡Enciende tu arma en un brasero!")
+		hint(attacker, "hint.lightWeapon")
 		return
 	end
 	if not hydra:cauterize(record.slot) then
@@ -468,7 +475,7 @@ local function onStumpHit(record: HeadRecord, attacker: Player)
 		HydraService.PhaseCleared:Fire(hydra.phase)
 	end
 	if not hydra:isPhaseCleared() then
-		announce(`¡Cuello cauterizado! ({hydra.cauterizedCount}/{hydra.requiredCount})`, 3, nil)
+		announce("ann.cauterized", { count = hydra.cauterizedCount, required = hydra.requiredCount }, 3, nil)
 	elseif hydra:advancePhase() then
 		startNextHeadPhase()
 	else
@@ -492,9 +499,9 @@ local function onHeadHit(record: HeadRecord, damage: number)
 		setStumpState(record, "Bleeding")
 		if not severedOnce then
 			severedOnce = true
-			announce("¡Una cabeza ha caído! Pero el cuello aún palpita…", 4, nil)
+			announce("ann.firstSevered", nil, 4, nil)
 		else
-			announce("¡Otra cabeza cortada!", 2.5, nil)
+			announce("ann.severed", nil, 2.5, nil)
 		end
 		return
 	end
@@ -519,12 +526,12 @@ local function stunImmortal(by: Player?)
 	immortalStunnedUntil = os.clock() + Config.IMMORTAL.STUN
 	golden.groundedUntil = immortalStunnedUntil
 	setHeadColor(golden, GOLD_STUNNED)
-	golden.label.Text = "ATURDIDA"
+	ServerText.setWorld(golden.label, "Text", "head.stunned")
 	if not immortalStunnedOnce then
 		immortalStunnedOnce = true
-		announce("¡Está aturdida! ¡LAS CADENAS! ¡Soltad la roca sobre ella!", 5, nil)
+		announce("ann.stunned", nil, 5, nil)
 	else
-		announce("¡Aturdida! ¡A las cadenas!", 2.5, nil)
+		announce("ann.stunnedAgain", nil, 2.5, nil)
 	end
 end
 
@@ -535,12 +542,12 @@ local function onImmortalHit(attacker: Player, stun: number)
 	end
 	local now = os.clock()
 	if now < immortalStunnedUntil then
-		hint(attacker, "No puede morir… ¡pero la roca sí puede enterrarla! ¡Las cadenas!")
+		hint(attacker, "hint.cantDie")
 	elseif now < golden.groundedUntil and stun >= 0.5 then
 		-- Un golpe pesado mientras está en el suelo la aturde.
 		stunImmortal(attacker)
 	else
-		hint(attacker, "Tu acero rebota en sus escamas doradas. Un golpe PESADO cuando caiga al suelo…")
+		hint(attacker, "hint.steelBounces")
 	end
 end
 
@@ -549,11 +556,11 @@ local function onChainHit(chain: Chain, attacker: Player, damage: number)
 		return
 	end
 	if mode ~= "Immortal" then
-		hint(attacker, "Una cadena enorme sujeta la roca sobre el estanque. Ahora no cede.")
+		hint(attacker, "hint.chainHolds")
 		return
 	end
 	if os.clock() >= immortalStunnedUntil then
-		hint(attacker, "La cabeza dorada vigila las cadenas. ¡Atúrdela primero!")
+		hint(attacker, "hint.stunFirst")
 		return
 	end
 
@@ -577,7 +584,7 @@ local function onChainHit(chain: Chain, attacker: Player, damage: number)
 	if brokenChains >= #chains then
 		finish()
 	else
-		announce(`¡Cadena rota! ({brokenChains}/{#chains}) La roca se tambalea…`, 3, nil)
+		announce("ann.chainBroken", { count = brokenChains, total = #chains }, 3, nil)
 	end
 end
 
@@ -823,7 +830,7 @@ local function buildHead(parent: Instance, slot: number, immortal: boolean): Hea
 
 	local billboard, label = makeBillboard(part, 4 * scale)
 	if immortal then
-		label.Text = "INMORTAL"
+		ServerText.setWorld(label, "Text", "head.immortal")
 		label.TextColor3 = GOLD
 	end
 	CollectionService:AddTag(part, HEAD_TAG)
@@ -973,11 +980,11 @@ local function handleRegrow(event: HydraLogic.RegrowEvent)
 	end
 
 	if hydra.regrowCount >= Config.HINT_AFTER_REGROWS then
-		announce("¡Vuelven a crecer! Solo el FUEGO de los braseros sella sus cuellos.", 5, nil)
+		announce("ann.regrowHint", nil, 5, nil)
 	elseif event.newSlot ~= nil then
-		announce("¡Córtale una cabeza y crecerán dos!", 4, nil)
+		announce("ann.regrowTwo", nil, 4, nil)
 	else
-		announce("¡La cabeza ha vuelto a crecer!", 3, nil)
+		announce("ann.regrowOne", nil, 3, nil)
 	end
 end
 
@@ -990,7 +997,12 @@ local function updateStumpTimers(now: number)
 		local head = hydra.heads[slot]
 		local label = record.stumpLabel
 		if head.status == "Severed" and label then
-			label.Text = `¡Fuego! {math.max(0, math.ceil(head.regrowAt - now))}`
+			-- Solo se actualiza cuando cambia el número (evita reenviar el texto cada décima).
+			local seconds = math.max(0, math.ceil(head.regrowAt - now))
+			if label:GetAttribute("Seconds") ~= seconds then
+				label:SetAttribute("Seconds", seconds)
+				ServerText.setWorld(label, "Text", "stump.fire", { seconds = seconds })
+			end
 		end
 	end
 end
@@ -1072,7 +1084,7 @@ local function bite(id: number, record: HeadRecord, targetPosition: Vector3, set
 		if isRunning(id) and headUsable(record) then
 			setHeadColor(record, record.baseColor)
 			if record.immortal then
-				record.label.Text = "INMORTAL"
+				ServerText.setWorld(record.label, "Text", "head.immortal")
 			end
 			tween(record.part, record.restCFrame, settings.RETURN_TIME, Enum.EasingStyle.Quad)
 			task.wait(settings.RETURN_TIME)
@@ -1160,7 +1172,7 @@ local function toxicCloud(id: number, positions: { Vector3 })
 	end
 	local axis = if balance >= 0 then Vector3.xAxis else -Vector3.xAxis
 
-	announce("¡La Hidra inhala! ¡Huid de la niebla!", settings.TELEGRAPH + 1, nil)
+	announce("ann.inhale", nil, settings.TELEGRAPH + 1, nil)
 	for _, record in heads do
 		if headUsable(record) and not record.busy then
 			setHeadColor(record, MARKER_POISON)
@@ -1384,9 +1396,9 @@ local function fireballs(id: number, target: Player, sources: { HeadRecord })
 	end
 	fireballVolleys += 1
 	if fireballVolleys == 1 then
-		announce("¡Bolas de fuego! Te persiguen… pero giran despacio.", 3, nil)
+		announce("ann.fireballs", nil, 3, nil)
 	elseif fireballVolleys == settings.HINT_AFTER then
-		announce("Dicen que un escudo en el instante justo devuelve el fuego a su dueño…", 4, nil)
+		announce("ann.fireballHint", nil, 4, nil)
 	end
 
 	for _, record in sources do
@@ -1531,7 +1543,7 @@ local function runAttack(id: number)
 		if record.immortal then
 			immortalBites += 1
 			if immortalBites == 3 and not immortalStunnedOnce then
-				announce("El anunciador: «¡Una parada perfecta podría aturdirla!»", 4, nil)
+				announce("ann.parryHint", nil, 4, nil)
 			end
 		end
 		bite(id, record, targetPosition, biteSettings)
@@ -1575,7 +1587,7 @@ local function extinguishBrazier()
 	end
 	if #lit > 1 then
 		ArenaService.setBrazierLit(lit[random:NextInteger(1, #lit)], false)
-		announce("¡La Hidra ha apagado un brasero! Reavivad el fuego.", 3.5, nil)
+		announce("ann.brazierOut", nil, 3.5, nil)
 	end
 end
 
@@ -1650,7 +1662,7 @@ local function lightWeapon(player: Player)
 		fire.Parent = hand
 		Debris:AddItem(fire, Config.WEAPON_LIT_TIME)
 	end
-	announce(`¡Arma en llamas! ({Config.WEAPON_LIT_TIME} s)`, 2, player)
+	announce("ann.weaponLit", { seconds = Config.WEAPON_LIT_TIME }, 2, player)
 end
 
 function HydraService.Start(_self: typeof(HydraService))

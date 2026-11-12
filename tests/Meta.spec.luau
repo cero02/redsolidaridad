@@ -73,11 +73,11 @@ T.test("la experiencia negativa se ignora", function()
 end)
 
 T.test("los rangos cambian en los niveles 5, 10, 15 y 20", function()
-	T.expectEqual(Progression.rankFor(config, 1).name, "Tiro")
-	T.expectEqual(Progression.rankFor(config, 4).name, "Tiro")
-	T.expectEqual(Progression.rankFor(config, 5).name, "Veteranus")
-	T.expectEqual(Progression.rankFor(config, 14).name, "Primus Palus")
-	T.expectEqual(Progression.rankFor(config, 20).name, "Rudiarius")
+	T.expectEqual(Progression.rankFor(config, 1).id, "Tiro")
+	T.expectEqual(Progression.rankFor(config, 4).id, "Tiro")
+	T.expectEqual(Progression.rankFor(config, 5).id, "Veteranus")
+	T.expectEqual(Progression.rankFor(config, 14).id, "PrimusPalus")
+	T.expectEqual(Progression.rankFor(config, 20).id, "Rudiarius")
 end)
 
 T.test("siempre hay un próximo desbloqueo hasta el nivel máximo", function()
@@ -188,8 +188,15 @@ T.test("los descubrimientos tienen identificadores únicos y experiencia", funct
 		assert(ids[discovery.id] == nil, `id repetido: {discovery.id}`)
 		ids[discovery.id] = true
 		assert(discovery.xp > 0, discovery.id)
-		assert(#discovery.riddle > 0 and #discovery.lesson > 0, discovery.id)
 	end
+end)
+
+T.test("unlockRef da la clave de texto de cada tipo de desbloqueo", function()
+	T.expectEqual(Progression.unlockRef({ kind = "Weapon", id = "Hasta" }).key, "weapon.Hasta.name")
+	T.expectEqual(Progression.unlockRef({ kind = "Cosmetic", id = "RedCape" }).key, "cosmetic.RedCape")
+	local title = Progression.unlockRef({ kind = "Title", id = "Campeon" })
+	T.expectEqual(title.key, "unlock.title")
+	T.expectEqual((title.params :: any).title.key, "title.Campeon.name")
 end)
 
 T.finish()

@@ -15,6 +15,7 @@ local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatService = require(script.Parent.CombatService)
 local Config = require(ServerStorage.ServerOnly.Config.TrainingDummy)
 local Homing = require(ServerScriptService.Server.Beasts.Homing)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 local NetService = require(script.Parent.NetService)
 
 local COLOR_IDLE = Color3.fromRGB(150, 110, 70)
@@ -37,9 +38,9 @@ local function refresh()
 	local now = os.clock()
 	if health <= 0 then
 		body.Color = COLOR_DEAD
-		label.Text = "Derrotado"
+		ServerText.setWorld(label, "Text", "dummy.defeated")
 	else
-		label.Text = `Muñeco {math.ceil(health)}/{Config.HEALTH}`
+		ServerText.setWorld(label, "Text", "dummy.health", { hp = math.ceil(health), max = Config.HEALTH })
 		if now < hitFlashUntil then
 			body.Color = COLOR_HIT
 		elseif now < stunnedUntil then

@@ -101,12 +101,12 @@ local Remotes: { [string]: Definition } = {
 		kind = "Event",
 		direction = "ToClient",
 	},
-	-- Noticias del servidor para todos: (texto).
+	-- Noticias del servidor para todos: (clave, parámetros).
 	WorldNews = {
 		kind = "Event",
 		direction = "ToClient",
 	},
-	-- Estado de los eventos: { decree, decreeRemaining, gamesRemaining, offerings, goal }.
+	-- Estado de los eventos: { decreeId, decreeRemaining, gamesRemaining, offerings, goal }.
 	WorldEvents = {
 		kind = "Event",
 		direction = "ToClient",
@@ -119,12 +119,33 @@ local Remotes: { [string]: Definition } = {
 		rate = { capacity = 4, perSecond = 1 },
 	},
 
-	-- Mensaje del anunciador del coliseo: (texto, segundos).
+	-- Ajustes del jugador: (idioma, volumen de música 0..1, temblor de cámara, modo ligero).
+	SaveSettings = {
+		kind = "Event",
+		direction = "ToServer",
+		args = {
+			Check.oneOf({ "auto", "en", "es" }),
+			Check.number({ min = 0, max = 1 }),
+			Check.boolean(),
+			Check.boolean(),
+		},
+		rate = { capacity = 5, perSecond = 2 },
+	},
+	-- Unirse a la arena desde el menú o tras una partida ("¡Otra vez!").
+	QuickJoin = {
+		kind = "Event",
+		direction = "ToServer",
+		args = {},
+		rate = { capacity = 2, perSecond = 0.5 },
+	},
+
+	-- Los textos viajan como claves de idioma (Shared/Locale) y los traduce el cliente.
+	-- Mensaje del anunciador del coliseo: (clave, parámetros, segundos).
 	Announce = {
 		kind = "Event",
 		direction = "ToClient",
 	},
-	-- Estado del combate contra la bestia: (estado, texto de progreso).
+	-- Estado del combate contra la bestia: (estado, clave de progreso, parámetros).
 	EncounterState = {
 		kind = "Event",
 		direction = "ToClient",

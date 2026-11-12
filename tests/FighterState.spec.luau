@@ -294,7 +294,7 @@ end)
 T.test("cada arma tiene definitiva y nivel de desbloqueo coherente", function()
 	local Progression = require("../src/shared/Config/Progression")
 	for id, weapon in Weapons do
-		assert(weapon.ultimate and #weapon.ultimate.name > 0, `{id}: sin definitiva`)
+		assert(weapon.ultimate and #weapon.ultimate.id > 0, `{id}: sin definitiva`)
 		if weapon.unlockLevel > 1 then
 			local found = false
 			for _, unlock in Progression.UNLOCKS[weapon.unlockLevel] or {} do

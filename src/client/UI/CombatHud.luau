@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
+local I18n = require(script.Parent.I18n)
 local Theme = require(script.Parent.Theme)
 
 local C = Theme.Colors
@@ -16,9 +17,9 @@ local BAR_HEIGHT = 14
 local MESSAGE_TIME = 0.9
 
 local BARS = {
-	{ name = "Health", label = "VIDA", color = Color3.fromRGB(196, 46, 40) },
-	{ name = "Stamina", label = "AGUANTE", color = Color3.fromRGB(84, 170, 92) },
-	{ name = "Ultimate", label = "GLORIA", color = Color3.fromRGB(235, 185, 60) },
+	{ name = "Health", label = "hud.health", color = Color3.fromRGB(196, 46, 40) },
+	{ name = "Stamina", label = "hud.stamina", color = Color3.fromRGB(84, 170, 92) },
+	{ name = "Ultimate", label = "hud.glory", color = Color3.fromRGB(235, 185, 60) },
 }
 
 local CombatHud = {}
@@ -43,14 +44,17 @@ function CombatHud.create()
 
 	for index, bar in BARS do
 		local y = 10 + (index - 1) * (BAR_HEIGHT + 8)
-		Theme.label({
+		local caption = Theme.label({
 			Size = UDim2.fromOffset(70, BAR_HEIGHT),
 			Position = UDim2.fromOffset(10, y),
 			Font = F.Bold,
 			TextColor3 = C.Muted,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = bar.label,
+			Text = I18n.t(bar.label),
 		}, panel)
+		I18n.Changed:Connect(function()
+			caption.Text = I18n.t(bar.label)
+		end)
 		local back = Theme.create("Frame", {
 			Size = UDim2.fromOffset(BAR_WIDTH, BAR_HEIGHT),
 			Position = UDim2.fromOffset(84, y),

@@ -15,10 +15,12 @@ local Migrations = require(ServerScriptService.Server.Data.Migrations)
 local NetService = require(script.Parent.NetService)
 local ProfileStore = require(ServerStorage.ServerPackages.ProfileStore)
 local Schema = require(ServerScriptService.Server.Data.Schema)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
-local KICK_LOAD_FAILED = "No se pudieron cargar tus datos. Vuelve a entrar en unos minutos."
-local KICK_SESSION_ENDED = "Tu partida se abrió en otro servidor. Vuelve a entrar si no fuiste tú."
+-- Mensajes de expulsión (claves de idioma).
+local KICK_LOAD_FAILED = "kick.loadFailed"
+local KICK_SESSION_ENDED = "kick.sessionEnded"
 
 local log = Log.new("PlayerDataService")
 
@@ -50,7 +52,7 @@ local function loadProfile(player: Player)
 	if profile == nil then
 		-- Rechazado o cancelado (el jugador salió mientras cargaba).
 		if player.Parent == Players then
-			player:Kick(KICK_LOAD_FAILED)
+			player:Kick(ServerText.t(player, KICK_LOAD_FAILED))
 		end
 		return
 	end
@@ -62,7 +64,7 @@ local function loadProfile(player: Player)
 	if not ok then
 		log:error(`Migración fallida para {player.UserId}: {err}`)
 		profile:EndSession()
-		player:Kick(KICK_LOAD_FAILED)
+		player:Kick(ServerText.t(player, KICK_LOAD_FAILED))
 		return
 	end
 
@@ -72,7 +74,7 @@ local function loadProfile(player: Player)
 		if profiles[player] == profile then
 			profiles[player] = nil
 			if player.Parent == Players then
-				player:Kick(KICK_SESSION_ENDED)
+				player:Kick(ServerText.t(player, KICK_SESSION_ENDED))
 			end
 		end
 	end)

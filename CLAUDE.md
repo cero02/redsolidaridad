@@ -75,6 +75,11 @@ produce un momento memorable. Mejor un sistema excelente que diez mediocres.
 - Toda decisión técnica relevante se documenta como ADR (`docs/adr/NNNN-titulo.md`).
 - Si una decisión cambia, se escribe un ADR nuevo que sustituye al anterior.
 
+### Idiomas (ADR 0008)
+- Ningún texto visible escrito en el código: todo va en `src/shared/Locale/Strings/` (inglés,
+  idioma base, y español) y se usa por clave. El servidor envía claves y parámetros.
+- `tests/Locale.spec.luau` debe pasar: mismas claves y marcadores en todos los idiomas.
+
 ### Contenido
 - Recursos (modelos, sonidos, texturas, nombres) propios o con licencia válida. Las imágenes
   de referencia solo marcan el tono; no se copian diseños de otros juegos o películas.

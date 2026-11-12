@@ -1,72 +1,102 @@
 --!strict
--- Muestra la voz del anunciador del coliseo y el progreso del combate contra la bestia.
+-- Voz del anunciador del coliseo y progreso del combate contra la bestia, en el idioma del
+-- jugador. Los mensajes llegan como claves (Shared/Locale) y se traducen aquí.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
+local I18n = require(script.Parent.Parent.UI.I18n)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
+local Theme = require(script.Parent.Parent.UI.Theme)
 
-local GOLD = Color3.fromRGB(255, 215, 110)
+local C = Theme.Colors
+local F = Theme.Fonts
+local t = I18n.t
 
 local EncounterController = {}
 
 local announcer: TextLabel
 local title: TextLabel
 local announceToken = 0
+-- Último estado recibido, para redibujar al cambiar de idioma.
+local current = { state = "Idle", progressKey = "", progressParams = nil :: any }
+local currentAnnounce: { key: string, params: any }? = nil
 
-local function makeLabel(parent: Instance, name: string, size: UDim2, position: UDim2, font: Enum.Font): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.Size = size
-	label.AnchorPoint = Vector2.new(0.5, 0)
-	label.Position = position
-	label.BackgroundTransparency = 1
-	label.TextScaled = true
-	label.TextWrapped = true
-	label.Font = font
-	label.TextColor3 = GOLD
-	label.TextStrokeTransparency = 0
-	label.Text = ""
-	label.Parent = parent
-	return label
+local function renderTitle()
+	local state = current.state
+	if state == "Idle" then
+		title.Text = ""
+	elseif state == "Intro" or current.progressKey == "" then
+		title.Text = t("encounter.title")
+	elseif state == "Ending" then
+		title.Text = t("encounter.ending")
+	else
+		title.Text = t("encounter.withProgress", {
+			progress = { key = current.progressKey, params = current.progressParams },
+		})
+	end
 end
 
-local function onAnnounce(text: string, seconds: number)
+local function onAnnounce(key: string, params: any, seconds: number)
 	announceToken += 1
 	local token = announceToken
-	announcer.Text = text
+	currentAnnounce = { key = key, params = params }
+	announcer.Text = t(key, params)
+	announcer.TextTransparency = 1
+	TweenService:Create(announcer, TweenInfo.new(0.25), { TextTransparency = 0 }):Play()
 	task.delay(seconds, function()
 		if announceToken == token then
-			announcer.Text = ""
+			currentAnnounce = nil
+			TweenService:Create(announcer, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
 		end
 	end)
 end
 
-local function onEncounterState(state: string, progress: string)
-	if state == "Idle" then
-		title.Text = ""
-	elseif state == "Intro" then
-		title.Text = "LA HIDRA DE LERNA"
-	elseif state == "Ending" then
-		title.Text = "LA HIDRA DE LERNA · Fin del combate"
-	else
-		title.Text = `LA HIDRA DE LERNA · {progress}`
-	end
+local function onEncounterState(state: string, progressKey: string?, progressParams: any)
+	current.state = state
+	current.progressKey = progressKey or ""
+	current.progressParams = progressParams
+	renderTitle()
 end
 
 function EncounterController.Start(_self: typeof(EncounterController))
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "EncounterHud"
-	gui.ResetOnSpawn = false
+	local gui = Theme.create("ScreenGui", { Name = "EncounterHud", ResetOnSpawn = false })
 
-	title = makeLabel(gui, "Title", UDim2.new(0.6, 0, 0, 30), UDim2.new(0.5, 0, 0, 44), Enum.Font.GothamBold)
-	title.TextColor3 = Color3.new(1, 1, 1)
-	announcer = makeLabel(gui, "Announcer", UDim2.new(0.8, 0, 0, 64), UDim2.fromScale(0.5, 0.14), Enum.Font.Garamond)
+	title = Theme.label({
+		Name = "Title",
+		Size = UDim2.new(0.6, 0, 0, 28),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 44),
+		Font = F.Title,
+		TextColor3 = C.Marble,
+		TextStrokeTransparency = 0.3,
+		Text = "",
+	}, gui)
+	announcer = Theme.label({
+		Name = "Announcer",
+		Size = UDim2.new(0.8, 0, 0, 60),
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.14),
+		TextWrapped = true,
+		Font = F.Heading,
+		TextColor3 = C.Gold,
+		TextStrokeTransparency = 0.1,
+		Text = "",
+	}, gui)
+	Theme.create("UISizeConstraint", { MaxSize = Vector2.new(900, 60) }, announcer)
 
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 	NetClient.on("Announce", onAnnounce)
 	NetClient.on("EncounterState", onEncounterState)
+	I18n.Changed:Connect(function()
+		renderTitle()
+		local active = currentAnnounce
+		if active then
+			announcer.Text = t(active.key, active.params)
+		end
+	end)
 end
 
 return EncounterController

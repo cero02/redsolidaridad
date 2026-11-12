@@ -18,7 +18,8 @@ export type Summary = {
 	eventMultiplier: number,
 }
 
-export type Line = { label: string, amount: number }
+-- Cada línea es una clave de idioma con sus parámetros (la traduce el cliente).
+export type Line = { key: string, params: { [string]: any }?, amount: number }
 export type Reward = { total: number, lines: { Line } }
 
 type XpConfig = {
@@ -40,25 +41,26 @@ local MatchRewards = {}
 function MatchRewards.compute(xp: XpConfig, summary: Summary): Reward
 	local lines: { Line } = {}
 	local base = 0
-	local function add(label: string, amount: number)
+	local function add(key: string, params: { [string]: any }?, amount: number)
 		if amount > 0 then
-			table.insert(lines, { label = label, amount = amount })
+			table.insert(lines, { key = key, params = params, amount = amount })
 			base += amount
 		end
 	end
 
-	add("Combate completado", xp.COMPLETE)
+	add("reward.complete", nil, xp.COMPLETE)
 	if summary.won then
-		add("Victoria", xp.VICTORY)
+		add("reward.victory", nil, xp.VICTORY)
 	end
-	add(`Fases superadas ({summary.phasesCleared})`, summary.phasesCleared * xp.PER_PHASE)
+	add("reward.phases", { count = summary.phasesCleared }, summary.phasesCleared * xp.PER_PHASE)
 	add(
-		`Paradas perfectas ({summary.perfectParries})`,
+		"reward.parries",
+		{ count = summary.perfectParries },
 		math.min(xp.PARRY_CAP, summary.perfectParries * xp.PER_PARRY)
 	)
-	add(`Compañeros reanimados ({summary.revives})`, summary.revives * xp.PER_REVIVE)
+	add("reward.revives", { count = summary.revives }, summary.revives * xp.PER_REVIVE)
 	if summary.won and summary.firstWinOfDay then
-		add("Primera victoria del día", xp.FIRST_WIN_OF_DAY)
+		add("reward.firstWin", nil, xp.FIRST_WIN_OF_DAY)
 	end
 
 	-- Multiplicadores sobre la base.
@@ -66,16 +68,16 @@ function MatchRewards.compute(xp: XpConfig, summary: Summary): Reward
 	local multiplier = summary.decreeMultiplier * summary.eventMultiplier * (1 + brotherhood)
 	local total = math.floor(base * multiplier + 0.5)
 	if brotherhood > 0 then
-		table.insert(lines, { label = `Hermandad (+{math.floor(brotherhood * 100 + 0.5)} %)`, amount = 0 })
+		table.insert(lines, { key = "reward.brotherhood", params = { percent = math.floor(brotherhood * 100 + 0.5) }, amount = 0 })
 	end
 	if summary.decreeMultiplier ~= 1 then
-		table.insert(lines, { label = `Decreto del César (×{summary.decreeMultiplier})`, amount = 0 })
+		table.insert(lines, { key = "reward.decree", params = { mult = summary.decreeMultiplier }, amount = 0 })
 	end
 	if summary.eventMultiplier ~= 1 then
-		table.insert(lines, { label = `Juegos Imperiales (×{summary.eventMultiplier})`, amount = 0 })
+		table.insert(lines, { key = "reward.games", params = { mult = summary.eventMultiplier }, amount = 0 })
 	end
 	if summary.mentor then
-		table.insert(lines, { label = "Mentor de un novato", amount = xp.MENTOR })
+		table.insert(lines, { key = "reward.mentor", amount = xp.MENTOR })
 		total += xp.MENTOR
 	end
 

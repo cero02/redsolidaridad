@@ -11,6 +11,8 @@ local Workspace = game:GetService("Workspace")
 
 local DataConfig = require(ServerScriptService.Server.Data.DataConfig)
 local EventService = require(script.Parent.EventService)
+local Locale = require(game:GetService("ReplicatedStorage").Shared.Locale.Locale)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 
 local STORE_NAME = "HydraBestTimes_v1"
 local TOP_COUNT = 10
@@ -55,15 +57,14 @@ local function render(top: { Entry })
 	if label == nil then
 		return
 	end
-	local lines = { "<b>SALÓN DE LEYENDAS</b>", "<i>Los más rápidos contra la Hidra</i>", "" }
-	if #top == 0 then
-		table.insert(lines, "Aún nadie ha vencido a la Hidra.\n¿Serás el primero?")
-	end
+	-- Nombres y tiempos no se traducen; la cabecera y el texto vacío sí.
+	local lines = {}
 	for index, entry in top do
 		local medal = if index == 1 then "👑 " elseif index <= 3 then "★ " else ""
 		table.insert(lines, `{medal}{index}. {entry.name} — {formatTime(entry.time)}`)
 	end
-	label.Text = table.concat(lines, "\n")
+	local list = if #lines > 0 then table.concat(lines, "\n") else Locale.ref("board.legendsEmpty")
+	ServerText.setWorld(label, "Text", "board.legends", { list = list })
 end
 
 local function localTop(): { Entry }
@@ -167,7 +168,7 @@ function LeaderboardService.submit(player: Player, seconds: number)
 	local top = localTop()
 	for index, entry in top do
 		if entry.userId == userId and entry.time == seconds and index <= 3 then
-			EventService.news(`¡{player.DisplayName} entra en el podio del Salón de Leyendas (puesto {index})!`)
+			EventService.news("news.podium", { name = player.DisplayName, place = index })
 			break
 		end
 	end

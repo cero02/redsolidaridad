@@ -8,6 +8,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ServerStorage.ServerOnly.Config.Arena)
+local ServerText = require(game:GetService("ServerScriptService").Server.Localization.ServerText)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local SAND = Color3.fromRGB(214, 190, 140)
@@ -40,7 +41,7 @@ local braziers: { Brazier } = {}
 local function applyBrazier(brazier: Brazier)
 	brazier.fire.Enabled = brazier.lit
 	brazier.light.Enabled = brazier.lit
-	brazier.prompt.ActionText = if brazier.lit then "Encender arma" else "Reavivar el fuego"
+	ServerText.setWorld(brazier.prompt, "ActionText", if brazier.lit then "world.brazier.light" else "world.brazier.rekindle")
 	brazier.prompt.HoldDuration = if brazier.lit then 0.4 else 2
 end
 
@@ -112,10 +113,11 @@ local function makeRing(
 	end
 end
 
+-- `action` y `object` son claves de idioma (Shared/Locale).
 local function addPrompt(parent: Instance, action: string, object: string, hold: number): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = action
-	prompt.ObjectText = object
+	ServerText.setWorld(prompt, "ActionText", action)
+	ServerText.setWorld(prompt, "ObjectText", object)
 	prompt.HoldDuration = hold
 	prompt.MaxActivationDistance = 10
 	prompt.RequiresLineOfSight = false
@@ -138,8 +140,8 @@ local function addSign(parent: Instance, text: string, offsetY: number)
 	label.Font = Enum.Font.Antique
 	label.TextColor3 = Color3.fromRGB(255, 220, 130)
 	label.TextStrokeTransparency = 0
-	label.Text = text
 	label.Parent = billboard
+	ServerText.setWorld(label, "Text", text)
 end
 
 local function buildBraziers(parent: Instance)
@@ -175,7 +177,7 @@ local function buildBraziers(parent: Instance)
 		light.Brightness = 2
 		light.Parent = bowl
 
-		local prompt = addPrompt(bowl, "Encender arma", "Brasero", 0.4)
+		local prompt = addPrompt(bowl, "world.brazier.light", "world.brazier.object", 0.4)
 		local brazier: Brazier = { fire = fire, light = light, prompt = prompt, lit = true }
 		table.insert(braziers, brazier)
 		prompt.Triggered:Connect(function(player: Player)
@@ -275,7 +277,7 @@ local function buildLobbyGate()
 		IMPERIAL_RED,
 		Enum.Material.Sandstone
 	)
-	addSign(lintel, "GRAN COLISEO", 3)
+	addSign(lintel, "world.sign", 3)
 
 	local door = makePart(
 		model,
@@ -288,7 +290,7 @@ local function buildLobbyGate()
 	door.Transparency = 0.6
 	door.CanCollide = false
 
-	local prompt = addPrompt(door, "Entrar a la arena", "La Hidra de Lerna", 0.5)
+	local prompt = addPrompt(door, "world.gate.action", "world.gate.object", 0.5)
 	prompt.Triggered:Connect(function(player: Player)
 		ArenaService.GateTriggered:Fire(player)
 	end)

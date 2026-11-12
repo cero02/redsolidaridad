@@ -8,11 +8,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local EventService = require(script.Parent.EventService)
+local Locale = require(ReplicatedStorage.Shared.Locale.Locale)
 local NetService = require(script.Parent.NetService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
 local Progression = require(ReplicatedStorage.Shared.Meta.Progression)
 local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
 local Schema = require(ServerScriptService.Server.Data.Schema)
+local ServerText = require(ServerScriptService.Server.Localization.ServerText)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 local Titles = require(ReplicatedStorage.Shared.Config.Titles)
 
@@ -96,10 +98,19 @@ local function updateNameplate(player: Player, data: Schema.ProfileData)
 	local gui = billboard :: Instance
 	local titleLabel = gui:FindFirstChild("Title") :: TextLabel
 	local rankLabel = gui:FindFirstChild("Rank") :: TextLabel
-	local title = Titles[data.equippedTitle]
-	titleLabel.Text = if title then `«{title.name}»` else ""
+	if Titles[data.equippedTitle] then
+		ServerText.setWorld(titleLabel, "Text", "nameplate.title", {
+			title = Locale.ref(`title.{data.equippedTitle}.name`),
+		})
+	else
+		titleLabel:SetAttribute("L_Text", nil)
+		titleLabel.Text = ""
+	end
 	titleLabel.TextColor3 = titleColor(data.equippedTitle)
-	rankLabel.Text = `Nv {data.level} · {Progression.rankFor(config, data.level).name}`
+	ServerText.setWorld(rankLabel, "Text", "nameplate.rank", {
+		level = data.level,
+		rank = Progression.rankRef(config, data.level),
+	})
 end
 
 -- Envía al jugador su perfil público y actualiza lo que ven los demás.
@@ -116,14 +127,13 @@ end
 -- Concede un título. Devuelve true si era nuevo.
 function ProgressionService.grantTitle(player: Player, titleId: string): boolean
 	local data = PlayerDataService.get(player)
-	local title = Titles[titleId]
-	if data == nil or title == nil or data.unlockedTitles[titleId] then
+	if data == nil or Titles[titleId] == nil or data.unlockedTitles[titleId] then
 		return false
 	end
 	data.unlockedTitles[titleId] = true
 	-- Un título recién ganado se luce: se equipa solo.
 	data.equippedTitle = titleId
-	EventService.news(`{player.DisplayName} ha obtenido el título «{title.name}».`)
+	EventService.news("news.title", { name = player.DisplayName, title = Locale.ref(`title.{titleId}.name`) })
 	ProgressionService.refresh(player)
 	return true
 end
@@ -155,9 +165,9 @@ function ProgressionService.grantXp(player: Player, amount: number): Progression
 
 	local rank = Progression.rankFor(config, data.level)
 	if rank.id ~= previousRank.id then
-		EventService.news(`¡{player.DisplayName} asciende a {rank.name}!`)
+		EventService.news("news.rankUp", { name = player.DisplayName, rank = Locale.ref(`rank.{rank.id}`) })
 	elseif result.levelsGained > 0 then
-		EventService.news(`{player.DisplayName} alcanza el nivel {data.level}.`)
+		EventService.news("news.levelUp", { name = player.DisplayName, level = data.level })
 	end
 
 	ProgressionService.refresh(player)

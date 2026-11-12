@@ -34,6 +34,12 @@ export type ProfileData = {
 	loadout: Loadout,
 	settings: {
 		damageNumbers: boolean,
+		-- "auto" (idioma de la cuenta), "en" o "es".
+		language: string,
+		-- Volumen de la música (0..1).
+		music: number,
+		cameraShake: boolean,
+		lightMode: boolean,
 	},
 	-- v2: títulos, códice y decretos (docs/design/PILARES.md).
 	unlockedTitles: { [string]: boolean },
@@ -57,6 +63,7 @@ export type PublicProfile = {
 	hydraKills: number,
 	unlockedWeapons: { string },
 	unlockedEssences: { string },
+	settings: { language: string, music: number, cameraShake: boolean, lightMode: boolean },
 }
 
 local Schema = {}
@@ -80,7 +87,13 @@ Schema.template = table.freeze({
 	unlockedEssences = table.freeze({ Loba = true }),
 	unlockedCosmetics = table.freeze({}),
 	loadout = table.freeze({ weapon = "Gladius", essence = "Loba" }),
-	settings = table.freeze({ damageNumbers = true }),
+	settings = table.freeze({
+		damageNumbers = true,
+		language = "auto",
+		music = 0.7,
+		cameraShake = true,
+		lightMode = false,
+	}),
 	unlockedTitles = table.freeze({ Tiro = true }),
 	equippedTitle = "Tiro",
 	codex = table.freeze({}),
@@ -111,6 +124,12 @@ function Schema.toPublic(data: ProfileData): PublicProfile
 		hydraKills = data.stats.hydraKills,
 		unlockedWeapons = keys(data.unlockedWeapons),
 		unlockedEssences = keys(data.unlockedEssences),
+		settings = {
+			language = data.settings.language,
+			music = data.settings.music,
+			cameraShake = data.settings.cameraShake,
+			lightMode = data.settings.lightMode,
+		},
 	}
 end
 

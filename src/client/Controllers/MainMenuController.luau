@@ -1,7 +1,12 @@
 --!strict
--- Pantalla de inicio: lo primero que ve el jugador. Cámara que sobrevuela el Gran
--- Coliseo, título, ficha del gladiador (progreso y presumir), edicto de la semana y Juegos
--- Imperiales (FOMO sano) y botones: Luchar, Armería, Códice y Ajustes.
+-- Pantalla de inicio: lo primero que ve el jugador.
+--   · Cámara que sobrevuela el Gran Coliseo y música del tema principal.
+--   · Logotipo dorado animado y lema.
+--   · Botones: Desafiar a la Hidra (directo a la arena), Entrenar en el Foro, Armería,
+--     Códice y Ajustes (idioma, música, temblor de cámara, modo ligero).
+--   · Ficha del gladiador (progreso y presumir, con selector de título), Edicto del César
+--     y Juegos Imperiales (FOMO sano) y noticias del servidor (comunidad).
+-- Todo en el idioma del jugador y redibujado al cambiarlo.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,9 +14,12 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local Bus = require(script.Parent.Parent.UI.Bus)
 local Codex = require(ReplicatedStorage.Shared.Config.Codex)
 local DecreeCalendar = require(ReplicatedStorage.Shared.Meta.DecreeCalendar)
+local I18n = require(script.Parent.Parent.UI.I18n)
 local MetaController = require(script.Parent.MetaController)
+local MusicController = require(script.Parent.MusicController)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Progression = require(ReplicatedStorage.Shared.Meta.Progression)
 local ProgressionConfig = require(ReplicatedStorage.Shared.Config.Progression)
@@ -22,23 +30,30 @@ local Version = require(ReplicatedStorage.Shared.Version)
 
 local C = Theme.Colors
 local F = Theme.Fonts
+local t = I18n.t
+local config = ProgressionConfig :: any
+
 local CAMERA_STEP = "ColosseumMenuCamera"
-local ORBIT_RADIUS = 115
-local ORBIT_HEIGHT = 48
-local ORBIT_SPEED = 0.06
+local ORBIT_RADIUS = 118
+local ORBIT_HEIGHT = 46
+local ORBIT_SPEED = 0.05
+local NEWS_LINES = 4
 -- Interfaces del juego que se ocultan mientras el menú está abierto.
-local GAME_GUIS = { MetaHud = true, CombatHud = true, EncounterHud = true, MenuButton = true, Onboarding = true }
+local GAME_GUIS = { MetaHud = true, CombatHud = true, EncounterHud = true, Onboarding = true }
 
 local localPlayer = Players.LocalPlayer
-local config = ProgressionConfig :: any
 
 local MainMenuController = {}
 
 local gui: ScreenGui
 local fade: Frame
+local logo: TextLabel
+local subtitle: TextLabel
+local buttonsFrame: Frame
 local settingsPanel: Frame
+local settingsRows: { [string]: TextButton } = {}
 local cardName: TextLabel
-local cardTitle: TextLabel
+local cardTitle: TextButton
 local cardRank: TextLabel
 local cardXpFill: Frame
 local cardXpText: TextLabel
@@ -46,15 +61,25 @@ local cardStats: TextLabel
 local decreeName: TextLabel
 local decreeText: TextLabel
 local gamesText: TextLabel
-local menuButtonGui: ScreenGui
+local newsList: Frame
+local staticLabels: { { object: any, key: string } } = {}
 local open = false
+local busy = false
 local orbitAngle = 0
+local decreeId: string? = nil
 local decreeEndsAt = 0
 local gamesEndsAt = 0
+local profile: { [string]: any }? = nil
+local news: { { key: string, params: any } } = {}
 
 local function formatTime(seconds: number): string
 	local whole = math.floor(seconds)
 	return string.format("%d:%02d", whole // 60, whole % 60)
+end
+
+local function static(object: any, key: string)
+	object.Text = t(key)
+	table.insert(staticLabels, { object = object, key = key })
 end
 
 local function setGameGuis(enabled: boolean)
@@ -67,7 +92,6 @@ local function setGameGuis(enabled: boolean)
 			child.Enabled = enabled
 		end
 	end
-	menuButtonGui.Enabled = enabled
 end
 
 local function setControls(enabled: boolean)
@@ -98,8 +122,11 @@ local function startCamera()
 	local center = arenaCenter()
 	RunService:BindToRenderStep(CAMERA_STEP, Enum.RenderPriority.Camera.Value + 1, function(deltaTime: number)
 		orbitAngle += deltaTime * ORBIT_SPEED
-		local position = center + Vector3.new(math.cos(orbitAngle) * ORBIT_RADIUS, ORBIT_HEIGHT, math.sin(orbitAngle) * ORBIT_RADIUS)
-		camera.CFrame = CFrame.lookAt(position, center + Vector3.new(0, 6, 0))
+		-- Ligera subida y bajada para dar vida al plano.
+		local height = ORBIT_HEIGHT + math.sin(orbitAngle * 2.3) * 6
+		local position = center
+			+ Vector3.new(math.cos(orbitAngle) * ORBIT_RADIUS, height, math.sin(orbitAngle) * ORBIT_RADIUS)
+		camera.CFrame = CFrame.lookAt(position, center + Vector3.new(0, 8, 0))
 	end)
 end
 
@@ -118,7 +145,6 @@ end
 local function fadeThen(action: () -> ())
 	local info = TweenInfo.new(0.35, Enum.EasingStyle.Quad)
 	fade.Visible = true
-	fade.BackgroundTransparency = 1
 	local fadeIn = TweenService:Create(fade, info, { BackgroundTransparency = 0 })
 	fadeIn:Play()
 	fadeIn.Completed:Wait()
@@ -129,83 +155,185 @@ local function fadeThen(action: () -> ())
 	fade.Visible = false
 end
 
+-- Entrada animada: el logotipo baja con un brillo y los botones aparecen uno a uno.
+local function animateIn()
+	logo.Position = UDim2.fromScale(0, -0.05)
+	logo.TextTransparency = 1
+	subtitle.TextTransparency = 1
+	TweenService:Create(logo, TweenInfo.new(0.9, Enum.EasingStyle.Quint), {
+		Position = UDim2.fromScale(0, 0),
+		TextTransparency = 0,
+	}):Play()
+	TweenService:Create(subtitle, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { TextTransparency = 0 }):Play()
+	local gradient = logo:FindFirstChildOfClass("UIGradient")
+	if gradient then
+		gradient.Offset = Vector2.new(-1, 0)
+		TweenService:Create(gradient, TweenInfo.new(1.6, Enum.EasingStyle.Sine), { Offset = Vector2.new(1, 0) }):Play()
+	end
+	local order = 0
+	for _, child in buttonsFrame:GetChildren() do
+		if child:IsA("TextButton") then
+			order += 1
+			local finalTransparency = child.BackgroundTransparency
+			child.BackgroundTransparency = 1
+			child.TextTransparency = 1
+			task.delay(0.25 + order * 0.08, function()
+				TweenService:Create(child, TweenInfo.new(0.3), {
+					BackgroundTransparency = finalTransparency,
+					TextTransparency = 0,
+				}):Play()
+			end)
+		end
+	end
+end
+
 local function closeMenu(after: (() -> ())?)
-	if not open then
+	if not open or busy then
 		return
 	end
 	open = false
+	busy = true
 	task.spawn(fadeThen, function()
 		gui.Enabled = false
 		settingsPanel.Visible = false
 		stopCamera()
 		setControls(true)
 		setGameGuis(true)
+		MusicController.setMenuOpen(false)
+		Bus.MenuVisibility:Fire(false)
 		if after then
 			after()
 		end
 	end)
+	task.delay(0.8, function()
+		busy = false
+	end)
 end
 
 local function openMenu()
-	if open then
+	if open or busy then
 		return
 	end
 	if localPlayer:GetAttribute("InArena") == true then
 		return
 	end
 	open = true
+	busy = true
 	task.spawn(fadeThen, function()
 		setGameGuis(false)
 		setControls(false)
 		startCamera()
 		gui.Enabled = true
+		MusicController.setMenuOpen(true)
+		Bus.MenuVisibility:Fire(true)
+		animateIn()
+	end)
+	task.delay(0.8, function()
+		busy = false
 	end)
 end
 
--- Ficha del gladiador -------------------------------------------------------------
+-- Ficha del gladiador -------------------------------------------------------------------
 
-local function onProfile(profile: { [string]: any })
+local function refreshCard()
 	cardName.Text = string.upper(localPlayer.DisplayName)
-	local title = Titles[profile.equippedTitle or ""]
-	cardTitle.Text = if title then `«{title.name}»` else ""
+	local current = profile
+	if current == nil then
+		return
+	end
+	local titleId = current.equippedTitle or ""
+	local title = Titles[titleId]
+	cardTitle.Text = if title
+		then `«{t(`title.{titleId}.name`)}»  {if #(current.unlockedTitles or {}) > 1 then "▸" else ""}`
+		else ""
 	if title then
 		cardTitle.TextColor3 = Color3.fromRGB(title.color[1], title.color[2], title.color[3])
 	end
-	local level = profile.level or 1
-	local rank = Progression.rankFor(config, level)
-	cardRank.Text = `Nivel {level} · {rank.name}`
+	local level = current.level or 1
+	cardRank.Text = t("menu.level", { level = level, rank = Progression.rankRef(config, level) })
 	local needed = Progression.xpToNext(config, level)
-	local xp = profile.xp or 0
+	local xp = current.xp or 0
 	cardXpFill.Size = UDim2.fromScale(if needed > 0 then math.clamp(xp / needed, 0, 1) else 1, 1)
 	local nextLevel, unlocks = Progression.nextUnlock(config, level)
-	cardXpText.Text = if needed > 0
-		then `{xp}/{needed} XP` .. (if nextLevel and unlocks then ` · Nv {nextLevel}: {unlocks[1].name}` else "")
-		else "Nivel máximo: eres una leyenda"
-	local best = profile.bestHydraTime or 0
-	local codexCount = if profile.codex then #profile.codex else 0
-	cardStats.Text = `Hidras vencidas: {profile.hydraKills or 0}   ·   Mejor tiempo: `
-		.. (if best > 0 then formatTime(best) else "—")
-		.. `\nCódice: {codexCount}/{#Codex} secretos`
+	cardXpText.Text = if needed <= 0
+		then t("hud.maxLevel")
+		elseif nextLevel and unlocks then t("hud.xpNext", {
+			xp = xp,
+			needed = needed,
+			level = nextLevel,
+			unlock = Progression.unlockRef(unlocks[1]),
+		})
+		else t("hud.xp", { xp = xp, needed = needed })
+	local best = current.bestHydraTime or 0
+	cardStats.Text = t("menu.stats", {
+		kills = current.hydraKills or 0,
+		best = if best > 0 then formatTime(best) else "—",
+	}) .. "\n" .. t("menu.codexStats", { count = #(current.codex or {}), total = #Codex })
 end
 
-local function onWorldEvents(state: { [string]: any })
-	decreeEndsAt = os.clock() + (state.decreeRemaining or 0)
-	gamesEndsAt = os.clock() + (state.gamesRemaining or 0)
-	decreeName.Text = state.decreeName or ""
-	decreeText.Text = state.decreeDescription or ""
+local function cycleTitle()
+	local current = profile
+	if current == nil or current.unlockedTitles == nil or #current.unlockedTitles < 2 then
+		return
+	end
+	local index = table.find(current.unlockedTitles, current.equippedTitle) or 0
+	NetClient.fire("EquipTitle", current.unlockedTitles[(index % #current.unlockedTitles) + 1])
+end
+
+local function refreshDecree()
+	if decreeId then
+		decreeName.Text = t(`decree.{decreeId}.name`)
+		decreeText.Text = t(`decree.{decreeId}.desc`)
+	end
+end
+
+local function refreshNews()
+	for _, child in newsList:GetChildren() do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	if #news == 0 then
+		Theme.label({
+			Size = UDim2.new(1, 0, 0, 18),
+			TextScaled = false,
+			TextSize = 14,
+			Font = F.Heading,
+			TextColor3 = C.Muted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = t("menu.noNews"),
+		}, newsList)
+		return
+	end
+	for index = #news, math.max(1, #news - NEWS_LINES + 1), -1 do
+		local item = news[index]
+		Theme.label({
+			LayoutOrder = #news - index,
+			Size = UDim2.new(1, 0, 0, 34),
+			TextScaled = false,
+			TextSize = 14,
+			TextWrapped = true,
+			Font = F.Heading,
+			TextColor3 = if index == #news then C.Text else C.Muted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = `• {t(item.key, item.params)}`,
+		}, newsList)
+	end
 end
 
 local function tick()
 	while true do
 		if open then
 			local now = os.clock()
-			local remaining = math.max(0, decreeEndsAt - now)
 			local games = math.max(0, gamesEndsAt - now)
 			if games > 0 then
-				gamesText.Text = `¡JUEGOS IMPERIALES EN CURSO! Experiencia ×2 · {formatTime(games)}`
+				gamesText.Text = t("menu.gamesActive", { time = formatTime(games) })
 				gamesText.TextColor3 = C.Gold
 			elseif decreeEndsAt > 0 then
-				gamesText.Text = `El edicto cambia en {DecreeCalendar.formatRemaining(remaining)}`
+				gamesText.Text = t("menu.edictEnds", {
+					remaining = DecreeCalendar.formatRemaining(math.max(0, decreeEndsAt - now)),
+				})
 				gamesText.TextColor3 = C.Muted
 			end
 		end
@@ -213,35 +341,52 @@ local function tick()
 	end
 end
 
--- Construcción -------------------------------------------------------------------
+-- Ajustes ---------------------------------------------------------------------------------
 
-local function toggleRow(parent: Instance, order: number, text: string, setting: string)
+local function settingValueText(name: string): string
+	local value = Settings.get(name)
+	if name == "language" then
+		return if value == "auto" then t("settings.auto") else t(`lang.{value}`)
+	elseif name == "music" then
+		return `{math.floor((value or 0) * 100 + 0.5)}%`
+	end
+	return if value then t("settings.on") else t("settings.off")
+end
+
+local function refreshSettings()
+	for name, button in settingsRows do
+		local value = Settings.get(name)
+		button.Text = settingValueText(name)
+		button.TextColor3 = if value == false or value == 0 then C.Muted else C.Gold
+	end
+end
+
+local function settingRow(parent: Instance, order: number, key: string, name: string, onClick: () -> ())
 	local row = Theme.create("Frame", {
 		LayoutOrder = order,
-		Size = UDim2.new(1, 0, 0, 44),
+		Size = UDim2.new(1, 0, 0, 40),
 		BackgroundTransparency = 1,
 	}, parent)
-	Theme.label({
-		Size = UDim2.fromScale(0.7, 1),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Font = F.Heading,
-		Text = text,
-	}, row)
+	static(
+		Theme.label({
+			Size = UDim2.fromScale(0.62, 1),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = F.Heading,
+		}, row),
+		key
+	)
 	local button = Theme.button("", "secondary", {
-		Size = UDim2.fromScale(0.28, 0.8),
-		Position = UDim2.fromScale(0.72, 0.1),
+		Size = UDim2.fromScale(0.36, 0.82),
+		Position = UDim2.fromScale(0.64, 0.09),
 	}, row)
-	local function refresh()
-		local on = Settings.get(setting)
-		button.Text = if on then "SÍ" else "NO"
-		button.TextColor3 = if on then C.Gold else C.Muted
-	end
 	button.Activated:Connect(function()
-		Settings.toggle(setting)
-		refresh()
+		onClick()
+		refreshSettings()
 	end)
-	refresh()
+	settingsRows[name] = button
 end
+
+-- Construcción ------------------------------------------------------------------------------
 
 local function build()
 	gui = Theme.create("ScreenGui", {
@@ -252,71 +397,93 @@ local function build()
 		Enabled = false,
 	})
 
-	-- Viñeta: oscurece los bordes para que el texto se lea sobre el coliseo.
+	-- Viñeta: oscurece los lados para que el texto se lea sobre el coliseo.
 	local vignette = Theme.create("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = C.Ink,
-		BackgroundTransparency = 0.1,
+		BackgroundTransparency = 0,
 		BorderSizePixel = 0,
 	}, gui)
 	Theme.create("UIGradient", {
 		Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 0.05),
-			NumberSequenceKeypoint.new(0.45, 0.65),
-			NumberSequenceKeypoint.new(0.62, 0.9),
-			NumberSequenceKeypoint.new(1, 0.25),
+			NumberSequenceKeypoint.new(0.42, 0.6),
+			NumberSequenceKeypoint.new(0.6, 0.85),
+			NumberSequenceKeypoint.new(1, 0.15),
 		}),
 	}, vignette)
 
-	-- Columna izquierda: título y botones.
+	-- Columna izquierda: logotipo, lema y botones.
 	local left = Theme.create("Frame", {
 		Size = UDim2.fromScale(0.42, 0.86),
-		Position = UDim2.fromScale(0.05, 0.08),
+		Position = UDim2.fromScale(0.05, 0.07),
 		BackgroundTransparency = 1,
 	}, gui)
-	Theme.create("UISizeConstraint", { MaxSize = Vector2.new(560, 700) }, left)
-	Theme.label({
-		Size = UDim2.fromScale(1, 0.17),
+	Theme.create("UISizeConstraint", { MaxSize = Vector2.new(580, 760) }, left)
+
+	local logoHolder = Theme.create("Frame", { Size = UDim2.fromScale(1, 0.17), BackgroundTransparency = 1 }, left)
+	logo = Theme.label({
+		Size = UDim2.fromScale(1, 1),
 		Font = F.Title,
-		TextColor3 = C.Gold,
-		TextStrokeTransparency = 0.2,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextStrokeTransparency = 0.35,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "COLOSSEUM",
-	}, left)
-	Theme.label({
-		Size = UDim2.fromScale(0.8, 0.06),
-		Position = UDim2.fromScale(0.005, 0.17),
+	}, logoHolder)
+	-- Oro con un brillo que recorre las letras.
+	Theme.create("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, C.GoldDark),
+			ColorSequenceKeypoint.new(0.45, C.Gold),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 225)),
+			ColorSequenceKeypoint.new(0.55, C.Gold),
+			ColorSequenceKeypoint.new(1, C.GoldDark),
+		}),
+	}, logo)
+	subtitle = Theme.label({
+		Size = UDim2.fromScale(0.8, 0.055),
+		Position = UDim2.fromScale(0.005, 0.175),
 		Font = F.Heading,
 		TextColor3 = C.Marble,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "RISE OF THE BEASTS",
+		Text = "— RISE OF THE BEASTS —",
 	}, left)
-	Theme.divider({ Size = UDim2.new(0.8, 0, 0, 2), Position = UDim2.fromScale(0, 0.25) }, left)
-	Theme.label({
-		Size = UDim2.fromScale(0.85, 0.07),
-		Position = UDim2.fromScale(0, 0.27),
-		Font = F.Heading,
-		TextColor3 = C.Muted,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextWrapped = true,
-		Text = "Entras como gladiador. Combates como guerrero.\nEvolucionas como una leyenda.",
-	}, left)
+	Theme.divider({ Size = UDim2.new(0.8, 0, 0, 2), Position = UDim2.fromScale(0, 0.245) }, left)
+	static(
+		Theme.label({
+			Size = UDim2.fromScale(0.85, 0.075),
+			Position = UDim2.fromScale(0, 0.265),
+			Font = F.Heading,
+			TextColor3 = C.Muted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextWrapped = true,
+		}, left),
+		"menu.tagline"
+	)
 
-	local buttons = Theme.create("Frame", {
-		Size = UDim2.fromScale(0.62, 0.5),
-		Position = UDim2.fromScale(0, 0.4),
+	buttonsFrame = Theme.create("Frame", {
+		Size = UDim2.fromScale(0.66, 0.56),
+		Position = UDim2.fromScale(0, 0.39),
 		BackgroundTransparency = 1,
 	}, left)
-	Theme.create("UIListLayout", {
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0.035, 0),
-	}, buttons)
-	local play = Theme.button("⚔  LUCHAR", "primary", { LayoutOrder = 1, Size = UDim2.fromScale(1, 0.22) }, buttons)
-	local armory = Theme.button("ARMERÍA", "secondary", { LayoutOrder = 2, Size = UDim2.fromScale(1, 0.16) }, buttons)
-	local codex = Theme.button("CÓDICE", "secondary", { LayoutOrder = 3, Size = UDim2.fromScale(1, 0.16) }, buttons)
-	local settings = Theme.button("AJUSTES", "ghost", { LayoutOrder = 4, Size = UDim2.fromScale(1, 0.16) }, buttons)
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0.028, 0) }, buttonsFrame)
+	local challenge = Theme.button("", "primary", { LayoutOrder = 1, Size = UDim2.fromScale(1, 0.2) }, buttonsFrame)
+	static(challenge, "menu.challenge")
+	local train = Theme.button("", "secondary", { LayoutOrder = 2, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	static(train, "menu.train")
+	local armory = Theme.button("", "secondary", { LayoutOrder = 3, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	static(armory, "menu.armory")
+	local codex = Theme.button("", "secondary", { LayoutOrder = 4, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	static(codex, "menu.codex")
+	local settings = Theme.button("", "ghost", { LayoutOrder = 5, Size = UDim2.fromScale(1, 0.14) }, buttonsFrame)
+	static(settings, "menu.settings")
 
-	play.Activated:Connect(function()
+	challenge.Activated:Connect(function()
+		closeMenu(function()
+			NetClient.fire("QuickJoin")
+		end)
+	end)
+	train.Activated:Connect(function()
 		closeMenu(nil)
 	end)
 	armory.Activated:Connect(function()
@@ -327,72 +494,200 @@ local function build()
 	end)
 	settings.Activated:Connect(function()
 		settingsPanel.Visible = not settingsPanel.Visible
+		refreshSettings()
 	end)
 
-	-- Columna derecha: ficha del gladiador y edicto.
-	local card = Theme.panel({
-		Size = UDim2.fromScale(0.3, 0.5),
+	-- Columna derecha: ficha del gladiador, edicto y noticias.
+	local right = Theme.create("Frame", {
+		Size = UDim2.fromScale(0.32, 0.84),
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.fromScale(0.95, 0.12),
+		Position = UDim2.fromScale(0.96, 0.08),
+		BackgroundTransparency = 1,
 	}, gui)
-	Theme.create("UISizeConstraint", { MinSize = Vector2.new(300, 280), MaxSize = Vector2.new(440, 420) }, card)
+	Theme.create("UISizeConstraint", { MinSize = Vector2.new(320, 0), MaxSize = Vector2.new(440, 760) }, right)
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) }, right)
+
+	local card = Theme.panel({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 200) }, right)
 	Theme.create("UIPadding", {
-		PaddingTop = UDim.new(0, 14),
-		PaddingBottom = UDim.new(0, 14),
+		PaddingTop = UDim.new(0, 12),
+		PaddingBottom = UDim.new(0, 12),
 		PaddingLeft = UDim.new(0, 16),
 		PaddingRight = UDim.new(0, 16),
 	}, card)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, card)
-	Theme.label({ LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 16), Font = F.Bold, TextColor3 = C.Muted, Text = "TU GLADIADOR", TextXAlignment = Enum.TextXAlignment.Left }, card)
-	cardName = Theme.label({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 30), Font = F.Title, TextColor3 = C.Text, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
-	cardTitle = Theme.label({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 20), Font = F.Heading, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
-	cardRank = Theme.label({ LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 20), Font = F.Bold, TextColor3 = C.Gold, TextXAlignment = Enum.TextXAlignment.Left, Text = "Nivel 1 · Tiro" }, card)
-	local bar = Theme.create("Frame", { LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 10), BackgroundColor3 = C.Ink, BorderSizePixel = 0 }, card)
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5) }, card)
+	static(
+		Theme.label({
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0, 14),
+			Font = F.Bold,
+			TextColor3 = C.Muted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, card),
+		"menu.yourGladiator"
+	)
+	cardName = Theme.label({
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0, 30),
+		Font = F.Title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, card)
+	cardTitle = Theme.create("TextButton", {
+		LayoutOrder = 3,
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundTransparency = 1,
+		Font = F.Heading,
+		TextScaled = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = C.Text,
+		Text = "",
+	}, card)
+	cardTitle.Activated:Connect(cycleTitle)
+	cardRank = Theme.label({
+		LayoutOrder = 4,
+		Size = UDim2.new(1, 0, 0, 20),
+		Font = F.Bold,
+		TextColor3 = C.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, card)
+	local bar = Theme.create("Frame", {
+		LayoutOrder = 5,
+		Size = UDim2.new(1, 0, 0, 10),
+		BackgroundColor3 = C.Ink,
+		BorderSizePixel = 0,
+	}, card)
 	Theme.corner(bar, 5)
 	cardXpFill = Theme.create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Gold, BorderSizePixel = 0 }, bar)
 	Theme.corner(cardXpFill, 5)
-	cardXpText = Theme.label({ LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 16), TextColor3 = C.Muted, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
-	cardStats = Theme.label({ LayoutOrder = 7, Size = UDim2.new(1, 0, 0, 34), TextScaled = false, TextSize = 14, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
-	Theme.divider({ LayoutOrder = 8 }, card)
-	Theme.label({ LayoutOrder = 9, Size = UDim2.new(1, 0, 0, 16), Font = F.Bold, TextColor3 = C.RedLight, Text = "EDICTO DEL CÉSAR", TextXAlignment = Enum.TextXAlignment.Left }, card)
-	decreeName = Theme.label({ LayoutOrder = 10, Size = UDim2.new(1, 0, 0, 22), Font = F.Heading, TextColor3 = C.Gold, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
-	decreeText = Theme.label({ LayoutOrder = 11, Size = UDim2.new(1, 0, 0, 34), TextScaled = false, TextSize = 14, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = "" }, card)
-	gamesText = Theme.label({ LayoutOrder = 12, Size = UDim2.new(1, 0, 0, 16), Font = F.Bold, TextColor3 = C.Muted, TextXAlignment = Enum.TextXAlignment.Left, Text = "" }, card)
+	cardXpText = Theme.label({
+		LayoutOrder = 6,
+		Size = UDim2.new(1, 0, 0, 15),
+		TextColor3 = C.Muted,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, card)
+	cardStats = Theme.label({
+		LayoutOrder = 7,
+		Size = UDim2.new(1, 0, 0, 36),
+		TextScaled = false,
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, card)
+
+	local edict = Theme.panel({ LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 122) }, right)
+	Theme.create("UIPadding", {
+		PaddingTop = UDim.new(0, 10),
+		PaddingLeft = UDim.new(0, 16),
+		PaddingRight = UDim.new(0, 16),
+	}, edict)
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, edict)
+	static(
+		Theme.label({
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0, 14),
+			Font = F.Bold,
+			TextColor3 = C.RedLight,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, edict),
+		"menu.edict"
+	)
+	decreeName = Theme.label({
+		LayoutOrder = 2,
+		Size = UDim2.new(1, 0, 0, 22),
+		Font = F.Title,
+		TextColor3 = C.Gold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, edict)
+	decreeText = Theme.label({
+		LayoutOrder = 3,
+		Size = UDim2.new(1, 0, 0, 36),
+		TextScaled = false,
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Text = "",
+	}, edict)
+	gamesText = Theme.label({
+		LayoutOrder = 4,
+		Size = UDim2.new(1, 0, 0, 16),
+		Font = F.Bold,
+		TextColor3 = C.Muted,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+	}, edict)
+
+	local newsPanel = Theme.panel({ LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 190) }, right)
+	Theme.create("UIPadding", {
+		PaddingTop = UDim.new(0, 10),
+		PaddingLeft = UDim.new(0, 16),
+		PaddingRight = UDim.new(0, 16),
+	}, newsPanel)
+	static(
+		Theme.label({
+			Size = UDim2.new(1, 0, 0, 14),
+			Font = F.Bold,
+			TextColor3 = C.Muted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, newsPanel),
+		"menu.news"
+	)
+	newsList = Theme.create("Frame", {
+		Size = UDim2.new(1, 0, 1, -28),
+		Position = UDim2.fromOffset(0, 22),
+		BackgroundTransparency = 1,
+	}, newsPanel)
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, newsList)
 
 	-- Ajustes.
 	settingsPanel = Theme.panel({
-		Size = UDim2.fromOffset(380, 150),
+		Size = UDim2.fromOffset(420, 250),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.55),
+		BackgroundTransparency = 0.04,
 		Visible = false,
+		ZIndex = 20,
 	}, gui)
 	Theme.create("UIPadding", {
 		PaddingTop = UDim.new(0, 12),
-		PaddingLeft = UDim.new(0, 16),
-		PaddingRight = UDim.new(0, 16),
+		PaddingLeft = UDim.new(0, 18),
+		PaddingRight = UDim.new(0, 18),
 	}, settingsPanel)
-	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }, settingsPanel)
-	Theme.label({ LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 22), Font = F.Title, TextColor3 = C.Gold, Text = "AJUSTES" }, settingsPanel)
-	toggleRow(settingsPanel, 1, "Temblor de cámara", "cameraShake")
-	toggleRow(settingsPanel, 2, "Modo ligero (equipos modestos)", "lightMode")
+	Theme.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }, settingsPanel)
+	static(
+		Theme.label({ LayoutOrder = 0, Size = UDim2.new(1, 0, 0, 26), Font = F.Title, TextColor3 = C.Gold }, settingsPanel),
+		"settings.title"
+	)
+	settingRow(settingsPanel, 1, "settings.language", "language", function()
+		Settings.cycle("language", Settings.LANGUAGE_OPTIONS)
+	end)
+	settingRow(settingsPanel, 2, "settings.music", "music", function()
+		Settings.cycle("music", Settings.MUSIC_OPTIONS)
+	end)
+	settingRow(settingsPanel, 3, "settings.shake", "cameraShake", function()
+		Settings.toggle("cameraShake")
+	end)
+	settingRow(settingsPanel, 4, "settings.light", "lightMode", function()
+		Settings.toggle("lightMode")
+	end)
+	local closeSettings = Theme.button("", "ghost", { LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 30) }, settingsPanel)
+	static(closeSettings, "ui.close")
+	closeSettings.Activated:Connect(function()
+		settingsPanel.Visible = false
+	end)
 
 	Theme.label({
-		Size = UDim2.new(0.3, 0, 0, 16),
+		Size = UDim2.fromOffset(200, 16),
 		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.fromScale(0.98, 0.98),
+		Position = UDim2.new(1, -16, 1, -10),
 		TextColor3 = C.Muted,
 		TextXAlignment = Enum.TextXAlignment.Right,
 		Text = `v{Version}`,
 	}, gui)
-
-	fade = Theme.create("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.new(0, 0, 0),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Visible = false,
-		ZIndex = 50,
-	}, nil)
 
 	-- El fundido vive en su propia pantalla para verse por encima de todo.
 	local fadeGui = Theme.create("ScreenGui", {
@@ -401,20 +696,17 @@ local function build()
 		IgnoreGuiInset = true,
 		DisplayOrder = 50,
 	})
-	fade.Parent = fadeGui
-
-	-- Botón para volver al menú durante el juego.
-	menuButtonGui = Theme.create("ScreenGui", { Name = "MenuButton", ResetOnSpawn = false, Enabled = false })
-	local menuButton = Theme.button("☰ MENÚ", "ghost", {
-		Size = UDim2.fromOffset(84, 28),
-		Position = UDim2.fromOffset(320, 8),
-	}, menuButtonGui)
-	menuButton.Activated:Connect(openMenu)
+	fade = Theme.create("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Visible = false,
+	}, fadeGui)
 
 	local playerGui = localPlayer:WaitForChild("PlayerGui")
 	gui.Parent = playerGui
 	fadeGui.Parent = playerGui
-	menuButtonGui.Parent = playerGui
 
 	-- Las interfaces del juego que aparezcan mientras el menú está abierto, ocultas.
 	playerGui.ChildAdded:Connect(function(child: Instance)
@@ -424,17 +716,48 @@ local function build()
 	end)
 end
 
+local function relabel()
+	for _, item in staticLabels do
+		item.object.Text = t(item.key)
+	end
+	refreshCard()
+	refreshDecree()
+	refreshNews()
+	refreshSettings()
+end
+
 function MainMenuController.Start(_self: typeof(MainMenuController))
 	build()
-	NetClient.on("ProfileReady", onProfile)
-	NetClient.on("ProgressUpdate", onProfile)
-	NetClient.on("WorldEvents", onWorldEvents)
 	cardName.Text = string.upper(localPlayer.DisplayName)
+	refreshNews()
+
+	Bus.Profile:Connect(function(data: any)
+		profile = data
+		refreshCard()
+		refreshSettings()
+	end)
+	Bus.OpenMenu:Connect(openMenu)
+	NetClient.on("WorldEvents", function(state: { [string]: any })
+		decreeId = state.decreeId
+		decreeEndsAt = os.clock() + (state.decreeRemaining or 0)
+		gamesEndsAt = os.clock() + (state.gamesRemaining or 0)
+		refreshDecree()
+	end)
+	NetClient.on("WorldNews", function(key: string, params: any)
+		table.insert(news, { key = key, params = params })
+		while #news > NEWS_LINES do
+			table.remove(news, 1)
+		end
+		if open then
+			refreshNews()
+		end
+	end)
+	I18n.Changed:Connect(relabel)
+	Settings.Changed:Connect(refreshSettings)
 
 	-- El coliseo lo genera el servidor: se espera a que exista para la cámara.
 	Workspace:WaitForChild("GranColiseo", 10)
 	Settings.reapply()
-	open = false
 	openMenu()
 	task.spawn(tick)
 end

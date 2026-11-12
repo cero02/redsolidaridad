@@ -1,3 +1,3 @@
 --!strict
 -- Versión del proyecto, visible para servidor y cliente.
-return "0.7.0"
+return "0.8.0"

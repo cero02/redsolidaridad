@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local I18n = require(script.Parent.Parent.UI.I18n)
 local Log = require(ReplicatedStorage.Shared.Util.Log)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
@@ -154,7 +155,7 @@ end
 function CharacterAnimator.getProblem(character: Model): string?
 	local entry = getEntry(character)
 	if entry.right == nil then
-		return `Aviso: hombro no encontrado (avatar {if entry.isR15 then "R15" else "R6"}). Se anima solo el arma.`
+		return I18n.t("combat.noShoulder", { rig = if entry.isR15 then "R15" else "R6" })
 	end
 	return nil
 end

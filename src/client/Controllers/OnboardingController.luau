@@ -8,30 +8,41 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Bus = require(script.Parent.Parent.UI.Bus)
+local I18n = require(script.Parent.Parent.UI.I18n)
 local NetClient = require(ReplicatedStorage.Shared.Net.Client)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local C = Theme.Colors
 local F = Theme.Fonts
 
-type Step = { id: string, text: string }
-
-local STEPS: { Step } = {
-	{ id = "hit", text = "Golpea al muñeco del ludus (clic izquierdo)" },
-	{ id = "dodge", text = "Esquiva con Q" },
-	{ id = "block", text = "Bloquea manteniendo clic derecho" },
-	{ id = "parry", text = "Parada perfecta: bloquea justo antes de su golpe" },
-	{ id = "arena", text = "Cruza la puerta dorada del Gran Coliseo" },
-}
+-- Cada paso usa la clave onboarding.<id> de Shared/Locale.
+local STEPS = { "hit", "dodge", "block", "parry", "arena" }
 
 local localPlayer = Players.LocalPlayer
 
 local OnboardingController = {}
 
 local gui: ScreenGui? = nil
+local titleLabel: TextLabel? = nil
 local rows: { [string]: TextLabel } = {}
 local done: { [string]: boolean } = {}
 local active = false
+local allDone = false
+
+local function rowText(id: string): string
+	return `{if done[id] then "✔" else "○"}  {I18n.t(`onboarding.{id}`)}`
+end
+
+local function relabel()
+	local title = titleLabel
+	if title then
+		title.Text = I18n.t(if allDone then "onboarding.done" else "onboarding.title")
+	end
+	for id, row in rows do
+		row.Text = rowText(id)
+	end
+end
 
 local function finish()
 	local screen = gui
@@ -41,6 +52,7 @@ local function finish()
 	active = false
 	task.delay(4, function()
 		screen:Destroy()
+		gui = nil
 	end)
 end
 
@@ -51,52 +63,46 @@ local function complete(id: string)
 	done[id] = true
 	local row = rows[id]
 	if row then
-		row.Text = `✔  {row:GetAttribute("Text")}`
+		row.Text = rowText(id)
 		row.TextColor3 = C.Green
-		TweenService:Create(row, TweenInfo.new(0.3), { TextTransparency = 0.35 }):Play()
+		TweenService:Create(row, TweenInfo.new(0.3), { TextTransparency = 0.3 }):Play()
 	end
 	for _, step in STEPS do
-		if not done[step.id] then
+		if not done[step] then
 			return
 		end
 	end
-	local screen = gui
-	local title = if screen then screen:FindFirstChild("Title", true) else nil
-	if title and title:IsA("TextLabel") then
-		title.Text = "¡LISTO, GLADIADOR! LA HIDRA TE ESPERA"
-	end
+	allDone = true
+	relabel()
 	finish()
 end
 
 local function build()
 	local screen = Theme.create("ScreenGui", { Name = "Onboarding", ResetOnSpawn = false })
 	local panel = Theme.panel({
-		Size = UDim2.fromOffset(330, 36 + #STEPS * 26),
+		Size = UDim2.fromOffset(340, 40 + #STEPS * 26),
 		AnchorPoint = Vector2.new(1, 0.5),
 		Position = UDim2.new(1, -12, 0.45, 0),
 	}, screen)
-	Theme.label({
-		Name = "Title",
+	titleLabel = Theme.label({
 		Size = UDim2.new(1, -20, 0, 22),
 		Position = UDim2.fromOffset(10, 8),
 		Font = F.Title,
 		TextColor3 = C.Gold,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		Text = "PRIMEROS PASOS",
+		Text = I18n.t("onboarding.title"),
 	}, panel)
 	for index, step in STEPS do
-		local row = Theme.label({
+		rows[step] = Theme.label({
 			Size = UDim2.new(1, -20, 0, 22),
-			Position = UDim2.fromOffset(10, 8 + index * 26),
+			Position = UDim2.fromOffset(10, 10 + index * 26),
 			TextScaled = false,
 			TextSize = 14,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Font = F.Body,
-			Text = `○  {step.text}`,
+			Font = F.Heading,
+			Text = rowText(step),
 		}, panel)
-		row:SetAttribute("Text", step.text)
-		rows[step.id] = row
 	end
 	screen.Parent = localPlayer:WaitForChild("PlayerGui")
 	gui = screen
@@ -105,7 +111,7 @@ end
 local function onProfile(profile: { [string]: any })
 	-- Solo para quien empieza: nivel 1 y sin victorias.
 	local isNew = (profile.level or 1) <= 1 and (profile.hydraKills or 0) == 0
-	if isNew and gui == nil then
+	if isNew and gui == nil and not allDone then
 		build()
 		active = true
 	elseif not isNew and gui ~= nil and active then
@@ -114,8 +120,8 @@ local function onProfile(profile: { [string]: any })
 end
 
 function OnboardingController.Start(_self: typeof(OnboardingController))
-	NetClient.on("ProfileReady", onProfile)
-	NetClient.on("ProgressUpdate", onProfile)
+	Bus.Profile:Connect(onProfile)
+	I18n.Changed:Connect(relabel)
 
 	NetClient.on("CombatEvent", function(kind: string, userId: number, a: any)
 		if userId ~= localPlayer.UserId then

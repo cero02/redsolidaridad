@@ -44,7 +44,7 @@ function LoadoutService.Start(_self: typeof(LoadoutService))
 			return
 		end
 		if player:GetAttribute(IN_ARENA) == true then
-			NetService.fire("Announce", player, "En plena arena no se cambia de equipo.", 3)
+			NetService.fire("Announce", player, "ann.noLoadoutInArena", nil, 3)
 			return
 		end
 		if Weapons[weapon] == nil or not data.unlockedWeapons[weapon] then

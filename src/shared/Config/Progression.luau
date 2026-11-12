@@ -1,14 +1,14 @@
 --!strict
--- Progresión: experiencia, niveles, rangos y desbloqueos. Diseño: docs/design/PROGRESION.md
+-- Progresión: experiencia, niveles, rangos y desbloqueos (los textos, en Shared/Locale). Diseño: docs/design/PROGRESION.md
 -- y docs/design/PILARES.md. Valores iniciales para equilibrar.
 
+-- El texto de cada desbloqueo está en los idiomas (Shared/Locale): ver Progression.unlockRef.
 export type Unlock = {
 	kind: "Weapon" | "Essence" | "Cosmetic" | "Title" | "Feature",
 	id: string,
-	name: string,
 }
 
-export type Rank = { minLevel: number, id: string, name: string }
+export type Rank = { minLevel: number, id: string }
 
 return table.freeze({
 	MAX_LEVEL = 20,
@@ -35,37 +35,37 @@ return table.freeze({
 	}),
 
 	RANKS = table.freeze({
-		table.freeze({ minLevel = 1, id = "Tiro", name = "Tiro" }),
-		table.freeze({ minLevel = 5, id = "Veteranus", name = "Veteranus" }),
-		table.freeze({ minLevel = 10, id = "PrimusPalus", name = "Primus Palus" }),
-		table.freeze({ minLevel = 15, id = "Campeon", name = "Campeón" }),
-		table.freeze({ minLevel = 20, id = "Rudiarius", name = "Rudiarius" }),
+		table.freeze({ minLevel = 1, id = "Tiro" }),
+		table.freeze({ minLevel = 5, id = "Veteranus" }),
+		table.freeze({ minLevel = 10, id = "PrimusPalus" }),
+		table.freeze({ minLevel = 15, id = "Campeon" }),
+		table.freeze({ minLevel = 20, id = "Rudiarius" }),
 	}) :: { Rank },
 
 	-- Lo que se desbloquea al ALCANZAR cada nivel.
 	UNLOCKS = table.freeze({
-		[2] = { { kind = "Weapon", id = "Hasta", name = "Hasta (lanza)" } },
-		[3] = { { kind = "Cosmetic", id = "ShieldEmblem", name = "Emblema del águila en el escudo" } },
-		[4] = { { kind = "Weapon", id = "Martillo", name = "Martillo del Coloso" } },
+		[2] = { { kind = "Weapon", id = "Hasta" } },
+		[3] = { { kind = "Cosmetic", id = "ShieldEmblem" } },
+		[4] = { { kind = "Weapon", id = "Martillo" } },
 		[5] = {
-			{ kind = "Essence", id = "Aguila", name = "Esencia del Águila imperial" },
-			{ kind = "Title", id = "Veteranus", name = "Título: Veteranus" },
+			{ kind = "Essence", id = "Aguila" },
+			{ kind = "Title", id = "Veteranus" },
 		},
-		[6] = { { kind = "Cosmetic", id = "BronzeHelmet", name = "Casco de bronce" } },
-		[8] = { { kind = "Feature", id = "Heroic", name = "Dificultad Heroica (próximamente)" } },
+		[6] = { { kind = "Cosmetic", id = "BronzeHelmet" } },
+		[8] = { { kind = "Feature", id = "Heroic" } },
 		[10] = {
-			{ kind = "Cosmetic", id = "RedCape", name = "Capa roja" },
-			{ kind = "Title", id = "PrimusPalus", name = "Título: Primus Palus" },
+			{ kind = "Cosmetic", id = "RedCape" },
+			{ kind = "Title", id = "PrimusPalus" },
 		},
-		[12] = { { kind = "Cosmetic", id = "Plume", name = "Penacho de campeón" } },
+		[12] = { { kind = "Cosmetic", id = "Plume" } },
 		[15] = {
-			{ kind = "Cosmetic", id = "ChampionArmor", name = "Armadura de campeón" },
-			{ kind = "Title", id = "Campeon", name = "Título: Campeón" },
+			{ kind = "Cosmetic", id = "ChampionArmor" },
+			{ kind = "Title", id = "Campeon" },
 		},
-		[18] = { { kind = "Cosmetic", id = "EmberBlade", name = "Hoja en brasas" } },
+		[18] = { { kind = "Cosmetic", id = "EmberBlade" } },
 		[20] = {
-			{ kind = "Cosmetic", id = "RudisSword", name = "Rudis: la espada de madera de los libres" },
-			{ kind = "Title", id = "Rudiarius", name = "Título: Rudiarius" },
+			{ kind = "Cosmetic", id = "RudisSword" },
+			{ kind = "Title", id = "Rudiarius" },
 		},
 	}) :: { [number]: { Unlock } },
 })

@@ -2,8 +2,8 @@
 -- Cálculos puros de progresión: experiencia por nivel, subidas de nivel, rangos y
 -- desbloqueos. Lo usan el servidor (autoridad) y el cliente (interfaz). Probado con Lune.
 
-type Unlock = { kind: string, id: string, name: string }
-type Rank = { minLevel: number, id: string, name: string }
+type Unlock = { kind: string, id: string }
+type Rank = { minLevel: number, id: string }
 
 export type Config = {
 	MAX_LEVEL: number,
@@ -82,6 +82,24 @@ function Progression.unlocksUpTo(config: Config, level: number): { Unlock }
 		end
 	end
 	return all
+end
+
+-- Referencia traducible (Shared/Locale) al nombre de un desbloqueo.
+function Progression.unlockRef(unlock: Unlock): { key: string, params: { [string]: any }? }
+	if unlock.kind == "Weapon" then
+		return { key = `weapon.{unlock.id}.name` }
+	elseif unlock.kind == "Essence" then
+		return { key = `essence.{unlock.id}.name` }
+	elseif unlock.kind == "Cosmetic" then
+		return { key = `cosmetic.{unlock.id}` }
+	elseif unlock.kind == "Title" then
+		return { key = "unlock.title", params = { title = { key = `title.{unlock.id}.name` } } }
+	end
+	return { key = `feature.{unlock.id}` }
+end
+
+function Progression.rankRef(config: Config, level: number): { key: string }
+	return { key = `rank.{Progression.rankFor(config, level).id}` }
 end
 
 return Progression

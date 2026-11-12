@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local CharacterAnimator = require(script.Parent.CharacterAnimator)
 local Combat = require(ReplicatedStorage.Shared.Config.Combat)
 local CombatHud = require(script.Parent.Parent.UI.CombatHud)
+local I18n = require(script.Parent.Parent.UI.I18n)
 local Settings = require(script.Parent.Parent.UI.Settings)
 local Essences = require(ReplicatedStorage.Shared.Config.Essences)
 local FighterState = require(ReplicatedStorage.Shared.Combat.FighterState)
@@ -36,16 +37,18 @@ local ACTION_ULTIMATE = "ColosseumUltimate"
 local EAGLE_UP_SPEED = 70
 local EAGLE_UP_TIME = 0.3
 
-local DEFENSE_MESSAGES: { [string]: { text: string, color: Color3 } } = {
-	Dodged = { text = "¡Esquivado!", color = Color3.fromRGB(120, 200, 255) },
-	Parried = { text = "¡PARADA PERFECTA!", color = Color3.fromRGB(255, 215, 80) },
-	Blocked = { text = "Bloqueado", color = Color3.fromRGB(200, 200, 200) },
-	GuardBroken = { text = "¡Guardia rota!", color = Color3.fromRGB(255, 120, 60) },
-	Hit = { text = "¡Golpeado!", color = Color3.fromRGB(255, 70, 70) },
-	Shielded = { text = "¡Testudo!", color = Color3.fromRGB(255, 215, 80) },
+-- Mensaje y color de cada resultado de defensa (las claves están en Shared/Locale).
+local DEFENSE_MESSAGES: { [string]: { key: string, color: Color3 } } = {
+	Dodged = { key = "combat.dodged", color = Color3.fromRGB(120, 200, 255) },
+	Parried = { key = "combat.parried", color = Color3.fromRGB(255, 215, 80) },
+	Blocked = { key = "combat.blocked", color = Color3.fromRGB(200, 200, 200) },
+	GuardBroken = { key = "combat.guardBroken", color = Color3.fromRGB(255, 120, 60) },
+	Hit = { key = "combat.hit", color = Color3.fromRGB(255, 70, 70) },
+	Shielded = { key = "combat.shielded", color = Color3.fromRGB(255, 215, 80) },
 }
 
 local localPlayer = Players.LocalPlayer
+local t = I18n.t
 
 local CombatController = {}
 
@@ -235,22 +238,25 @@ local function onCombatEvent(kind: string, userId: number, a: any, _b: any)
 	elseif kind == "Defense" and userId == localPlayer.UserId then
 		local info = DEFENSE_MESSAGES[a]
 		if info then
-			CombatHud.showMessage(info.text, info.color)
+			CombatHud.showMessage(t(info.key), info.color)
 		end
 		if a == "Hit" or a == "GuardBroken" then
 			shake(HURT_SHAKE)
 		end
 	elseif kind == "Downed" and userId == localPlayer.UserId then
-		CombatHud.showMessage("Has caído…", Color3.fromRGB(255, 70, 70))
+		CombatHud.showMessage(t("combat.downed"), Color3.fromRGB(255, 70, 70))
 	elseif kind == "Revived" and userId == localPlayer.UserId then
-		CombatHud.showMessage("¡En pie, gladiador!", Color3.fromRGB(255, 215, 80))
+		CombatHud.showMessage(t("combat.revived"), Color3.fromRGB(255, 215, 80))
 	elseif kind == "Telegraph" then
-		CombatHud.showMessage("¡Cuidado!", Color3.fromRGB(255, 90, 90))
+		CombatHud.showMessage(t("combat.warning"), Color3.fromRGB(255, 90, 90))
 	elseif kind == "Ultimate" and a == "TestudoAlly" then
-		CombatHud.showMessage("¡Un aliado te cubre con su Testudo!", Color3.fromRGB(255, 215, 80))
+		CombatHud.showMessage(t("combat.testudoAlly"), Color3.fromRGB(255, 215, 80))
 	elseif kind == "Ultimate" and userId == localPlayer.UserId then
 		local weapon = Weapons[weaponId]
-		CombatHud.showMessage(`¡{string.upper(weapon.ultimate.name)}!`, Color3.fromRGB(255, 215, 80))
+		CombatHud.showMessage(
+			t("combat.ultimateUsed", { name = string.upper(t(`ultimate.{weapon.ultimate.id}.name`)) }),
+			Color3.fromRGB(255, 215, 80)
+		)
 		shake(HURT_SHAKE)
 	end
 end
@@ -267,7 +273,7 @@ local function onEssence(_name: string, inputState: Enum.UserInputState, _input:
 		return Enum.ContextActionResult.Pass
 	end
 	if os.clock() < essenceReadyAt then
-		CombatHud.showMessage("Esencia recargándose…", Color3.fromRGB(200, 200, 200))
+		CombatHud.showMessage(t("combat.essenceCooldown"), Color3.fromRGB(200, 200, 200))
 		return Enum.ContextActionResult.Pass
 	end
 	NetClient.fire("CombatEssence")
@@ -288,7 +294,7 @@ local function onUltimate(_name: string, inputState: Enum.UserInputState, _input
 		return Enum.ContextActionResult.Pass
 	end
 	if state.ultimate < Combat.ULTIMATE_MAX then
-		CombatHud.showMessage("La definitiva aún no está cargada", Color3.fromRGB(200, 200, 200))
+		CombatHud.showMessage(t("combat.ultimateNotReady"), Color3.fromRGB(200, 200, 200))
 		return Enum.ContextActionResult.Pass
 	end
 	NetClient.fire("CombatUltimate")
@@ -341,13 +347,18 @@ function CombatController.Start(_self: typeof(CombatController))
 		Enum.KeyCode.ButtonL1
 	)
 	ContextActionService:BindAction(ACTION_DODGE, onDodge, true, Enum.KeyCode.Q, Enum.KeyCode.ButtonB)
-	ContextActionService:SetTitle(ACTION_ATTACK, "Atacar")
-	ContextActionService:SetTitle(ACTION_BLOCK, "Bloquear")
 	ContextActionService:BindAction(ACTION_ESSENCE, onEssence, true, Enum.KeyCode.Z, Enum.KeyCode.ButtonX)
 	ContextActionService:BindAction(ACTION_ULTIMATE, onUltimate, true, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
-	ContextActionService:SetTitle(ACTION_DODGE, "Esquivar")
-	ContextActionService:SetTitle(ACTION_ESSENCE, "Esencia")
-	ContextActionService:SetTitle(ACTION_ULTIMATE, "Definitiva")
+	-- Títulos de los botones táctiles (móvil), en el idioma del jugador.
+	local function relabelActions()
+		ContextActionService:SetTitle(ACTION_ATTACK, t("action.attack"))
+		ContextActionService:SetTitle(ACTION_BLOCK, t("action.block"))
+		ContextActionService:SetTitle(ACTION_DODGE, t("action.dodge"))
+		ContextActionService:SetTitle(ACTION_ESSENCE, t("action.essence"))
+		ContextActionService:SetTitle(ACTION_ULTIMATE, t("action.ultimate"))
+	end
+	relabelActions()
+	I18n.Changed:Connect(relabelActions)
 
 	RunService.Heartbeat:Connect(function()
 		local state = fighter
@@ -360,16 +371,23 @@ function CombatController.Start(_self: typeof(CombatController))
 			CombatHud.updateAbilities(
 				if essence
 					then (if remaining > 0
-						then `Z · {essence.name}: {math.ceil(remaining)} s`
-						else `Z · {essence.name}: lista`)
+						then t("combat.essenceWait", {
+							name = { key = `essence.{essenceId}.name` },
+							seconds = math.ceil(remaining),
+						})
+						else t("combat.essenceReady", { name = { key = `essence.{essenceId}.name` } }))
 					else "",
 				if weapon
 					then (if snapshot.ultimate >= Combat.ULTIMATE_MAX
-						then `R · {weapon.ultimate.name}: ¡LISTA!`
-						else `R · {weapon.ultimate.name}: {math.floor(snapshot.ultimate)} %`)
+						then t("combat.ultimateReady", { name = { key = `ultimate.{weapon.ultimate.id}.name` } })
+						else t("combat.ultimateCharge", {
+							name = { key = `ultimate.{weapon.ultimate.id}.name` },
+							percent = math.floor(snapshot.ultimate),
+						}))
 					else "",
 				snapshot.ultimate >= Combat.ULTIMATE_MAX
 			)
+
 		end
 	end)
 end

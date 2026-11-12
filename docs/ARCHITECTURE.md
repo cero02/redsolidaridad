@@ -220,6 +220,18 @@ recompensas al terminar. El perfil pasa a la versión 2 del esquema (migración 
 | `OnboardingController` | `client/Controllers` | Primeros pasos para jugadores nuevos |
 | `LobbyService` | `server/Services` | El Foro (plaza, columnata, ludus, calzada) e iluminación |
 
+### v0.8 Internacional
+
+| Módulo | Ubicación | Qué hace |
+|---|---|---|
+| `Translate` | `shared/Locale` | Traducción pura: `{marcadores}`, referencias anidadas, idioma por defecto |
+| `Locale`, `Strings/En`, `Strings/Es` | `shared/Locale` | Diccionarios y elección de idioma |
+| `ServerText` | `server/Localization` | Traducción por jugador (expulsiones) y textos del mundo traducibles |
+| `SettingsService` | `server/Services` | Guarda los ajustes en el perfil y el idioma como atributo |
+| `I18n`, `Settings`, `Bus` | `client/UI` | Idioma activo, ajustes guardados, señales entre pantallas |
+| `LocalizeController` | `client/Controllers` | Traduce carteles y avisos del mundo |
+| `MusicController` | `client/Controllers` | Música por momentos con fundidos (Config/Audio) |
+
 Flujo de carga: el jugador entra → `PlayerDataService` inicia su sesión → el cliente envía
 `ClientReady` cuando ya escucha → el servidor responde `ProfileReady` con el perfil público.
 

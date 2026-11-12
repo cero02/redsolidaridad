@@ -1,7 +1,7 @@
 --!strict
 -- Definición de armas. Diseño: docs/design/ARMAS_Y_ESENCIAS.md.
 -- Tiempos en segundos, distancias en studs. Valores iniciales para equilibrar.
--- Ninguna es la mejor en todo: el Gladius defiende, la Hasta alcanza y el Martillo rompe.
+-- Textos: weapon.<id>.name y weapon.<id>.desc. Ninguna es la mejor en todo: el Gladius defiende, la Hasta alcanza y el Martillo rompe.
 
 export type Attack = {
 	damage: number,
@@ -22,16 +22,13 @@ export type Attack = {
 	lunge: number?,
 }
 
+-- Textos: ultimate.<id>.name y ultimate.<id>.desc.
 export type Ultimate = {
 	id: "Testudo" | "Pila" | "Terremoto",
-	name: string,
-	description: string,
 }
 
 export type Weapon = {
 	id: string,
-	displayName: string,
-	description: string,
 	light: { Attack },
 	heavy: Attack,
 	-- Ventana de parada perfecta (segundos desde que empieza el bloqueo).
@@ -51,8 +48,6 @@ end
 local Weapons: { [string]: Weapon } = {
 	Gladius = table.freeze({
 		id = "Gladius",
-		displayName = "Gladius y escudo",
-		description = "Equilibrado. Paradas perfectas más fáciles y golpe de escudo que aturde.",
 		light = table.freeze({
 			attack({ damage = 12, windup = 0.12, active = 0.1, recovery = 0.22, reach = 6, width = 6, height = 5, stun = 0 }),
 			attack({ damage = 12, windup = 0.12, active = 0.1, recovery = 0.22, reach = 6, width = 6, height = 5, stun = 0 }),
@@ -62,18 +57,12 @@ local Weapons: { [string]: Weapon } = {
 		parryWindow = 0.3,
 		blockReduction = 0.7,
 		dodgeCost = 25,
-		ultimate = table.freeze({
-			id = "Testudo",
-			name = "Testudo",
-			description = "Tú y los aliados cercanos sois inmunes al daño durante 4 s.",
-		}),
+		ultimate = table.freeze({ id = "Testudo" }),
 		unlockLevel = 1,
 	}),
 
 	Hasta = table.freeze({
 		id = "Hasta",
-		displayName = "Hasta (lanza)",
-		description = "Alcance largo y estocada a la carrera. Bloquea peor.",
 		light = table.freeze({
 			attack({ damage = 10, windup = 0.14, active = 0.1, recovery = 0.22, reach = 9.5, width = 3.5, height = 5, stun = 0 }),
 			attack({ damage = 10, windup = 0.14, active = 0.1, recovery = 0.22, reach = 9.5, width = 3.5, height = 5, stun = 0 }),
@@ -93,18 +82,12 @@ local Weapons: { [string]: Weapon } = {
 		parryWindow = 0.25,
 		blockReduction = 0.5,
 		dodgeCost = 20,
-		ultimate = table.freeze({
-			id = "Pila",
-			name = "Lluvia de pila",
-			description = "Seis jabalinas caen sobre la zona de delante: 20 de daño cada una.",
-		}),
+		ultimate = table.freeze({ id = "Pila" }),
 		unlockLevel = 2,
 	}),
 
 	Martillo = table.freeze({
 		id = "Martillo",
-		displayName = "Martillo del Coloso",
-		description = "Lento y devastador. Su golpe pesado crea una onda que aturde.",
 		light = table.freeze({
 			attack({ damage = 18, windup = 0.3, active = 0.12, recovery = 0.4, reach = 6.5, width = 7, height = 6, stun = 0.2 }),
 			attack({ damage = 18, windup = 0.3, active = 0.12, recovery = 0.4, reach = 6.5, width = 7, height = 6, stun = 0.2 }),
@@ -114,11 +97,7 @@ local Weapons: { [string]: Weapon } = {
 		parryWindow = 0.2,
 		blockReduction = 0.75,
 		dodgeCost = 35,
-		ultimate = table.freeze({
-			id = "Terremoto",
-			name = "Terremoto",
-			description = "Tres ondas expansivas a tu alrededor: 30 de daño cada una.",
-		}),
+		ultimate = table.freeze({ id = "Terremoto" }),
 		unlockLevel = 4,
 	}),
 }

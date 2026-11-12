@@ -12,9 +12,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local DecreeCalendar = require(ReplicatedStorage.Shared.Meta.DecreeCalendar)
+local Locale = require(ReplicatedStorage.Shared.Locale.Locale)
 local Decrees = require(ReplicatedStorage.Shared.Config.Decrees)
 local NetService = require(script.Parent.NetService)
 local PlayerDataService = require(script.Parent.PlayerDataService)
+local ServerText = require(game:GetService("ServerScriptService").Server.Localization.ServerText)
 local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local GAMES_DURATION = 4 * 60
@@ -23,6 +25,7 @@ local GAMES_MULTIPLIER = 2
 local GAMES_MIN_INTERVAL = 15 * 60
 local GAMES_MAX_INTERVAL = 25 * 60
 local OFFERING_GOAL = 5
+local NEWS_HISTORY = 6
 local BROADCAST_INTERVAL = 30
 local BOARD_POSITION = Vector3.new(-18, 0, -8)
 
@@ -34,6 +37,7 @@ EventService.GamesStarted = Signal.new() :: Signal.Signal<()>
 local gamesUntil = 0
 local nextGamesAt = 0
 local offerings = 0
+local recentNews: { { key: string, params: { [string]: any }? } } = {}
 local boardLabel: TextLabel? = nil
 local random = Random.new()
 
@@ -49,8 +53,7 @@ end
 local function snapshot()
 	local current, remaining = decree()
 	return {
-		decreeName = current.name,
-		decreeDescription = current.description,
+		decreeId = current.id,
 		decreeRemaining = remaining,
 		gamesRemaining = gamesRemaining(),
 		offerings = offerings,
@@ -66,10 +69,14 @@ local function refreshBoard()
 	local current, remaining = decree()
 	local games = gamesRemaining()
 	local gamesLine = if games > 0
-		then `<font color="#FFD25A">¡JUEGOS IMPERIALES EN CURSO! Experiencia ×{GAMES_MULTIPLIER} · {math.ceil(games / 60)} min</font>`
-		else `Ofrendas al templo: {offerings}/{OFFERING_GOAL} Hidras vencidas.\nAl completarlas, ¡Juegos Imperiales para todos!`
-	label.Text = `<b>EDICTO DEL CÉSAR</b>\n<font color="#FF8C6E">{current.name}</font>\n{current.description}\n`
-		.. `<i>Termina en {DecreeCalendar.formatRemaining(remaining)}</i>\n\n{gamesLine}`
+		then Locale.ref("board.gamesActive", { mult = GAMES_MULTIPLIER, minutes = math.ceil(games / 60) })
+		else Locale.ref("board.offerings", { count = offerings, goal = OFFERING_GOAL })
+	ServerText.setWorld(label, "Text", "board.edict", {
+		decree = Locale.ref(`decree.{current.id}.name`),
+		desc = Locale.ref(`decree.{current.id}.desc`),
+		remaining = DecreeCalendar.formatRemaining(remaining),
+		games = gamesLine,
+	})
 end
 
 local function broadcast(player: Player?)
@@ -113,21 +120,28 @@ local function scheduleNextGames()
 	nextGamesAt = os.clock() + random:NextNumber(GAMES_MIN_INTERVAL, GAMES_MAX_INTERVAL)
 end
 
--- Envía una noticia a todo el servidor.
-function EventService.news(text: string)
-	NetService.fireAll("WorldNews", text)
+-- Envía una noticia (clave de idioma) a todo el servidor y la guarda en el historial
+-- reciente, que reciben los jugadores al entrar (menú de inicio: "Desde la arena").
+function EventService.news(key: string, params: { [string]: any }?)
+	table.insert(recentNews, { key = key, params = params })
+	while #recentNews > NEWS_HISTORY do
+		table.remove(recentNews, 1)
+	end
+	NetService.fireAll("WorldNews", key, params)
 end
 
-function EventService.startGames(reason: string)
+-- `reason` es una referencia de idioma (Locale.ref).
+function EventService.startGames(reason: { key: string, params: { [string]: any }? })
 	if gamesRemaining() > 0 then
 		return
 	end
 	gamesUntil = os.clock() + GAMES_DURATION
 	scheduleNextGames()
-	NetService.fireAll(
-		"WorldNews",
-		`¡ALERTA IMPERIAL! {reason} ¡Comienzan los Juegos Imperiales: experiencia ×{GAMES_MULTIPLIER} durante {GAMES_DURATION // 60} minutos!`
-	)
+	EventService.news("news.gamesStart", {
+		reason = reason,
+		mult = GAMES_MULTIPLIER,
+		minutes = GAMES_DURATION // 60,
+	})
 	EventService.GamesStarted:Fire()
 	broadcast(nil)
 end
@@ -152,9 +166,9 @@ function EventService.addOffering(byName: string)
 	offerings += 1
 	if offerings >= OFFERING_GOAL then
 		offerings = 0
-		EventService.startGames(`¡El pueblo ha completado las ofrendas gracias a {byName} y los demás!`)
+		EventService.startGames(Locale.ref("news.reasonOfferings", { name = byName }))
 	else
-		EventService.news(`Ofrendas al templo: {offerings}/{OFFERING_GOAL}. ¡Faltan {OFFERING_GOAL - offerings} Hidras!`)
+		EventService.news("news.offerings", { count = offerings, goal = OFFERING_GOAL, left = OFFERING_GOAL - offerings })
 		broadcast(nil)
 	end
 end
@@ -165,7 +179,13 @@ end
 
 function EventService.Start(_self: typeof(EventService))
 	scheduleNextGames()
-	PlayerDataService.ClientReady:Connect(broadcast)
+	PlayerDataService.ClientReady:Connect(function(player: Player)
+		broadcast(player)
+		-- Las últimas noticias, para que el menú de inicio no empiece vacío.
+		for _, item in recentNews do
+			NetService.fire("WorldNews", player, item.key, item.params)
+		end
+	end)
 	refreshBoard()
 
 	local lastDecreeId = EventService.getDecree().id
@@ -174,10 +194,13 @@ function EventService.Start(_self: typeof(EventService))
 		local current = EventService.getDecree()
 		if current.id ~= lastDecreeId then
 			lastDecreeId = current.id
-			EventService.news(`¡Nuevo edicto del César! {current.name}: {current.description}`)
+			EventService.news("news.newDecree", {
+				decree = Locale.ref(`decree.{current.id}.name`),
+				desc = Locale.ref(`decree.{current.id}.desc`),
+			})
 		end
 		if os.clock() >= nextGamesAt and #Players:GetPlayers() > 0 then
-			EventService.startGames("¡El César ha llegado al palco!")
+			EventService.startGames(Locale.ref("news.reasonCaesar"))
 		else
 			broadcast(nil)
 		end

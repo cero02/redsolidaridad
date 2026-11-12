@@ -13,7 +13,7 @@ poderes. Ver la [visión de diseño](docs/VISION.md).
 2. Ejecuta `wally install` (descarga ProfileStore en `ServerPackages/`).
 3. Instala el plugin de Rojo en Studio (`rojo plugin install`).
 4. Ejecuta `rojo serve`, abre un place vacío en Studio y pulsa **Connect** en el plugin.
-5. Pulsa **Play** y sigue la [prueba de la presentación](docs/testing/PRESENTACION.md): entra por la
+5. Pulsa **Play** y sigue la [prueba de la v0.8](docs/testing/INTERNACIONAL.md): entra por la
    puerta dorada al Gran Coliseo y enfréntate a la Hidra.
 
 ## Calidad
@@ -34,6 +34,7 @@ Este repositorio alojaba antes la web **RedSolidaria**. Su código se conserva e
 - [Visión de diseño](docs/VISION.md)
 - [Diseño detallado](docs/design/): combate, Hidra, armas y esencias, progresión, espectadores
 - [Modelos 3D para la Hidra](docs/ARTE_3D.md)
+- [Música](docs/AUDIO.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [Hoja de ruta](docs/ROADMAP.md)
 - [Seguridad](docs/SECURITY.md)
