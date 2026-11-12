@@ -9,10 +9,20 @@ local RunService = game:GetService("RunService")
 local NetService = require(script.Parent.NetService)
 
 local MAX_LENGTH = 300
+-- Mensajes esperados en Studio que no son fallos del juego:
+--   · ProfileStore prueba a escribir en un DataStore para saber si hay acceso a la API.
+--     Sin "Enable Studio Access to API Services" Roblox registra ese intento como error,
+--     pero el juego usa datos simulados en Studio (DataConfig.USE_LIVE_DATA_IN_STUDIO).
+local IGNORED = { "StudioAccessToApisNotAllowed" }
 
 local DevLogService = {}
 
 local function isProblem(message: string, messageType: Enum.MessageType): boolean
+	for _, pattern in IGNORED do
+		if string.find(message, pattern, 1, true) ~= nil then
+			return false
+		end
+	end
 	if messageType == Enum.MessageType.MessageError then
 		return true
 	end
