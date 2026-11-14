@@ -10,6 +10,8 @@ Theme.Colors = table.freeze({
 	Ink = Color3.fromRGB(16, 12, 10),
 	Panel = Color3.fromRGB(30, 21, 16),
 	PanelLight = Color3.fromRGB(52, 36, 26),
+	-- Panel claro y cálido para ventanas que deben leerse bien (Ajustes).
+	PanelWarm = Color3.fromRGB(86, 60, 40),
 	Gold = Color3.fromRGB(255, 205, 110),
 	GoldDark = Color3.fromRGB(176, 124, 46),
 	Bronze = Color3.fromRGB(150, 98, 52),

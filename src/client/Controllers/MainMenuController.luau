@@ -398,7 +398,8 @@ local function refreshSettings()
 	for name, button in settingsRows do
 		local value = Settings.get(name)
 		button.Text = settingValueText(name)
-		button.TextColor3 = if value == false or value == 0 then C.Muted else C.Gold
+		-- Activado en dorado; desactivado en blanco (legible, no gris apagado).
+		button.TextColor3 = if value == false or value == 0 then C.Text else C.Gold
 	end
 end
 
@@ -422,7 +423,7 @@ local function settingRow(
 		}, row),
 		key
 	)
-	local button = Theme.button("", "secondary", {
+	local button = Theme.button("", "primary", {
 		Size = UDim2.fromScale(0.36, 0.82),
 		Position = UDim2.fromScale(0.64, 0.09),
 	}, row)
@@ -749,10 +750,23 @@ local function build()
 		Size = UDim2.fromOffset(420, 250),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.55),
-		BackgroundTransparency = 0.04,
+		BackgroundColor3 = C.PanelWarm,
+		BackgroundTransparency = 0,
 		Visible = false,
 		ZIndex = 20,
 	}, gui)
+	-- Más luminoso que los demás paneles: degradado suave y borde dorado.
+	local settingsGradient = settingsPanel:FindFirstChildOfClass("UIGradient")
+	if settingsGradient then
+		settingsGradient.Color =
+			ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(225, 215, 200))
+	end
+	local settingsStroke = settingsPanel:FindFirstChildOfClass("UIStroke")
+	if settingsStroke then
+		settingsStroke.Color = C.Gold
+		settingsStroke.Thickness = 2
+		settingsStroke.Transparency = 0
+	end
 	Theme.create("UIPadding", {
 		PaddingTop = UDim.new(0, 12),
 		PaddingLeft = UDim.new(0, 18),
