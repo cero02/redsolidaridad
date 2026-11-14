@@ -839,6 +839,7 @@ function MainMenuController.Start(_self: typeof(MainMenuController))
 	build()
 	cardName.Text = string.upper(localPlayer.DisplayName)
 	refreshNews()
+	refreshSettings()
 
 	Bus.Profile:Connect(function(data: any)
 		profile = data

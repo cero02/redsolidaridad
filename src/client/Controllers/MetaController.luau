@@ -98,7 +98,7 @@ local function modal(size: UDim2, parent: Instance): Frame
 end
 
 local function closeButton(parent: Frame, onClose: () -> ())
-	local button = Theme.button("✕", "ghost", {
+	local button = Theme.button(t("ui.x"), "ghost", {
 		Size = UDim2.fromOffset(32, 32),
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, -8, 0, 8),

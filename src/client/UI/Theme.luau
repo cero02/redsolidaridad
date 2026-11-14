@@ -32,8 +32,13 @@ Theme.Fonts = table.freeze({
 local C = Theme.Colors
 
 -- Crea una instancia con propiedades. `Parent` se asigna al final.
+-- Las ScreenGui usan ZIndexBehavior.Sibling: el contenido de un panel se dibuja siempre
+-- encima del panel. Con Global, un panel con ZIndex alto tapaba su propio contenido.
 function Theme.create(className: string, props: { [string]: any }, parent: Instance?): any
 	local instance = Instance.new(className)
+	if instance:IsA("ScreenGui") and props.ZIndexBehavior == nil then
+		instance.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	end
 	for key, value in props do
 		(instance :: any)[key] = value
 	end

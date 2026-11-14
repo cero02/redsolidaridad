@@ -320,6 +320,7 @@ return table.freeze({
 	["lang.es"] = "Español",
 
 	-- Studio only -------------------------------------------------------------
+	-- Botón de cerrar (una X normal: el símbolo ✕ no existe en las fuentes de Roblox).
+	["ui.x"] = "X",
 	["dev.errors"] = "⚠ ERRORS (Studio only) — take a screenshot and send it",
-	["dev.close"] = "X",
 })
