@@ -43,6 +43,8 @@ local NEWS_LINES = 4
 local GAME_GUIS = { MetaHud = true, CombatHud = true, EncounterHud = true, Onboarding = true }
 -- Espera máxima al módulo de controles de Roblox: nunca debe bloquear el menú.
 local CONTROLS_TIMEOUT = 10
+-- Capa del panel de Ajustes: por encima del resto del menú.
+local SETTINGS_Z_INDEX = 20
 
 local log = Log.new("MainMenu")
 
@@ -753,7 +755,6 @@ local function build()
 		BackgroundColor3 = C.PanelWarm,
 		BackgroundTransparency = 0,
 		Visible = false,
-		ZIndex = 20,
 	}, gui)
 	-- Más luminoso que los demás paneles: degradado suave y borde dorado.
 	local settingsGradient = settingsPanel:FindFirstChildOfClass("UIGradient")
@@ -802,6 +803,7 @@ local function build()
 	closeSettings.Activated:Connect(function()
 		settingsPanel.Visible = false
 	end)
+	Theme.raise(settingsPanel, SETTINGS_Z_INDEX)
 
 	Theme.label({
 		Size = UDim2.fromOffset(200, 16),

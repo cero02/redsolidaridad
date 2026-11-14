@@ -63,6 +63,18 @@ function Theme.stroke(parent: Instance, color: Color3?, thickness: number?, tran
 	}, parent)
 end
 
+-- Coloca una ventana por encima del resto: el panel en la capa `zIndex` y todo su
+-- contenido una capa más arriba. Funciona con ZIndexBehavior Global y Sibling, así el
+-- contenido nunca queda tapado por el fondo de su propio panel.
+function Theme.raise(panel: GuiObject, zIndex: number)
+	panel.ZIndex = zIndex
+	for _, descendant in panel:GetDescendants() do
+		if descendant:IsA("GuiObject") then
+			descendant.ZIndex = zIndex + 1
+		end
+	end
+end
+
 -- Panel oscuro con degradado y borde de bronce.
 function Theme.panel(props: { [string]: any }, parent: Instance?): Frame
 	props.BackgroundColor3 = props.BackgroundColor3 or C.Panel
